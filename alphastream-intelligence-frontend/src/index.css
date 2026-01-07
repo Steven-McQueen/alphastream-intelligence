@@ -1,0 +1,245 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* AlphaStream Design System - Dark (tokenized) */
+
+@layer base {
+  :root {
+    /* Core tokens (dark default) */
+    --bg-primary: #0A0A0A;
+    --bg-secondary: #1A1A1A;
+    --bg-tertiary: #2A2A2A;
+    --bg-hover: #333333;
+
+    --text-primary: #FFFFFF;
+    --text-secondary: #A0A0A0;
+    --text-tertiary: #707070;
+
+    --accent-primary: #20B886;
+    --accent-hover: #1A9A6F;
+
+    --border-color: #2A2A2A;
+
+    --success: #20B886;
+    --error: #FF4444;
+    --warning: #FFA500;
+
+    --chart-bull: #20B886;
+    --chart-bear: #FF4444;
+
+    /* Shadcn/Tailwind mapped vars (HSL where expected) */
+    --background: 0 0% 4%; /* hsl of #0A0A0A */
+    --foreground: 0 0% 100%;
+
+    --card: 0 0% 10%; /* #1A1A1A */
+    --card-foreground: 0 0% 100%;
+
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 158 74% 43%; /* #20B886 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 10%; /* align to bg-secondary */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 16%; /* #2A2A2A */
+    --muted-foreground: 0 0% 62%; /* #A0A0A0 */
+
+    --accent: 0 0% 16%; /* reuse tertiary */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 100% 57%; /* #FF4444 */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 16%; /* #2A2A2A */
+    --input: 0 0% 16%;
+    --ring: 158 74% 43%; /* accent-primary */
+
+    --radius: 12px;
+
+    /* Financial semantic colors */
+    --positive: 158 74% 43%;
+    --positive-foreground: 0 0% 0%;
+    --negative: 0 100% 57%;
+    --negative-foreground: 0 0% 100%;
+    --warning: 38 100% 50%;
+    --warning-foreground: 0 0% 0%;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 158 74% 43%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 16%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 16%;
+    --sidebar-ring: 158 74% 43%;
+
+    /* Charts */
+    --chart-1: 158 74% 43%;
+    --chart-2: 0 100% 57%;
+    --chart-3: 38 100% 50%;
+    --chart-4: 210 10% 50%;
+    --chart-5: 280 60% 60%;
+  }
+
+  /* Light mode (fallback; not primary) */
+  .light {
+    --background: 0 0% 96%;
+    --foreground: 0 0% 7%;
+    --card: 0 0% 98%;
+    --card-foreground: 0 0% 7%;
+    --popover: 0 0% 98%;
+    --popover-foreground: 0 0% 7%;
+    --primary: 158 74% 43%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 92%;
+    --secondary-foreground: 0 0% 10%;
+    --muted: 0 0% 88%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 0 0% 88%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 85%;
+    --input: 0 0% 85%;
+    --ring: 158 74% 43%;
+    --radius: 12px;
+    --positive: 158 74% 43%;
+    --positive-foreground: 0 0% 0%;
+    --negative: 0 84% 60%;
+    --negative-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+    --sidebar-background: 0 0% 92%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary: 158 74% 43%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 88%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 0 0% 85%;
+    --sidebar-ring: 158 74% 43%;
+    --chart-1: 158 74% 43%;
+    --chart-2: 0 84% 60%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 210 10% 50%;
+    --chart-5: 280 60% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
+
+  /* Monospace for financial numbers */
+  .font-mono-numbers {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+}
+
+.ticker-font {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-feature-settings: 'tnum' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@keyframes ticker {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-33.333%);
+  }
+}
+
+.animate-ticker {
+  animation: ticker 60s linear infinite;
+}
+
+.animate-ticker:hover {
+  animation-play-state: paused;
+}
+
+@keyframes ticker-inline {
+  0% {
+    transform: translateX(-33.333%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-ticker-inline {
+  animation: ticker-inline 45s linear infinite;
+}
+
+.animate-ticker-inline:hover {
+  animation-play-state: paused;
+}
+
+@layer utilities {
+  /* Terminal-style scrollbar */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted)) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted));
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
+
+  /* Positive/Negative colors for financial data */
+  .text-positive {
+    color: hsl(var(--positive));
+  }
+
+  .text-negative {
+    color: hsl(var(--negative));
+  }
+
+  .bg-positive {
+    background-color: hsl(var(--positive));
+  }
+
+  .bg-negative {
+    background-color: hsl(var(--negative));
+  }
+
+  /* Dense table styling */
+  .table-dense {
+    @apply text-xs;
+  }
+
+  .table-dense th,
+  .table-dense td {
+    @apply px-2 py-1.5;
+  }
+}
