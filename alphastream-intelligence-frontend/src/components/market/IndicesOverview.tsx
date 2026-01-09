@@ -1,25 +1,42 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMarket } from '@/context/MarketContext';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { getIndexIntradayData } from '@/data/mockMarket';
 import { Area, AreaChart, ResponsiveContainer } from 'recharts';
+import { useIndicesIntraday } from '@/hooks/useIndicesIntraday';
 
-function IndexCard({ symbol, name, value, change, changePercent, onClick }: {
+type FlashDir = 'up' | 'down' | null;
+
+function IndexCard({ symbol, name, value, change, changePercent, flashDir, series, onClick }: {
   symbol: string;
   name: string;
   value: number;
   change: number;
   changePercent: number;
+  flashDir: FlashDir;
+  series: { date: string; value: number }[];
   onClick: () => void;
 }) {
-  const intradayData = useMemo(() => getIndexIntradayData(symbol), [symbol]);
+  const intradayData = useMemo(() => series || [], [series]);
   const isPositive = changePercent >= 0;
+  const flashClass =
+    flashDir === 'up'
+      ? 'bg-emerald-500/10'
+      : flashDir === 'down'
+        ? 'bg-red-500/10'
+        : '';
   
   return (
     <Card 
-      className="p-4 bg-card border-border overflow-hidden cursor-pointer hover:bg-muted/50 transition-colors"
+      className={cn(
+        "p-4 bg-card border-border overflow-hidden cursor-pointer hover:bg-muted/50 transition-all",
+        flashClass
+      )}
+      style={{
+        transform: flashDir ? 'scale(1.015)' : 'scale(1)',
+        transition: 'transform 0.25s ease, background-color 0.3s ease',
+      }}
       onClick={onClick}
     >
       <div className="flex items-start justify-between mb-2">
@@ -89,6 +106,27 @@ function IndexCard({ symbol, name, value, change, changePercent, onClick }: {
 export function IndicesOverview() {
   const { indices } = useMarket();
   const navigate = useNavigate();
+  const [flashMap, setFlashMap] = useState<Record<string, FlashDir>>({});
+  const prevValues = useRef<Record<string, number>>({});
+  const symbols = useMemo(() => indices.map((i) => i.symbol), [indices]);
+  const { data: intradayMap } = useIndicesIntraday(symbols, '5min');
+
+  useEffect(() => {
+    const updates: Record<string, FlashDir> = {};
+    indices.forEach((idx) => {
+      const prev = prevValues.current[idx.symbol];
+      if (prev !== undefined && prev !== idx.value) {
+        updates[idx.symbol] = idx.value > prev ? 'up' : 'down';
+        setTimeout(() => {
+          setFlashMap((m) => ({ ...m, [idx.symbol]: null }));
+        }, 400);
+      }
+      prevValues.current[idx.symbol] = idx.value;
+    });
+    if (Object.keys(updates).length) {
+      setFlashMap((m) => ({ ...m, ...updates }));
+    }
+  }, [indices]);
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
@@ -100,6 +138,8 @@ export function IndicesOverview() {
           value={index.value}
           change={index.change}
           changePercent={index.changePercent}
+          series={intradayMap?.[index.symbol] ?? []}
+          flashDir={flashMap[index.symbol] ?? null}
           onClick={() => navigate(`/market/${index.symbol}`)}
         />
       ))}

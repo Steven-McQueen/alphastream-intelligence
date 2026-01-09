@@ -234,6 +234,478 @@ class DatabaseManager:
       self.close()
 
   # ============================================================================
+  # SECTOR PERFORMANCE
+  # ============================================================================
+  def insert_or_update_sector_performance(self, sector: str, change_percent: float):
+    """Insert or update sector performance snapshot."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      cursor.execute(
+        """
+        INSERT OR REPLACE INTO sector_performance
+        (sector, change_percent, last_updated)
+        VALUES (?, ?, ?)
+        """,
+        (sector, change_percent, datetime.now().isoformat()),
+      )
+      conn.commit()
+    finally:
+      self.close()
+
+  def get_sector_performance(self) -> list:
+    """Return cached sector performance records."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      cursor.execute(
+        "SELECT * FROM sector_performance ORDER BY change_percent DESC"
+      )
+      rows = cursor.fetchall()
+      return [dict(row) for row in rows]
+    finally:
+      self.close()
+
+  # ============================================================================
+  # MARKET MOVERS
+  # ============================================================================
+  def clear_market_movers(self):
+    """Remove existing market mover rows."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      cursor.execute("DELETE FROM market_movers")
+      conn.commit()
+    finally:
+      self.close()
+
+  def insert_market_mover(
+      self,
+      ticker: str,
+      name: str,
+      price: float,
+      change: float,
+      change_percent: float,
+      volume: int,
+      category: str,
+      market_cap: float = None,
+  ):
+    """Insert a single market mover row."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      cursor.execute(
+        """
+        INSERT INTO market_movers
+        (ticker, name, price, change, change_percent, volume, category, market_cap, last_updated)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+          ticker,
+          name,
+          price,
+          change,
+          change_percent,
+          volume,
+          category,
+          market_cap,
+          datetime.now().isoformat(),
+        ),
+      )
+      conn.commit()
+    finally:
+      self.close()
+
+  def get_market_movers(self, category: str = None) -> list:
+    """Retrieve movers, optionally filtered by category."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      if category:
+        cursor.execute(
+          "SELECT * FROM market_movers WHERE category = ? ORDER BY change_percent DESC",
+          (category,),
+        )
+      else:
+        cursor.execute("SELECT * FROM market_movers ORDER BY change_percent DESC")
+      rows = cursor.fetchall()
+      return [dict(row) for row in rows]
+    finally:
+      self.close()
+
+  # ============================================================================
+  # EARNINGS CALENDAR
+  # ============================================================================
+  def insert_or_update_earning(
+      self,
+      ticker: str,
+      company_name: str,
+      report_date: str,
+      fiscal_period: str,
+      eps_estimate: float = None,
+      eps_actual: float = None,
+      revenue_estimate: float = None,
+      revenue_actual: float = None,
+      time: str = None,
+  ):
+    """Insert or update an earnings calendar entry."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      cursor.execute(
+        """
+        INSERT OR REPLACE INTO earnings_calendar
+        (ticker, company_name, report_date, fiscal_period, eps_estimate, eps_actual,
+         revenue_estimate, revenue_actual, time, last_updated)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+          ticker,
+          company_name,
+          report_date,
+          fiscal_period,
+          eps_estimate,
+          eps_actual,
+          revenue_estimate,
+          revenue_actual,
+          time,
+          datetime.now().isoformat(),
+        ),
+      )
+      conn.commit()
+    finally:
+      self.close()
+
+  def get_earnings_calendar(self, from_date: str = None, to_date: str = None) -> list:
+    """Retrieve earnings calendar entries."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      if from_date and to_date:
+        cursor.execute(
+          """
+          SELECT * FROM earnings_calendar
+          WHERE report_date BETWEEN ? AND ?
+          ORDER BY report_date ASC
+          """,
+          (from_date, to_date),
+        )
+      else:
+        cursor.execute("SELECT * FROM earnings_calendar ORDER BY report_date ASC")
+      rows = cursor.fetchall()
+      return [dict(row) for row in rows]
+    finally:
+      self.close()
+
+  # ============================================================================
+  # NEWS ARTICLES
+  # ============================================================================
+  def upsert_news_articles_bulk(self, articles: List[dict]) -> int:
+    """Upsert multiple news articles keyed by URL."""
+    if not articles:
+      return 0
+    conn = self.connect()
+    cursor = conn.cursor()
+    inserted = 0
+    try:
+      for item in articles:
+        cursor.execute(
+          """
+          INSERT OR REPLACE INTO news_articles
+          (ticker, title, url, published_date, snippet, site, publisher, image, last_cached)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          """,
+          (
+            item.get("ticker"),
+            item.get("title"),
+            item.get("url"),
+            item.get("published_date"),
+            item.get("snippet"),
+            item.get("site"),
+            item.get("publisher"),
+            item.get("image"),
+            datetime.now().isoformat(),
+          ),
+        )
+        inserted += 1
+      conn.commit()
+      return inserted
+    finally:
+      self.close()
+
+  def get_news_general(self, limit: int = 50) -> List[dict]:
+    """Get recent general market news."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      cursor.execute(
+        """
+        SELECT * FROM news_articles
+        WHERE ticker IS NULL
+        ORDER BY published_date DESC
+        LIMIT ?
+        """,
+        (limit,),
+      )
+      rows = cursor.fetchall()
+      return [dict(row) for row in rows]
+    finally:
+      self.close()
+
+  def get_news_for_ticker(self, ticker: str, limit: int = 50) -> List[dict]:
+    """Get news for a specific ticker."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      cursor.execute(
+        """
+        SELECT * FROM news_articles
+        WHERE ticker = ?
+        ORDER BY published_date DESC
+        LIMIT ?
+        """,
+        (ticker.upper(), limit),
+      )
+      rows = cursor.fetchall()
+      return [dict(row) for row in rows]
+    finally:
+      self.close()
+
+  def prune_news(self, max_age_days: int = 7) -> int:
+    """Delete news articles older than max_age_days based on last_cached."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      cutoff = (datetime.now() - timedelta(days=max_age_days)).isoformat()
+      cursor.execute(
+        "DELETE FROM news_articles WHERE last_cached < ?",
+        (cutoff,),
+      )
+      deleted = cursor.rowcount
+      conn.commit()
+      return deleted
+    finally:
+      self.close()
+
+  # ============================================================================
+  # SECTOR PERFORMANCE HISTORY
+  # ============================================================================
+  def upsert_sector_history_bulk(self, rows: List[dict]) -> int:
+    """Insert or replace sector performance history rows."""
+    if not rows:
+      return 0
+    conn = self.connect()
+    cursor = conn.cursor()
+    inserted = 0
+    try:
+      for row in rows:
+        cursor.execute(
+          """
+          INSERT OR REPLACE INTO sector_performance_history
+          (date, sector, exchange, average_change, last_cached)
+          VALUES (?, ?, ?, ?, ?)
+          """,
+          (
+            row.get("date"),
+            row.get("sector"),
+            row.get("exchange"),
+            row.get("average_change"),
+            datetime.now().isoformat(),
+          ),
+        )
+        inserted += 1
+      conn.commit()
+      return inserted
+    finally:
+      self.close()
+
+  def get_latest_sector_history_date(self) -> Optional[str]:
+    """Return latest date stored in sector_performance_history."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      cursor.execute(
+        "SELECT MAX(date) as latest_date FROM sector_performance_history"
+      )
+      row = cursor.fetchone()
+      return row["latest_date"] if row and row["latest_date"] else None
+    finally:
+      self.close()
+
+  def get_sector_history(self, start_date: str = None, end_date: str = None) -> List[dict]:
+    """Fetch sector history rows between dates (inclusive)."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      if start_date and end_date:
+        cursor.execute(
+          """
+          SELECT date, sector, exchange, average_change
+          FROM sector_performance_history
+          WHERE date BETWEEN ? AND ?
+          ORDER BY date DESC
+          """,
+          (start_date, end_date),
+        )
+      elif start_date:
+        cursor.execute(
+          """
+          SELECT date, sector, exchange, average_change
+          FROM sector_performance_history
+          WHERE date >= ?
+          ORDER BY date DESC
+          """,
+          (start_date,),
+        )
+      else:
+        cursor.execute(
+          """
+          SELECT date, sector, exchange, average_change
+          FROM sector_performance_history
+          ORDER BY date DESC
+          """
+        )
+      rows = cursor.fetchall()
+      return [dict(row) for row in rows]
+    finally:
+      self.close()
+
+  # ============================================================================
+  # PRICE BARS
+  # ============================================================================
+  def upsert_price_bars_bulk(self, bars: List[dict]) -> int:
+    """Insert or replace multiple price bars."""
+    if not bars:
+      return 0
+    conn = self.connect()
+    cursor = conn.cursor()
+    inserted = 0
+    try:
+      for bar in bars:
+        cursor.execute(
+          """
+          INSERT OR REPLACE INTO price_bars
+          (symbol, timeframe, bar_time, open, high, low, close, volume, source, last_updated)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          """,
+          (
+            bar.get("symbol"),
+            bar.get("timeframe"),
+            bar.get("bar_time"),
+            bar.get("open"),
+            bar.get("high"),
+            bar.get("low"),
+            bar.get("close"),
+            bar.get("volume"),
+            bar.get("source"),
+            datetime.now().isoformat(),
+          ),
+        )
+        inserted += 1
+      conn.commit()
+      return inserted
+    finally:
+      self.close()
+
+  def get_price_bars(
+      self,
+      symbol: str,
+      timeframe: str,
+      limit: int = 300,
+      start_time: str = None,
+      end_time: str = None,
+  ) -> List[dict]:
+    """Retrieve price bars for a symbol/timeframe ordered newest -> oldest."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      params = [symbol, timeframe]
+      query = """
+        SELECT symbol, timeframe, bar_time, open, high, low, close, volume, source
+        FROM price_bars
+        WHERE symbol = ? AND timeframe = ?
+      """
+      if start_time:
+        query += " AND bar_time >= ?"
+        params.append(start_time)
+      if end_time:
+        query += " AND bar_time <= ?"
+        params.append(end_time)
+      query += " ORDER BY bar_time DESC LIMIT ?"
+      params.append(limit)
+      cursor.execute(query, tuple(params))
+      rows = cursor.fetchall()
+      return [dict(row) for row in rows]
+    finally:
+      self.close()
+
+  def get_eod_last_updated(self, symbol: str) -> Optional[str]:
+    """Get the last_updated timestamp for EOD data of a symbol."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      cursor.execute(
+        """
+        SELECT last_updated FROM price_bars
+        WHERE symbol = ? AND timeframe = '1day'
+        ORDER BY last_updated DESC LIMIT 1
+        """,
+        (symbol,),
+      )
+      row = cursor.fetchone()
+      return row["last_updated"] if row else None
+    finally:
+      self.close()
+
+  def delete_eod_bars(self, symbol: str) -> int:
+    """Delete all EOD bars for a symbol (used for cache invalidation)."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      cursor.execute(
+        "DELETE FROM price_bars WHERE symbol = ? AND timeframe = '1day'",
+        (symbol,),
+      )
+      deleted = cursor.rowcount
+      conn.commit()
+      return deleted
+    finally:
+      self.close()
+
+  def get_intraday_last_updated(self, symbol: str, timeframe: str = "5min") -> Optional[str]:
+    """Get the last_updated timestamp for intraday data of a symbol."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      cursor.execute(
+        """
+        SELECT last_updated FROM price_bars
+        WHERE symbol = ? AND timeframe = ?
+        ORDER BY last_updated DESC LIMIT 1
+        """,
+        (symbol, timeframe),
+      )
+      row = cursor.fetchone()
+      return row["last_updated"] if row else None
+    finally:
+      self.close()
+
+  def delete_intraday_bars(self, symbol: str, timeframe: str = "5min") -> int:
+    """Delete all intraday bars for a symbol/timeframe (used for cache invalidation)."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      cursor.execute(
+        "DELETE FROM price_bars WHERE symbol = ? AND timeframe = ?",
+        (symbol, timeframe),
+      )
+      deleted = cursor.rowcount
+      conn.commit()
+      return deleted
+    finally:
+      self.close()
+
+  # ============================================================================
   # ALTERNATIVE ASSETS METHODS
   # ============================================================================
   def insert_or_update_alternative_asset(

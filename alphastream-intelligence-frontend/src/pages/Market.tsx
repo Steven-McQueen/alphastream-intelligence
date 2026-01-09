@@ -7,13 +7,12 @@ import { MarketNewsSummary } from '@/components/market/MarketNewsSummary';
 import { useMarket } from '@/context/MarketContext';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
+import { LiveBadge } from '@/components/ui/LiveBadge';
 
 export default function Market() {
   const { refreshMarketData, isLoading, marketState, setScrollY } = useMarket();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const lastUpdated = marketState?.lastUpdated
-    ? new Date(marketState.lastUpdated).toLocaleTimeString()
-    : '—';
+  const lastUpdated = marketState?.lastUpdated;
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement;
@@ -28,11 +27,9 @@ export default function Market() {
     >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
+        <div className="space-y-1">
           <h2 className="text-lg font-semibold">Market Overview</h2>
-          <p className="text-xs text-muted-foreground">
-            Last updated: {lastUpdated}
-          </p>
+          <LiveBadge lastUpdated={lastUpdated} isLoading={isLoading} />
         </div>
         <Button
           variant="outline"

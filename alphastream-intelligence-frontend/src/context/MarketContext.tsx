@@ -4,6 +4,12 @@ import { getMockMarketState, getKeyIndicators, getMockMarketNews, generateNewNew
 
 const API_BASE = 'http://localhost:8000';
 
+interface MarketStatusResponse {
+  status: string;
+  isMarketOpen: boolean;
+  serverTime: string;
+}
+
 interface MarketContextValue {
   // Core market data
   marketState: MarketState;
@@ -48,6 +54,7 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
   const [newNewsCount, setNewNewsCount] = useState(0);
   const [scrollY, setScrollY] = useState(0);
   const lastReadTimestamp = useRef<string>(new Date().toISOString());
+  const [marketOpen, setMarketOpen] = useState<boolean>(false);
 
   const loadMarketData = useCallback(async () => {
     setIsLoading(true);
@@ -108,9 +115,32 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
     loadMarketData();
   }, [loadMarketData]);
 
+  // Poll market status to gate live updates
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/market/status`);
+        if (!res.ok) throw new Error('status error');
+        const data: MarketStatusResponse = await res.json();
+        setMarketOpen(Boolean(data.isMarketOpen));
+        setMarketState((prev) => ({
+          ...prev,
+          status: data.status,
+          lastUpdated: data.serverTime,
+        }));
+      } catch (err) {
+        console.error('Market status fetch failed', err);
+      }
+    };
+    fetchStatus();
+    const id = setInterval(fetchStatus, 20_000);
+    return () => clearInterval(id);
+  }, []);
+
   useEffect(() => {
     loadMarketData();
-    const interval = setInterval(loadMarketData, 5 * 60 * 1000);
+    // keep base polling for core data; now gated by isMarketOpen for UI decisions elsewhere
+    const interval = setInterval(loadMarketData, 10 * 1000); // 10s polling
     return () => clearInterval(interval);
   }, [loadMarketData]);
 
@@ -146,9 +176,6 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
     setNewNewsCount(0);
   }, []);
 
-  const isMarketOpen = useMemo(() => 
-    marketState.status === 'Open', [marketState.status]);
-
   const keyIndicators = useMemo(() => getKeyIndicators(), [marketState]);
 
   const value: MarketContextValue = {
@@ -157,7 +184,7 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
     cryptoPrices: marketState.cryptoPrices,
     macroIndicators: marketState.macroIndicators,
     sectorPerformance: marketState.sectorPerformance,
-    isMarketOpen,
+    isMarketOpen: marketOpen,
     regime: marketState.regime,
     regimeProbabilities: marketState.regimeProbabilities,
     keyIndicators,

@@ -1,40 +1,38 @@
 import { useEffect, useState } from "react";
 
-interface SectorData {
-  sector: string;
-  change1D: number;
+interface InsightResponse {
+  status: string;
+  marketTone: string;
+  leaders: { sector: string; change1D: number }[];
+  laggards: { sector: string; change1D: number }[];
+  text: string;
+  last_updated: string;
 }
 
 export function TodaysMarketInsight() {
-  const [sectors, setSectors] = useState<SectorData[]>([]);
+  const [insight, setInsight] = useState<InsightResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchSectors = async () => {
+    const fetchInsight = async () => {
       try {
-        const response = await fetch("http://localhost:8000/api/market/sectors");
+        const response = await fetch("http://localhost:8000/api/market/todays-insight");
         const data = await response.json();
-        setSectors(data);
+        setInsight(data);
       } catch (error) {
-        console.error("Error fetching sectors:", error);
+        console.error("Error fetching insight:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchSectors();
+    fetchInsight();
   }, []);
 
-  const getSectorColor = (name: string) => {
-    const s = sectors.find((x) => x.sector === name);
-    if (!s) return "text-zinc-400";
-    return (s.change1D ?? 0) >= 0 ? "text-green-500" : "text-red-500";
-  };
-
-  const getSectorChange = (name: string) => {
-    const s = sectors.find((x) => x.sector === name);
-    if (!s) return "0.00";
-    return ((s.change1D ?? 0) >= 0 ? "+" : "") + (s.change1D ?? 0).toFixed(2);
-  };
+  const pill = (label: string, value: string) => (
+    <span className="px-2 py-1 text-xs rounded-full bg-zinc-800 text-zinc-200 border border-zinc-700">
+      {label}: {value}
+    </span>
+  );
 
   return (
     <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
@@ -43,50 +41,31 @@ export function TodaysMarketInsight() {
         <div className="text-zinc-400">Loading...</div>
       ) : (
         <div className="space-y-4 text-zinc-300 leading-relaxed">
-          <p>
-            Markets showed mixed signals today as investors weighed economic data.{" "}
-            <span className={getSectorColor("Technology")}>
-              Technology ({getSectorChange("Technology")}%)
-            </span>{" "}
-            led the session, while{" "}
-            <span className={getSectorColor("Financials")}>
-              Financials ({getSectorChange("Financials")}%)
-            </span>{" "}
-            and{" "}
-            <span className={getSectorColor("Energy")}>
-              Energy ({getSectorChange("Energy")}%)
-            </span>{" "}
-            sectors showed relative weakness.
-          </p>
-
-          <p>
-            <span className={getSectorColor("Healthcare")}>
-              Healthcare ({getSectorChange("Healthcare")}%)
-            </span>{" "}
-            and{" "}
-            <span className={getSectorColor("Consumer Discretionary")}>
-              Consumer Discretionary ({getSectorChange("Consumer Discretionary")}%)
-            </span>{" "}
-            sectors demonstrated resilience. The market breadth remained constructive with
-            advancing issues outnumbering decliners.
-          </p>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-            {sectors.slice(0, 8).map((sector) => (
+          <div className="flex flex-wrap gap-2">
+            {pill("Session", insight?.status ?? "Unknown")}
+            {pill("Tone", insight?.marketTone ?? "Neutral")}
+          </div>
+          <p>{insight?.text ?? "No data available."}</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+            {insight?.leaders?.map((sector) => (
               <div
                 key={sector.sector}
-                className={`p-3 rounded-lg ${
-                  (sector.change1D ?? 0) >= 0
-                    ? "bg-green-900/20 border border-green-800/30"
-                    : "bg-red-900/20 border border-red-800/30"
-                }`}
+                className="p-3 rounded-lg bg-green-900/20 border border-green-800/30"
               >
                 <div className="text-xs text-zinc-400 mb-1">{sector.sector}</div>
-                <div
-                  className={`text-sm font-semibold ${
-                    (sector.change1D ?? 0) >= 0 ? "text-green-500" : "text-red-500"
-                  }`}
-                >
+                <div className="text-sm font-semibold text-green-500">
+                  {(sector.change1D ?? 0) >= 0 ? "+" : ""}
+                  {(sector.change1D ?? 0).toFixed(2)}%
+                </div>
+              </div>
+            ))}
+            {insight?.laggards?.map((sector) => (
+              <div
+                key={sector.sector}
+                className="p-3 rounded-lg bg-red-900/20 border border-red-800/30"
+              >
+                <div className="text-xs text-zinc-400 mb-1">{sector.sector}</div>
+                <div className="text-sm font-semibold text-red-500">
                   {(sector.change1D ?? 0) >= 0 ? "+" : ""}
                   {(sector.change1D ?? 0).toFixed(2)}%
                 </div>

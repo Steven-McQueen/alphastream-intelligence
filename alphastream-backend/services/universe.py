@@ -2,16 +2,10 @@ import logging
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from clients.sp500live import fetch_sp500_live
+from database.db_manager import db
 from config import STOCK_TTL, UNIVERSE_TTL
 from models import Stock
 from utils.cache import TTLCache
-from utils.parsers import (
-    clean_market_cap,
-    clean_number,
-    clean_percentage,
-    optional_float,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -19,47 +13,43 @@ _universe_cache = TTLCache(UNIVERSE_TTL)
 _stock_cache = TTLCache(STOCK_TTL)
 
 
-def _map_raw_to_stock(ticker: str, data: Dict) -> Stock:
-    if not isinstance(data, dict):
-        raise ValueError("invalid data")
-
-    updated_at = data.get("date") or datetime.utcnow().isoformat()
-
+def _map_db_row_to_stock(data: Dict) -> Stock:
+    """Convert a database row into the Stock model."""
     return Stock(
-        ticker=ticker,
-        name=data.get("name", ticker),
-        sector=data.get("sector", "Unknown"),
-        industry=data.get("industry", "Unknown"),
-        marketCap=clean_market_cap(data.get("MarketCap")),
-        price=clean_number(data.get("last")),
-        change1D=clean_percentage(data.get("change_1d")),
-        change1W=clean_percentage(data.get("change_1w")),
-        change1M=clean_percentage(data.get("change_1m")),
-        changeYTD=clean_percentage(data.get("change_YTD")),
-        change1Y=clean_percentage(data.get("change_1y")),
-        change5Y=clean_percentage(data.get("change_5y")),
-        peRatio=optional_float(data.get("pe_ratio")),
-        forwardPE=optional_float(data.get("pe_forward")),
-        pegRatio=optional_float(data.get("peg")),
-        priceToBook=optional_float(data.get("price_to_book")),
-        evToEbitda=optional_float(data.get("ev_to_ebitda")),
-        evToSales=optional_float(data.get("ev_to_sales")),
-        dividendYield=optional_float(data.get("dividendyield")),
-        beta=optional_float(data.get("beta")),
-        eps=optional_float(data.get("eps")),
-        volume=clean_number(data.get("volume_1d")),
-        avgVolume=0.0,
-        grossMargin=clean_percentage(data.get("gross_margin")),
-        operatingMargin=clean_percentage(data.get("operating_margin")),
-        netMargin=clean_percentage(data.get("net_margin")),
-        roe=clean_percentage(data.get("roe")),
-        roic=clean_percentage(data.get("roic")),
-        revenueGrowth=clean_percentage(data.get("revenue_growth")),
-        earningsGrowth=clean_percentage(data.get("earnings_growth")),
-        fcfYield=clean_percentage(data.get("fcf_yield")),
+        ticker=data.get("ticker", ""),
+        name=data.get("name", data.get("ticker", "")),
+        sector=data.get("sector") or "Unknown",
+        industry=data.get("industry") or "Unknown",
+        marketCap=float(data.get("market_cap") or 0),
+        price=float(data.get("price") or 0),
+        change1D=float(data.get("change_1d") or 0),
+        change1W=float(data.get("change_1w") or 0),
+        change1M=float(data.get("change_1m") or 0),
+        changeYTD=float(data.get("change_ytd") or 0),
+        change1Y=float(data.get("change_1y") or 0),
+        change5Y=float(data.get("change_5y") or 0),
+        peRatio=data.get("pe_ratio"),
+        forwardPE=None,
+        pegRatio=None,
+        priceToBook=None,
+        evToEbitda=None,
+        evToSales=None,
+        dividendYield=data.get("dividend_yield"),
+        beta=data.get("beta"),
+        eps=data.get("eps"),
+        volume=float(data.get("volume") or 0),
+        avgVolume=float(data.get("volume") or 0),
+        grossMargin=float(data.get("gross_margin") or 0),
+        operatingMargin=0.0,
+        netMargin=float(data.get("net_profit_margin") or 0),
+        roe=float(data.get("roe") or 0),
+        roic=0.0,
+        revenueGrowth=0.0,
+        earningsGrowth=0.0,
+        fcfYield=0.0,
         catalysts=[],
         weight=float(data.get("weight") or 0.0),
-        updatedAt=updated_at,
+        updatedAt=data.get("last_updated") or datetime.utcnow().isoformat(),
     )
 
 
@@ -69,24 +59,15 @@ def get_core_universe(force_refresh: bool = False) -> List[Stock]:
         return cached
 
     try:
-        raw_data, source = fetch_sp500_live()
+        rows = db.get_all_stocks(order_by="market_cap DESC")
+        stocks = [_map_db_row_to_stock(row) for row in rows]
+        _universe_cache.set("core", stocks)
+        return stocks
     except Exception as exc:
-        logger.warning("SP500Live fetch failed: %s", exc)
+        logger.warning("Failed to load universe from DB: %s", exc)
         if cached:
             return cached
         raise
-
-    stocks: List[Stock] = []
-    for ticker, payload in raw_data.items():
-        try:
-            stock = _map_raw_to_stock(ticker, payload)
-            stocks.append(stock)
-        except Exception as exc:
-            logger.warning("Skipping %s due to parse error: %s", ticker, exc)
-            continue
-
-    _universe_cache.set("core", stocks)
-    return stocks
 
 
 def search_symbol(query: str) -> List[Stock]:

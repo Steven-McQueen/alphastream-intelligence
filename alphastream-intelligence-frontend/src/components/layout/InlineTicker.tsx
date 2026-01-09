@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useMarket } from '@/context/MarketContext';
 
 interface TickerItem {
   symbol: string;
@@ -10,7 +11,10 @@ interface TickerItem {
 export function InlineTicker() {
   const [isPaused, setIsPaused] = useState(false);
   const [tickerData, setTickerData] = useState<TickerItem[]>([]);
+  const [symbols, setSymbols] = useState<string[]>([]);
   const navigate = useNavigate();
+  const { isMarketOpen } = useMarket();
+  const idxRef = useRef(0);
 
   useEffect(() => {
     const fetchTicker = async () => {
@@ -52,6 +56,7 @@ export function InlineTicker() {
         }));
 
         setTickerData(formatted);
+        setSymbols(formatted.map((f: any) => f.symbol));
       } catch (error) {
         console.error('❌ Ticker fetch failed:', error);
         setTickerData([]);
@@ -59,9 +64,46 @@ export function InlineTicker() {
     };
 
     fetchTicker();
-    const interval = setInterval(fetchTicker, 30000);
+    // keep a slower base refresh for list integrity
+    const interval = setInterval(fetchTicker, 60_000);
     return () => clearInterval(interval);
   }, []);
+
+  // Live rotation: update one symbol every 2s when market is open
+  useEffect(() => {
+    if (!isMarketOpen || !symbols.length) return;
+    let cancelled = false;
+    const tick = async () => {
+      const sym = symbols[idxRef.current % symbols.length];
+      idxRef.current = (idxRef.current + 1) % symbols.length;
+      try {
+        const res = await fetch(`http://localhost:8000/api/live/quote?symbol=${encodeURIComponent(sym)}`);
+        if (!res.ok) throw new Error('live quote failed');
+        const data = await res.json();
+        if (cancelled) return;
+        setTickerData((prev) => {
+          const next = [...prev];
+          const i = next.findIndex((x) => x.symbol === sym);
+          if (i >= 0) {
+            next[i] = {
+              symbol: sym,
+              value: data.price ?? data.value ?? next[i].value,
+              changePercent: data.changePercent ?? next[i].changePercent ?? 0,
+            };
+          }
+          return next;
+        });
+      } catch (err) {
+        // ignore single fetch errors
+      }
+    };
+
+    const id = setInterval(tick, 2000); // 2s stagger
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [isMarketOpen, symbols]);
 
   const loopedData = useMemo(
     () => (tickerData.length ? [...tickerData, ...tickerData, ...tickerData] : []),

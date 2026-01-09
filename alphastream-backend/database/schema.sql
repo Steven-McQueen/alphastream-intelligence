@@ -9,6 +9,10 @@ DROP TABLE IF EXISTS cpi_history;
 DROP TABLE IF EXISTS vix_history;
 DROP TABLE IF EXISTS refresh_log;
 DROP TABLE IF EXISTS alternative_assets;
+DROP TABLE IF EXISTS sector_performance;
+DROP TABLE IF EXISTS market_movers;
+DROP TABLE IF EXISTS earnings_calendar;
+DROP TABLE IF EXISTS news_articles;
 
 -- Main stocks table
 CREATE TABLE stocks (
@@ -68,7 +72,7 @@ CREATE TABLE stocks (
     
     -- Metadata
     last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    data_source TEXT DEFAULT 'sp500live',
+    data_source TEXT DEFAULT 'fmp',
     is_sp500 BOOLEAN DEFAULT 1
 );
 
@@ -160,4 +164,97 @@ CREATE TABLE IF NOT EXISTS alternative_assets (
     last_updated TEXT NOT NULL,
     fetch_error TEXT
 );
+
+-- ============================================================================
+-- Sector Performance
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS sector_performance (
+    sector TEXT PRIMARY KEY,
+    change_percent REAL NOT NULL,
+    last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Sector performance history (daily snapshots from FMP)
+CREATE TABLE IF NOT EXISTS sector_performance_history (
+    date TEXT NOT NULL,
+    sector TEXT NOT NULL,
+    exchange TEXT,
+    average_change REAL NOT NULL,
+    last_cached TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (date, sector)
+);
+
+-- ============================================================================
+-- Market Movers (gainers, losers, actives)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS market_movers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticker TEXT NOT NULL,
+    name TEXT,
+    price REAL NOT NULL,
+    change REAL,
+    change_percent REAL,
+    volume INTEGER,
+    category TEXT NOT NULL,  -- 'gainer', 'loser', 'active'
+    market_cap REAL,
+    last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================================
+-- Earnings Calendar
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS earnings_calendar (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticker TEXT NOT NULL,
+    company_name TEXT,
+    report_date TEXT NOT NULL,
+    fiscal_period TEXT,
+    eps_estimate REAL,
+    eps_actual REAL,
+    revenue_estimate REAL,
+    revenue_actual REAL,
+    time TEXT,
+    last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(ticker, report_date, fiscal_period)
+);
+
+-- ============================================================================
+-- News Articles Cache
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS news_articles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticker TEXT,
+    title TEXT NOT NULL,
+    url TEXT NOT NULL UNIQUE,
+    published_date TEXT,
+    snippet TEXT,
+    site TEXT,
+    publisher TEXT,
+    image TEXT,
+    last_cached TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================================
+-- Price bars (intraday and EOD)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS price_bars (
+    symbol TEXT NOT NULL,
+    timeframe TEXT NOT NULL, -- e.g., 5min, 1day
+    bar_time TEXT NOT NULL,
+    open REAL,
+    high REAL,
+    low REAL,
+    close REAL,
+    volume REAL,
+    source TEXT,
+    last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (symbol, timeframe, bar_time)
+);
+
+-- Create indexes for performance
+CREATE INDEX IF NOT EXISTS idx_market_movers_category ON market_movers(category);
+CREATE INDEX IF NOT EXISTS idx_earnings_report_date ON earnings_calendar(report_date);
+CREATE INDEX IF NOT EXISTS idx_news_ticker ON news_articles(ticker);
+CREATE INDEX IF NOT EXISTS idx_sector_perf_history_date ON sector_performance_history(date);
+CREATE INDEX IF NOT EXISTS idx_price_bars_symbol_timeframe ON price_bars(symbol, timeframe, bar_time);
 

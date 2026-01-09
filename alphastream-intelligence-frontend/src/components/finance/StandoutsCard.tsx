@@ -1,14 +1,40 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight } from 'lucide-react';
-import { getStandouts } from '@/data/mockFinanceHome';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 
 export function StandoutsCard() {
   const navigate = useNavigate();
-  const standouts = getStandouts();
+  const [standouts, setStandouts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchStandouts = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/api/market/standouts?limit=10');
+        const data = await res.json();
+        const combined = [
+          ...(data.gainers || []),
+          ...(data.losers || []),
+          ...(data.actives || []),
+        ].slice(0, 10);
+        // synthesize tags/sparkline placeholders
+        setStandouts(
+          combined.map((s: any) => ({
+            ...s,
+            tags: ['Mover'],
+            sparklineData: [0, s.change1D ?? s.change_percent ?? 0],
+          }))
+        );
+      } catch (err) {
+        console.error('Error fetching standouts', err);
+        setStandouts([]);
+      }
+    };
+    fetchStandouts();
+  }, []);
 
   const handleAskWhy = () => {
     const prompt = "Analyze why these standout names might be mispriced and how they fit in a quality growth portfolio.";

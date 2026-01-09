@@ -1,5 +1,5 @@
 import { useLocation, Link } from 'react-router-dom';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import {
   Brain,
@@ -15,6 +15,7 @@ import {
   Star,
 } from 'lucide-react';
 import { useWatchlist } from '@/contexts/WatchlistContext';
+import { useMarket } from '@/context/MarketContext';
 import type { Stock } from '@/types';
 
 const API_BASE_URL = 'http://localhost:8000';
@@ -35,6 +36,8 @@ export function AppSidebar() {
   const { watchlist } = useWatchlist();
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [loadingMini, setLoadingMini] = useState(false);
+  const { isMarketOpen } = useMarket();
+  const idxRef = useRef(0);
 
   const toggleTheme = () => {
     setIsDark(!isDark);
@@ -43,9 +46,14 @@ export function AppSidebar() {
 
   useEffect(() => {
     const fetchStocks = async () => {
+      if (!watchlist.length) {
+        setStocks([]);
+        return;
+      }
       try {
         setLoadingMini(true);
-        const res = await fetch(`${API_BASE_URL}/api/universe/core`);
+        const params = new URLSearchParams({ tickers: watchlist.join(',') });
+        const res = await fetch(`${API_BASE_URL}/api/watchlist/prices?${params.toString()}`);
         if (!res.ok) throw new Error(`Status ${res.status}`);
         const data = await res.json();
         setStocks(data);
@@ -56,7 +64,44 @@ export function AppSidebar() {
       }
     };
     fetchStocks();
-  }, []);
+  }, [watchlist]);
+
+  // Live staggered update: one symbol every 2s when market open
+  useEffect(() => {
+    if (!isMarketOpen || !watchlist.length) return;
+    let cancelled = false;
+    const tick = async () => {
+      const symbols = watchlist;
+      if (!symbols.length) return;
+      const sym = symbols[idxRef.current % symbols.length];
+      idxRef.current = (idxRef.current + 1) % symbols.length;
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/live/quote?symbol=${encodeURIComponent(sym)}`);
+        if (!res.ok) throw new Error('live quote failed');
+        const data = await res.json();
+        if (cancelled) return;
+        setStocks((prev) => {
+          const next = [...prev];
+          const i = next.findIndex((x) => x.ticker === sym);
+          if (i >= 0) {
+            next[i] = {
+              ...next[i],
+              price: data.price ?? next[i].price,
+              change1D: data.changePercent ?? next[i].change1D,
+            };
+          }
+          return next;
+        });
+      } catch {
+        // ignore single fetch errors
+      }
+    };
+    const id = setInterval(tick, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [isMarketOpen, watchlist]);
 
   const miniWatchlist = useMemo(() => {
     const filtered = stocks.filter((s) => watchlist.includes(s.ticker));

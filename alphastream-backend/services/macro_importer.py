@@ -302,7 +302,8 @@ def fetch_and_import_vix_history():
 
 def refresh_all_macro_data():
   """Refresh current values only (not historical data)."""
-  indices_count = fetch_and_import_indices()
+  # Indices are now refreshed via FMP; skip here to avoid overriding.
+  indices_count = 0
   indicators_count = fetch_and_import_macro_indicators()
   assets_count = fetch_and_import_alternative_assets()
   return {
@@ -318,7 +319,8 @@ def initialize_all_macro_data():
   print("INITIALIZING MACRO DATA")
   print("=" * 60)
 
-  indices_count = fetch_and_import_indices()
+  # Indices handled by FMP importers
+  indices_count = 0
   indicators_count = fetch_and_import_macro_indicators()
   treasury_count = fetch_and_import_treasury_history()
   cpi_count = fetch_and_import_cpi_history()
@@ -388,7 +390,7 @@ def fetch_and_import_alternative_assets():
   # --------------------------------------------------------------------------
   def store_failure(sym, name, asset_type, msg):
     nonlocal fail_count
-    print(f"❌ All sources failed: {msg}")
+    print(f"[ERROR] All sources failed: {msg}")
     db.insert_or_update_alternative_asset(
       symbol=sym,
       name=name,
@@ -422,11 +424,11 @@ def fetch_and_import_alternative_assets():
           value=round(current, 2), change=round(change, 2),
           change_percent=round(change_pct, 2), fetch_error=None
         )
-        print(f"✅ yfinance: {current:,.2f} ({change_pct:+.2f}%)")
+        print(f"[OK] yfinance: {current:,.2f} ({change_pct:+.2f}%)")
         success_count += 1
         success = True
     except Exception as e:
-      print(f"⚠ yfinance failed ({e}), trying CoinGecko... ", end="")
+      print(f"[WARN] yfinance failed ({e}), trying CoinGecko... ", end="")
 
     if not success:
       # Fallback: CoinGecko
@@ -438,7 +440,7 @@ def fetch_and_import_alternative_assets():
         change_percent=round(cg_data['change_percent_24h'], 2),
         fetch_error=None
       )
-      print(f"✅ CoinGecko: {cg_data['value']:,.2f} ({cg_data['change_percent_24h']:+.2f}%)")
+      print(f"[OK] CoinGecko: {cg_data['value']:,.2f} ({cg_data['change_percent_24h']:+.2f}%)")
       success_count += 1
 
   except Exception as e:
@@ -465,11 +467,11 @@ def fetch_and_import_alternative_assets():
           value=round(current, 2), change=round(change, 2),
           change_percent=round(change_pct, 2), fetch_error=None
         )
-        print(f"✅ yfinance: {current:,.2f} ({change_pct:+.2f}%)")
+        print(f"[OK] yfinance: {current:,.2f} ({change_pct:+.2f}%)")
         success_count += 1
         success = True
     except Exception as e:
-      print(f"⚠ yfinance failed ({e}), trying CoinGecko... ", end="")
+      print(f"[WARN] yfinance failed ({e}), trying CoinGecko... ", end="")
 
     if not success:
       cg_data = fetch_crypto_from_coingecko('ethereum')
@@ -480,7 +482,7 @@ def fetch_and_import_alternative_assets():
         change_percent=round(cg_data['change_percent_24h'], 2),
         fetch_error=None
       )
-      print(f"✅ CoinGecko: {cg_data['value']:,.2f} ({cg_data['change_percent_24h']:+.2f}%)")
+      print(f"[OK] CoinGecko: {cg_data['value']:,.2f} ({cg_data['change_percent_24h']:+.2f}%)")
       success_count += 1
 
   except Exception as e:
@@ -507,11 +509,11 @@ def fetch_and_import_alternative_assets():
           value=round(current, 2), change=round(change, 2),
           change_percent=round(change_pct, 2), fetch_error=None
         )
-        print(f"✅ yfinance: {current:,.2f} ({change_pct:+.2f}%)")
+        print(f"[OK] yfinance: {current:,.2f} ({change_pct:+.2f}%)")
         success_count += 1
         success = True
     except Exception as e:
-      print(f"⚠ yfinance failed ({e}), trying FRED... ", end="")
+      print(f"[WARN] yfinance failed ({e}), trying FRED... ", end="")
 
     if not success:
       if not fred:
@@ -529,7 +531,7 @@ def fetch_and_import_alternative_assets():
         value=round(current, 2), change=round(change, 2),
         change_percent=round(change_pct, 2), fetch_error=None
       )
-      print(f"✅ FRED: {current:,.2f} ({change_pct:+.2f}%)")
+      print(f"[OK] FRED: {current:,.2f} ({change_pct:+.2f}%)")
       success_count += 1
 
   except Exception as e:
@@ -556,11 +558,11 @@ def fetch_and_import_alternative_assets():
           value=round(current, 2), change=round(change, 2),
           change_percent=round(change_pct, 2), fetch_error=None
         )
-        print(f"✅ yfinance: {current:,.2f} ({change_pct:+.2f}%)")
+        print(f"[OK] yfinance: {current:,.2f} ({change_pct:+.2f}%)")
         success_count += 1
         success = True
     except Exception as e:
-      print(f"⚠ yfinance failed ({e}), trying FRED... ", end="")
+      print(f"[WARN] yfinance failed ({e}), trying FRED... ", end="")
 
     if not success:
       if not fred:
@@ -578,7 +580,7 @@ def fetch_and_import_alternative_assets():
         value=round(current, 2), change=round(change, 2),
         change_percent=round(change_pct, 2), fetch_error=None
       )
-      print(f"✅ FRED: {current:,.2f} ({change_pct:+.2f}%)")
+      print(f"[OK] FRED: {current:,.2f} ({change_pct:+.2f}%)")
       success_count += 1
 
   except Exception as e:
@@ -606,11 +608,11 @@ def fetch_and_import_alternative_assets():
           change_percent=round(change_pct, 2) if change_pct is not None else None,
           fetch_error=None
         )
-        print(f"✅ yfinance: {current:.4f} ({change_pct:+.2f}%)")
+        print(f"[OK] yfinance: {current:.4f} ({change_pct:+.2f}%)")
         success_count += 1
         success = True
     except Exception as e:
-      print(f"⚠ yfinance failed ({e}), trying FRED... ", end="")
+      print(f"[WARN] yfinance failed ({e}), trying FRED... ", end="")
 
     if not success:
       if not fred:
@@ -629,16 +631,16 @@ def fetch_and_import_alternative_assets():
         change_percent=round(change_pct, 2) if change_pct is not None else None,
         fetch_error=None
       )
-      print(f"✅ FRED: {current:.4f} ({change_pct:+.2f}%)")
+      print(f"[OK] FRED: {current:.4f} ({change_pct:+.2f}%)")
       success_count += 1
 
   except Exception as e:
     store_failure(symbol, 'Norwegian Krone', 'currency', f"yfinance + FRED failed: {e}")
 
   print("=" * 60)
-  print(f"✅ Success: {success_count}/5 assets")
+  print(f"[OK] Success: {success_count}/5 assets")
   if fail_count > 0:
-    print(f"❌ Failed: {fail_count}/5 assets (all sources exhausted)")
+    print(f"[ERROR] Failed: {fail_count}/5 assets (all sources exhausted)")
   print("=" * 60)
 
   return success_count

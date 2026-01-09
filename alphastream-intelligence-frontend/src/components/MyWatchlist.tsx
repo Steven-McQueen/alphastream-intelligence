@@ -25,10 +25,10 @@ export function MyWatchlist() {
 
       try {
         setLoading(true);
-        const response = await fetch("http://localhost:8000/api/universe/core");
-        const allStocks = await response.json();
-        const watchlistStocks = allStocks.filter((stock: Stock) => watchlist.includes(stock.ticker));
-        const stocksWithTags = watchlistStocks.map((stock: Stock) => ({
+        const params = new URLSearchParams({ tickers: watchlist.join(",") });
+        const response = await fetch(`http://localhost:8000/api/watchlist/prices?${params.toString()}`);
+        const data = await response.json();
+        const stocksWithTags = (data || []).map((stock: Stock) => ({
           ...stock,
           tags: [],
         }));
