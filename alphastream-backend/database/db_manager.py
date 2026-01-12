@@ -611,7 +611,7 @@ class DatabaseManager:
       self,
       symbol: str,
       timeframe: str,
-      limit: int = 300,
+      limit: int = 1500,
       start_time: str = None,
       end_time: str = None,
   ) -> List[dict]:

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 
 from clients.finnhub_client import FinnhubRateLimitError, finnhub
@@ -828,7 +828,7 @@ def company_news(ticker: str):
 
 
 @app.get("/api/stock/{ticker}/chart")
-def get_stock_chart(ticker: str, timeframe: str = "1day", limit: int = 500):
+def get_stock_chart(ticker: str, timeframe: str = "1day", limit: int = 2000):
     """
     Get cached chart data for a ticker and timeframe.
     Timeframes supported:
@@ -913,6 +913,117 @@ def get_stock_profile(ticker: str):
         raise
     except Exception as exc:
         print(f"[ERROR] Error in get_stock_profile for {ticker}: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ============================================================================
+# FINANCIAL STATEMENTS
+# ============================================================================
+
+@app.get("/api/stock/{ticker}/financials/income")
+def get_income_statement(ticker: str, period: str = "annual", limit: int = 5):
+    """
+    Get income statement data for a stock.
+    period: 'annual' or 'quarter'
+    """
+    try:
+        symbol = ticker.upper()
+        data = fmp_client.get_income_statement(symbol, period=period, limit=limit)
+        if not data:
+            raise HTTPException(status_code=404, detail=f"Income statement not found for {ticker}")
+        return data
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"[ERROR] Error fetching income statement for {ticker}: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/api/stock/{ticker}/financials/balance")
+def get_balance_sheet(ticker: str, period: str = "annual", limit: int = 5):
+    """
+    Get balance sheet data for a stock.
+    period: 'annual' or 'quarter'
+    """
+    try:
+        symbol = ticker.upper()
+        data = fmp_client.get_balance_sheet(symbol, period=period, limit=limit)
+        if not data:
+            raise HTTPException(status_code=404, detail=f"Balance sheet not found for {ticker}")
+        return data
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"[ERROR] Error fetching balance sheet for {ticker}: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/api/stock/{ticker}/financials/cashflow")
+def get_cash_flow(ticker: str, period: str = "annual", limit: int = 5):
+    """
+    Get cash flow statement data for a stock.
+    period: 'annual' or 'quarter'
+    """
+    try:
+        symbol = ticker.upper()
+        data = fmp_client.get_cash_flow_statement(symbol, period=period, limit=limit)
+        if not data:
+            raise HTTPException(status_code=404, detail=f"Cash flow statement not found for {ticker}")
+        return data
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"[ERROR] Error fetching cash flow for {ticker}: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/api/stock/{ticker}/financials/metrics")
+def get_key_metrics(ticker: str, period: str = "annual", limit: int = 5):
+    """
+    Get key financial metrics for a stock.
+    period: 'annual' or 'quarter'
+    """
+    try:
+        symbol = ticker.upper()
+        data = fmp_client.get_key_metrics(symbol, period=period, limit=limit)
+        if not data:
+            raise HTTPException(status_code=404, detail=f"Key metrics not found for {ticker}")
+        return data
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"[ERROR] Error fetching key metrics for {ticker}: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/api/stock/{ticker}/financials/all")
+def get_all_financials(ticker: str, period: str = "annual", limit: int = 5):
+    """
+    Get all financial statements (income, balance, cashflow, metrics) in one call.
+    """
+    try:
+        symbol = ticker.upper()
+        
+        # Fetch income, balance, cashflow (these work for all plans)
+        income = fmp_client.get_income_statement(symbol, period=period, limit=limit) or []
+        balance = fmp_client.get_balance_sheet(symbol, period=period, limit=limit) or []
+        cashflow = fmp_client.get_cash_flow_statement(symbol, period=period, limit=limit) or []
+        
+        # Try to fetch metrics (may fail for quarterly on starter plan)
+        metrics = []
+        try:
+            metrics = fmp_client.get_key_metrics(symbol, period=period, limit=limit) or []
+        except Exception as metrics_err:
+            print(f"[WARN] Could not fetch key-metrics for {symbol} ({period}): {metrics_err}")
+        
+        return {
+            "income": income,
+            "balance": balance,
+            "cashflow": cashflow,
+            "metrics": metrics,
+        }
+    except Exception as exc:
+        print(f"[ERROR] Error fetching all financials for {ticker}: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
 
 
@@ -1189,6 +1300,422 @@ async def get_ticker_all():
     except Exception as e:
         print(f"[ERROR] Error in get_ticker_all: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# DCF VALUATION
+# ============================================================================
+
+@app.get("/api/stock/{ticker}/dcf/data")
+def get_dcf_data(ticker: str):
+    """
+    Get all data needed for DCF calculation:
+    - Current price, shares outstanding, market cap
+    - Historical financials (EBIT, D&A, CapEx, NWC changes)
+    - Balance sheet items (cash, debt)
+    """
+    try:
+        symbol = ticker.upper()
+        
+        # Get company profile for current price, shares, market cap
+        profile_data = fmp_client.get_company_profile(symbol)
+        profile = profile_data[0] if profile_data else {}
+        
+        # Get income statement for EBIT
+        income = fmp_client.get_income_statement(symbol, period="annual", limit=5) or []
+        
+        # Get cash flow for D&A, CapEx
+        cashflow = fmp_client.get_cash_flow_statement(symbol, period="annual", limit=5) or []
+        
+        # Get balance sheet for cash, debt, working capital
+        balance = fmp_client.get_balance_sheet(symbol, period="annual", limit=5) or []
+        
+        # Get key metrics for additional data
+        metrics = []
+        try:
+            metrics = fmp_client.get_key_metrics(symbol, period="annual", limit=5) or []
+        except Exception:
+            pass
+        
+        # Build historical data array (most recent first)
+        historical = []
+        for i, inc in enumerate(income):
+            period = inc.get("calendarYear") or inc.get("date", "")[:4]
+            
+            # Find matching cashflow and balance sheet
+            cf = cashflow[i] if i < len(cashflow) else {}
+            bs = balance[i] if i < len(balance) else {}
+            
+            # Calculate NWC = Current Assets - Current Liabilities
+            current_assets = bs.get("totalCurrentAssets") or 0
+            current_liabilities = bs.get("totalCurrentLiabilities") or 0
+            nwc = current_assets - current_liabilities
+            
+            historical.append({
+                "period": period,
+                "date": inc.get("date"),
+                "revenue": inc.get("revenue"),
+                "ebit": inc.get("operatingIncome") or inc.get("ebitda"),
+                "ebitda": inc.get("ebitda"),
+                "netIncome": inc.get("netIncome"),
+                "depreciationAndAmortization": cf.get("depreciationAndAmortization") or 0,
+                "capitalExpenditure": abs(cf.get("capitalExpenditure") or 0),
+                "freeCashFlow": cf.get("freeCashFlow"),
+                "operatingCashFlow": cf.get("operatingCashFlow"),
+                "totalCash": bs.get("cashAndCashEquivalents") or bs.get("cashAndShortTermInvestments") or 0,
+                "totalDebt": bs.get("totalDebt") or (bs.get("longTermDebt", 0) + bs.get("shortTermDebt", 0)),
+                "netWorkingCapital": nwc,
+                "currentAssets": current_assets,
+                "currentLiabilities": current_liabilities,
+                "sharesOutstanding": inc.get("weightedAverageShsOut") or profile.get("sharesOutstanding"),
+            })
+        
+        # Calculate average growth rates from historical
+        revenue_growth = None
+        if len(income) >= 2:
+            rev_now = income[0].get("revenue") or 0
+            rev_prev = income[-1].get("revenue") or 0
+            if rev_prev and rev_now:
+                years = len(income) - 1
+                revenue_growth = ((rev_now / rev_prev) ** (1 / years) - 1) * 100
+        
+        # Calculate average EBIT margin
+        ebit_margin = None
+        if income and income[0].get("revenue") and income[0].get("operatingIncome"):
+            ebit_margin = (income[0].get("operatingIncome") / income[0].get("revenue")) * 100
+        
+        return {
+            "symbol": symbol,
+            "companyName": profile.get("companyName", symbol),
+            "currentPrice": profile.get("price"),
+            "marketCap": profile.get("marketCap"),
+            "sharesOutstanding": profile.get("sharesOutstanding"),
+            "beta": profile.get("beta"),
+            "historical": historical,
+            "defaults": {
+                "revenueGrowthRate": round(revenue_growth, 2) if revenue_growth else 5.0,
+                "ebitMargin": round(ebit_margin, 2) if ebit_margin else 15.0,
+                "taxRate": 25.0,
+                "discountRate": 10.0,
+                "perpetualGrowthRate": 2.5,
+                "exitMultiple": 10.0,
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"[ERROR] Error fetching DCF data for {ticker}: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post("/api/stock/{ticker}/dcf/calculate")
+def calculate_dcf(ticker: str, inputs: dict = Body(...)):
+    """
+    Calculate DCF valuation with user-provided assumptions.
+    
+    Required inputs:
+    - projectionYears: number of years to project (default 5)
+    - revenueGrowthRate: annual revenue growth % (e.g., 10)
+    - ebitMargin: EBIT as % of revenue (e.g., 20)
+    - taxRate: corporate tax rate % (e.g., 25)
+    - depreciationRate: D&A as % of revenue (e.g., 3)
+    - capexRate: CapEx as % of revenue (e.g., 5)
+    - nwcRate: NWC change as % of revenue change (e.g., 10)
+    - discountRate: WACC % (e.g., 10)
+    - terminalMethod: 'perpetual' or 'multiple'
+    - perpetualGrowthRate: for perpetual method (e.g., 2.5)
+    - exitMultiple: for multiple method (e.g., 10x EBITDA)
+    - sharesOutstanding: number of shares
+    - cash: cash and equivalents
+    - debt: total debt
+    - baseRevenue: starting revenue for projections
+    """
+    try:
+        symbol = ticker.upper()
+        
+        # Extract inputs with defaults
+        projection_years = inputs.get("projectionYears", 5)
+        revenue_growth = inputs.get("revenueGrowthRate", 10) / 100
+        ebit_margin = inputs.get("ebitMargin", 20) / 100
+        tax_rate = inputs.get("taxRate", 25) / 100
+        depreciation_rate = inputs.get("depreciationRate", 3) / 100
+        capex_rate = inputs.get("capexRate", 5) / 100
+        nwc_rate = inputs.get("nwcRate", 10) / 100
+        discount_rate = inputs.get("discountRate", 10) / 100
+        terminal_method = inputs.get("terminalMethod", "perpetual")
+        perpetual_growth = inputs.get("perpetualGrowthRate", 2.5) / 100
+        exit_multiple = inputs.get("exitMultiple", 10)
+        shares_outstanding = inputs.get("sharesOutstanding", 1)
+        cash = inputs.get("cash", 0)
+        debt = inputs.get("debt", 0)
+        base_revenue = inputs.get("baseRevenue", 0)
+        
+        if not base_revenue or not shares_outstanding:
+            raise HTTPException(status_code=400, detail="baseRevenue and sharesOutstanding are required")
+        
+        # Project cash flows
+        projections = []
+        prev_revenue = base_revenue
+        
+        for year in range(1, projection_years + 1):
+            revenue = prev_revenue * (1 + revenue_growth)
+            ebit = revenue * ebit_margin
+            taxes = ebit * tax_rate
+            nopat = ebit - taxes  # Net Operating Profit After Tax
+            depreciation = revenue * depreciation_rate
+            capex = revenue * capex_rate
+            delta_nwc = (revenue - prev_revenue) * nwc_rate
+            
+            # Unlevered Free Cash Flow = NOPAT + D&A - CapEx - Delta NWC
+            ufcf = nopat + depreciation - capex - delta_nwc
+            
+            # Discount factor
+            discount_factor = (1 + discount_rate) ** year
+            pv_ufcf = ufcf / discount_factor
+            
+            projections.append({
+                "year": year,
+                "revenue": round(revenue, 0),
+                "ebit": round(ebit, 0),
+                "taxes": round(taxes, 0),
+                "nopat": round(nopat, 0),
+                "depreciation": round(depreciation, 0),
+                "capex": round(capex, 0),
+                "deltaNWC": round(delta_nwc, 0),
+                "ufcf": round(ufcf, 0),
+                "discountFactor": round(discount_factor, 4),
+                "pvUFCF": round(pv_ufcf, 0),
+            })
+            
+            prev_revenue = revenue
+        
+        # Calculate terminal value
+        final_year = projections[-1]
+        if terminal_method == "perpetual":
+            # Gordon Growth: TV = FCF * (1 + g) / (r - g)
+            terminal_fcf = final_year["ufcf"] * (1 + perpetual_growth)
+            terminal_value = terminal_fcf / (discount_rate - perpetual_growth)
+        else:
+            # Exit Multiple: TV = EBITDA * Multiple
+            final_ebitda = final_year["ebit"] + final_year["depreciation"]
+            terminal_value = final_ebitda * exit_multiple
+        
+        # Present value of terminal value
+        pv_terminal = terminal_value / ((1 + discount_rate) ** projection_years)
+        
+        # Sum of PV of projected cash flows
+        sum_pv_fcf = sum(p["pvUFCF"] for p in projections)
+        
+        # Enterprise Value
+        enterprise_value = sum_pv_fcf + pv_terminal
+        
+        # Equity Value = EV + Cash - Debt
+        equity_value = enterprise_value + cash - debt
+        
+        # Per share value
+        intrinsic_value_per_share = equity_value / shares_outstanding if shares_outstanding else 0
+        
+        # Current price for comparison (if provided)
+        current_price = inputs.get("currentPrice", 0)
+        upside = ((intrinsic_value_per_share / current_price) - 1) * 100 if current_price else None
+        
+        return {
+            "symbol": symbol,
+            "projections": projections,
+            "terminalValue": round(terminal_value, 0),
+            "pvTerminalValue": round(pv_terminal, 0),
+            "sumPVCashFlows": round(sum_pv_fcf, 0),
+            "enterpriseValue": round(enterprise_value, 0),
+            "cash": round(cash, 0),
+            "debt": round(debt, 0),
+            "equityValue": round(equity_value, 0),
+            "sharesOutstanding": shares_outstanding,
+            "intrinsicValuePerShare": round(intrinsic_value_per_share, 2),
+            "currentPrice": current_price,
+            "upside": round(upside, 2) if upside is not None else None,
+            "terminalMethod": terminal_method,
+            "assumptions": {
+                "projectionYears": projection_years,
+                "revenueGrowthRate": revenue_growth * 100,
+                "ebitMargin": ebit_margin * 100,
+                "taxRate": tax_rate * 100,
+                "depreciationRate": depreciation_rate * 100,
+                "capexRate": capex_rate * 100,
+                "nwcRate": nwc_rate * 100,
+                "discountRate": discount_rate * 100,
+                "perpetualGrowthRate": perpetual_growth * 100 if terminal_method == "perpetual" else None,
+                "exitMultiple": exit_multiple if terminal_method == "multiple" else None,
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"[ERROR] Error calculating DCF for {ticker}: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ============================================================================
+# ANALYST RATINGS & ESTIMATES
+# ============================================================================
+
+@app.get("/api/stock/{ticker}/analyst/ratings")
+def get_analyst_ratings(ticker: str):
+    """
+    Get comprehensive analyst ratings data for a stock.
+    Combines ratings historical, grades consensus, price targets, and recent grades.
+    """
+    try:
+        symbol = ticker.upper()
+        
+        # Fetch all analyst data in parallel-ish
+        ratings_historical = []
+        grades_consensus = []
+        price_target = []
+        price_target_summary = []
+        recent_grades = []
+        
+        try:
+            ratings_historical = fmp_client.get_ratings_historical(symbol, limit=100) or []
+        except Exception as e:
+            print(f"[WARN] Could not fetch ratings historical for {symbol}: {e}")
+        
+        try:
+            grades_consensus = fmp_client.get_grades_consensus(symbol) or []
+        except Exception as e:
+            print(f"[WARN] Could not fetch grades consensus for {symbol}: {e}")
+        
+        try:
+            price_target = fmp_client.get_price_target_consensus(symbol) or []
+        except Exception as e:
+            print(f"[WARN] Could not fetch price target consensus for {symbol}: {e}")
+        
+        try:
+            price_target_summary = fmp_client.get_price_target_summary(symbol) or []
+        except Exception as e:
+            print(f"[WARN] Could not fetch price target summary for {symbol}: {e}")
+        
+        try:
+            recent_grades = fmp_client.get_analyst_grades(symbol, limit=20) or []
+        except Exception as e:
+            print(f"[WARN] Could not fetch analyst grades for {symbol}: {e}")
+        
+        # Calculate consensus rating
+        consensus_rating = "Hold"
+        consensus_score = 0
+        
+        if grades_consensus and len(grades_consensus) > 0:
+            gc = grades_consensus[0]
+            buy_count = (gc.get("buy", 0) or 0) + (gc.get("strongBuy", 0) or 0)
+            sell_count = (gc.get("sell", 0) or 0) + (gc.get("strongSell", 0) or 0)
+            hold_count = gc.get("hold", 0) or 0
+            total = buy_count + sell_count + hold_count
+            
+            if total > 0:
+                # Score: Strong Buy = 5, Buy = 4, Hold = 3, Sell = 2, Strong Sell = 1
+                weighted = (
+                    (gc.get("strongBuy", 0) or 0) * 5 +
+                    (gc.get("buy", 0) or 0) * 4 +
+                    (gc.get("hold", 0) or 0) * 3 +
+                    (gc.get("sell", 0) or 0) * 2 +
+                    (gc.get("strongSell", 0) or 0) * 1
+                )
+                consensus_score = round(weighted / total, 2)
+                
+                if consensus_score >= 4.5:
+                    consensus_rating = "Strong Buy"
+                elif consensus_score >= 3.5:
+                    consensus_rating = "Buy"
+                elif consensus_score >= 2.5:
+                    consensus_rating = "Hold"
+                elif consensus_score >= 1.5:
+                    consensus_rating = "Sell"
+                else:
+                    consensus_rating = "Strong Sell"
+        
+        return {
+            "symbol": symbol,
+            "consensusRating": consensus_rating,
+            "consensusScore": consensus_score,
+            "ratingsHistorical": ratings_historical[:30],  # Last 30 ratings for chart
+            "gradesConsensus": grades_consensus[0] if grades_consensus else {},
+            "priceTarget": price_target[0] if price_target else {},
+            "priceTargetSummary": price_target_summary[0] if price_target_summary else {},
+            "recentGrades": recent_grades[:15],  # Last 15 upgrades/downgrades
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"[ERROR] Error fetching analyst ratings for {ticker}: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/api/stock/{ticker}/analyst/estimates")
+def get_analyst_estimates(ticker: str, period: str = "annual", limit: int = 5):
+    """
+    Get analyst estimates for EPS, revenue, etc.
+    """
+    try:
+        symbol = ticker.upper()
+        data = fmp_client.get_analyst_estimates(symbol, period=period, limit=limit)
+        if not data:
+            return []
+        return data
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"[ERROR] Error fetching analyst estimates for {ticker}: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/api/stock/{ticker}/analyst/price-targets")
+def get_analyst_price_targets(ticker: str):
+    """
+    Get analyst price target information.
+    """
+    try:
+        symbol = ticker.upper()
+        
+        consensus = []
+        summary = []
+        
+        try:
+            consensus = fmp_client.get_price_target_consensus(symbol) or []
+        except Exception as e:
+            print(f"[WARN] Could not fetch price target consensus for {symbol}: {e}")
+        
+        try:
+            summary = fmp_client.get_price_target_summary(symbol) or []
+        except Exception as e:
+            print(f"[WARN] Could not fetch price target summary for {symbol}: {e}")
+        
+        return {
+            "symbol": symbol,
+            "consensus": consensus[0] if consensus else {},
+            "summary": summary[0] if summary else {},
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"[ERROR] Error fetching price targets for {ticker}: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/api/stock/{ticker}/analyst/grades")
+def get_analyst_grades(ticker: str, limit: int = 30):
+    """
+    Get individual analyst grades (upgrades/downgrades history).
+    """
+    try:
+        symbol = ticker.upper()
+        data = fmp_client.get_analyst_grades(symbol, limit=limit)
+        if not data:
+            return []
+        return data
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"[ERROR] Error fetching analyst grades for {ticker}: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 if __name__ == "__main__":

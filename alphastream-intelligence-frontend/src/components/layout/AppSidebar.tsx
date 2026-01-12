@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useWatchlist } from '@/contexts/WatchlistContext';
 import { useMarket } from '@/context/MarketContext';
+import { useStockDetail } from '@/contexts/StockDetailContext';
 import type { Stock } from '@/types';
 
 const API_BASE_URL = 'http://localhost:8000';
@@ -37,6 +38,7 @@ export function AppSidebar() {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [loadingMini, setLoadingMini] = useState(false);
   const { isMarketOpen } = useMarket();
+  const { openStockDetail } = useStockDetail();
   const idxRef = useRef(0);
 
   const toggleTheme = () => {
@@ -162,10 +164,10 @@ export function AppSidebar() {
             <div className="text-xs text-zinc-500 px-2 py-2">No watchlist stocks yet</div>
           )}
           {miniWatchlist.map((item) => (
-            <Link
+            <button
               key={item.ticker}
-              to="/watchlist"
-              className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-zinc-900/60 transition-colors"
+              onClick={() => openStockDetail(item)}
+              className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-zinc-900/60 transition-colors text-left"
             >
               <div className="flex flex-col w-16">
                 <span className="text-xs font-semibold text-zinc-100">{item.ticker}</span>
@@ -182,7 +184,7 @@ export function AppSidebar() {
                 {(item.change1D ?? 0) >= 0 ? '+' : ''}
                 {(item.change1D ?? 0).toFixed(2)}%
               </div>
-            </Link>
+            </button>
           ))}
         </div>
       </div>

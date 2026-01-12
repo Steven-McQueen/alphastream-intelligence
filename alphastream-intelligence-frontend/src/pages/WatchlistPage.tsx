@@ -1,15 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw, Settings, Star, Newspaper, X } from "lucide-react";
+import { RefreshCw, Settings, Star, X, Search, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWatchlist } from "@/contexts/WatchlistContext";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStockDetail } from "@/contexts/StockDetailContext";
+import { WatchlistChart } from "@/components/charts/WatchlistChart";
+import { WatchlistNews } from "@/components/screener/WatchlistNews";
 import type { Stock } from "@/types";
 
 const API_BASE_URL = "http://localhost:8000";
-const MOCK_SUMMARY = `Watchlist is loading live data from the AlphaStream backend (SQLite cache).`;
-const EMPTY_NEWS: { id: string; headline: string; summary: string; source: string; timestamp: string; url?: string }[] = [];
+// Format large numbers (Market Cap, etc.)
+function formatLargeNumber(value: number): string {
+  if (value === null || value === undefined || isNaN(value)) return "-";
+  const absValue = Math.abs(value);
+  if (absValue >= 1e12) return `$${(value / 1e12).toFixed(2)}T`;
+  if (absValue >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
+  if (absValue >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
+  if (absValue >= 1e3) return `$${(value / 1e3).toFixed(2)}K`;
+  return `$${value.toFixed(2)}`;
+}
 
 type SortColumn = "price" | "change1D" | "marketCap" | "peRatio" | "roe";
 type SortDirection = "asc" | "desc";
@@ -21,13 +30,19 @@ export default function WatchlistPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [displayCount, setDisplayCount] = useState(25);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [summaryText, setSummaryText] = useState(MOCK_SUMMARY);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
-  const [chartPeriod, setChartPeriod] = useState("1D");
-  const [compareMode, setCompareMode] = useState("top-movers");
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [stockLogos, setStockLogos] = useState<Record<string, string>>({});
+  const [stockMetrics, setStockMetrics] = useState<Record<string, {
+    beta?: number;
+    roe?: number;
+    grossMargin?: number;
+    netMargin?: number;
+  }>>({});
 
   useEffect(() => {
     const fetchStocks = async () => {
@@ -62,9 +77,8 @@ export default function WatchlistPage() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    setSummaryText("Refreshing data from backend...");
     await new Promise((resolve) => setTimeout(resolve, 400));
-    setSummaryText(MOCK_SUMMARY);
+    setLastUpdated(new Date());
     setIsRefreshing(false);
   };
 
@@ -101,21 +115,55 @@ export default function WatchlistPage() {
     });
   }, [watchlistStocks, sortColumn, sortDirection]);
 
-  const chartData = [
-    { time: "9:30", A: 0, B: 0, C: 0, D: 0 },
-    { time: "10:30", A: 1.2, B: 0.6, C: 0.4, D: -0.5 },
-    { time: "11:30", A: 2.4, B: 1.1, C: 0.9, D: -0.8 },
-    { time: "12:30", A: 3.8, B: 1.9, C: 1.4, D: -1.2 },
-    { time: "13:30", A: 4.5, B: 2.5, C: 1.9, D: -1.5 },
-    { time: "14:30", A: 5.2, B: 3.1, C: 2.4, D: -1.7 },
-    { time: "15:30", A: 6.0, B: 3.8, C: 2.9, D: -2.0 },
-  ];
-  const chartLines = [
-    { key: "A", label: "Top Gainer 1", color: "#06b6d4" },
-    { key: "B", label: "Top Gainer 2", color: "#f59e0b" },
-    { key: "C", label: "Top Gainer 3", color: "#10b981" },
-    { key: "D", label: "Top Loser 1", color: "#ef4444" },
-  ];
+  // Fetch logos and metrics for watchlist stocks
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      const newLogos: Record<string, string> = {};
+      const newMetrics: Record<string, { beta?: number; roe?: number; grossMargin?: number; netMargin?: number }> = {};
+      
+      for (const ticker of watchlist) {
+        if (stockLogos[ticker] && stockMetrics[ticker]) continue;
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/stock/${ticker}/profile`);
+          if (res.ok) {
+            const profile = await res.json();
+            if (profile.image && !stockLogos[ticker]) {
+              newLogos[ticker] = profile.image;
+            }
+            // Extract metrics from profile (FMP profile includes these)
+            if (!stockMetrics[ticker]) {
+              newMetrics[ticker] = {
+                beta: profile.beta,
+                // Note: FMP profile doesn't include margins/ROE directly
+                // These would need key-metrics endpoint, but beta is in profile
+              };
+            }
+          }
+        } catch {
+          // Ignore errors
+        }
+      }
+      if (Object.keys(newLogos).length > 0) {
+        setStockLogos(prev => ({ ...prev, ...newLogos }));
+      }
+      if (Object.keys(newMetrics).length > 0) {
+        setStockMetrics(prev => ({ ...prev, ...newMetrics }));
+      }
+    };
+    fetchProfileData();
+  }, [watchlist, stockLogos, stockMetrics]);
+
+  // Filter stocks for search
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase();
+    return stocks
+      .filter(s => 
+        !watchlist.includes(s.ticker) && 
+        (s.ticker.toLowerCase().includes(query) || s.name.toLowerCase().includes(query))
+      )
+      .slice(0, 10);
+  }, [stocks, searchQuery, watchlist]);
 
   if (loading) {
     return (
@@ -133,25 +181,34 @@ export default function WatchlistPage() {
 
   return (
     <div className="flex flex-col gap-4 pb-16">
-      {/* Summary */}
+      {/* Summary Header */}
       <section className="px-6 pt-6 pb-4">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 relative">
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="absolute top-4 right-4 flex items-center gap-2 text-xs text-zinc-400 hover:text-white transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
-            Updated now
-          </button>
-          <p className="text-sm text-zinc-300 leading-relaxed pr-24">{summaryText}</p>
+        <div className="bg-gradient-to-r from-zinc-900 via-zinc-900 to-emerald-900/20 border border-zinc-800 rounded-xl p-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl" />
+          <div className="relative">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-white mb-1">My Watchlist</h1>
+                <p className="text-sm text-zinc-400">
+                  Track {watchlistStocks.length} stocks • Last updated {lastUpdated.toLocaleTimeString()}
+                </p>
+              </div>
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-sm text-zinc-300 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
+                {isRefreshing ? "Refreshing..." : "Refresh"}
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Table */}
       <section className="px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-white">My Watchlist</h2>
+        <div className="flex items-center justify-end mb-4">
           <button
             onClick={() => setIsManageModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-sm text-zinc-300 transition-colors"
@@ -206,7 +263,7 @@ export default function WatchlistPage() {
                     {(stock.change1D ?? 0) >= 0 ? "+" : ""}{(stock.change1D ?? 0).toFixed(2)}%
                   </td>
                   <td className="px-4 py-3 text-sm text-right text-zinc-300">
-                    ${((stock.marketCap ?? 0) / 1000).toFixed(1)}B
+                    {formatLargeNumber(stock.marketCap ?? 0)}
                   </td>
                   <td className="px-4 py-3 text-sm text-right text-zinc-300">
                     {stock.peRatio ? stock.peRatio.toFixed(2) : "N/A"}
@@ -221,7 +278,9 @@ export default function WatchlistPage() {
                     {stock.netProfitMargin ? `${stock.netProfitMargin.toFixed(1)}%` : "N/A"}
                   </td>
                   <td className="px-4 py-3 text-sm text-right text-zinc-300">
-                    {stock.beta ? stock.beta.toFixed(2) : "N/A"}
+                    {(stock.beta || stockMetrics[stock.ticker]?.beta) 
+                      ? (stock.beta || stockMetrics[stock.ticker]?.beta)?.toFixed(2) 
+                      : "N/A"}
                   </td>
                   <td className="px-4 py-3 text-sm text-right text-zinc-300">
                     {((stock.volume ?? 0) / 1_000_000).toFixed(2)}M
@@ -243,105 +302,21 @@ export default function WatchlistPage() {
         </div>
       </section>
 
-      {/* Movers placeholder chart */}
+      {/* Performance Comparison Chart */}
       <section className="px-6 py-4">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-white">Watchlist Movers</h3>
-            <div className="flex items-center gap-2">
-              {['1D', '1M', '6M', 'YTD', '1Y', '5Y', 'MAX'].map((period) => (
-                <button
-                  key={period}
-                  onClick={() => setChartPeriod(period)}
-                  className={cn(
-                    "px-3 py-1.5 text-xs font-medium rounded-lg transition-colors",
-                    chartPeriod === period
-                      ? "bg-emerald-500 text-white"
-                      : "bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700"
-                  )}
-                >
-                  {period}
-                </button>
-              ))}
-              <Select value={compareMode} onValueChange={setCompareMode}>
-                <SelectTrigger className="w-32 bg-zinc-800 border-zinc-700 text-zinc-300 text-xs">
-                  <SelectValue placeholder="Compare" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-800 border-zinc-700">
-                  <SelectItem value="top-movers">Top Movers</SelectItem>
-                  <SelectItem value="custom">Custom...</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="h-80 relative bg-[#0f0f11] border border-zinc-800 rounded-lg p-4">
-            <svg viewBox="0 0 100 80" className="w-full h-full">
-              <g stroke="#27272a" strokeDasharray="3 3">
-                <line x1="0" x2="100" y1="20" y2="20" />
-                <line x1="0" x2="100" y1="40" y2="40" />
-                <line x1="0" x2="100" y1="60" y2="60" />
-              </g>
-              {chartLines.map((line, idx) => (
-                <polyline
-                  key={line.key}
-                  fill="none"
-                  stroke={line.color}
-                  strokeWidth="1.5"
-                  points={chartData.map((row, i) => `${(i / (chartData.length - 1)) * 100},${60 - (row[line.key as keyof typeof row] as number) * 3}`).join(' ')}
-                />
-              ))}
-            </svg>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-4">
-            {chartLines.map((line) => (
-              <div key={line.key} className="flex items-center gap-2">
-                <div className="w-3 h-0.5" style={{ backgroundColor: line.color }} />
-                <span className="text-xs text-zinc-300">{line.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <WatchlistChart tickers={watchlist} maxStocks={8} />
       </section>
 
       {/* News */}
       <section className="px-6 py-4 pb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Newspaper className="w-5 h-5" />
-            Watchlist News
-          </h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(EMPTY_NEWS.length ? EMPTY_NEWS : []).map((article) => (
-            <a
-              key={article.id}
-              href={article.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:bg-zinc-800/50 transition-colors group"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-4 h-4 rounded bg-zinc-700" />
-                <span className="text-xs text-zinc-500">{article.source}</span>
-                <span className="text-xs text-zinc-600">·</span>
-                <span className="text-xs text-zinc-500">{article.timestamp}</span>
-              </div>
-              <h4 className="text-sm font-medium text-white leading-snug mb-2 group-hover:text-emerald-500 transition-colors">
-                {article.headline}
-              </h4>
-              <p className="text-xs text-zinc-400 leading-relaxed line-clamp-2">
-                {article.summary}
-              </p>
-            </a>
-            ))}
-          {EMPTY_NEWS.length === 0 && (
-            <div className="text-sm text-zinc-500">News not available yet.</div>
-          )}
-        </div>
+        <WatchlistNews tickers={watchlist} maxArticles={12} />
       </section>
 
       {/* Manage modal */}
-      <Dialog open={isManageModalOpen} onOpenChange={setIsManageModalOpen}>
+      <Dialog open={isManageModalOpen} onOpenChange={(open) => {
+        setIsManageModalOpen(open);
+        if (!open) setSearchQuery("");
+      }}>
         <DialogContent className="bg-zinc-900 border border-zinc-800 max-w-md">
           <DialogHeader>
             <DialogTitle className="text-white text-lg font-semibold">Manage Watchlist</DialogTitle>
@@ -349,15 +324,75 @@ export default function WatchlistPage() {
               Add or remove tickers from your watchlist.
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-96 overflow-y-auto space-y-2">
+          
+          {/* Search Input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search stocks to add..."
+              className="w-full pl-10 pr-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500"
+            />
+          </div>
+          
+          {/* Search Results */}
+          {searchResults.length > 0 && (
+            <div className="border border-zinc-700 rounded-lg bg-zinc-800/50 max-h-40 overflow-y-auto">
+              {searchResults.map((stock) => (
+                <button
+                  key={stock.ticker}
+                  onClick={() => {
+                    toggleWatchlist(stock.ticker);
+                    setSearchQuery("");
+                  }}
+                  className="w-full flex items-center justify-between p-3 hover:bg-zinc-700/50 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded bg-zinc-700 flex items-center justify-center overflow-hidden">
+                      {stockLogos[stock.ticker] ? (
+                        <img 
+                          src={stockLogos[stock.ticker]} 
+                          alt={stock.ticker}
+                          className="w-6 h-6 object-contain"
+                        />
+                      ) : (
+                        <span className="text-xs text-zinc-400">{stock.ticker.slice(0, 2)}</span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="font-medium text-white text-sm">{stock.ticker}</div>
+                      <div className="text-xs text-zinc-500 truncate max-w-[200px]">{stock.name}</div>
+                    </div>
+                  </div>
+                  <Plus className="w-4 h-4 text-emerald-500" />
+                </button>
+              ))}
+            </div>
+          )}
+          
+          {/* Current Watchlist */}
+          <div className="max-h-64 overflow-y-auto space-y-2">
+            <div className="text-xs text-zinc-500 uppercase tracking-wider mb-2">
+              Current Watchlist ({watchlist.length})
+            </div>
             {watchlist.map((ticker) => {
               const stock = watchlistStocks.find((s) => s.ticker === ticker);
               return (
                 <div key={ticker} className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg hover:bg-zinc-800 group">
                   <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 text-zinc-600 group-hover:text-zinc-400">⋮⋮</div>
-                    <div className="w-8 h-8 rounded bg-zinc-700 flex items-center justify-center text-xs text-zinc-300">
-                      {ticker.slice(0, 3)}
+                    <div className="w-4 h-4 text-zinc-600 group-hover:text-zinc-400 cursor-grab">⋮⋮</div>
+                    <div className="w-8 h-8 rounded bg-zinc-700 flex items-center justify-center overflow-hidden">
+                      {stockLogos[ticker] ? (
+                        <img 
+                          src={stockLogos[ticker]} 
+                          alt={ticker}
+                          className="w-6 h-6 object-contain"
+                        />
+                      ) : (
+                        <span className="text-xs text-zinc-400">{ticker.slice(0, 2)}</span>
+                      )}
                     </div>
                     <div>
                       <div className="font-semibold text-white text-sm">{ticker}</div>
@@ -366,18 +401,27 @@ export default function WatchlistPage() {
                   </div>
                   <button
                     onClick={() => toggleWatchlist(ticker)}
-                    className="text-zinc-500 hover:text-red-500"
+                    className="text-zinc-500 hover:text-red-500 transition-colors"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               );
             })}
+            {watchlist.length === 0 && (
+              <div className="text-center py-8 text-zinc-500 text-sm">
+                Your watchlist is empty. Search for stocks above to add them.
+              </div>
+            )}
           </div>
+          
           <DialogFooter>
             <button
-              onClick={() => setIsManageModalOpen(false)}
-              className="w-full bg-zinc-700 hover:bg-zinc-600 text-white py-2 rounded-lg font-medium"
+              onClick={() => {
+                setIsManageModalOpen(false);
+                setSearchQuery("");
+              }}
+              className="w-full bg-zinc-700 hover:bg-zinc-600 text-white py-2 rounded-lg font-medium transition-colors"
             >
               Done
             </button>

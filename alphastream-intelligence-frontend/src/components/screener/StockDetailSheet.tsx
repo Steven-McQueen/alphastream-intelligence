@@ -3,18 +3,23 @@ import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Stock } from "@/types"
-import { X, Star, ExternalLink } from "lucide-react"
+import { X, Star, ExternalLink, ChevronRight, ChevronLeft } from "lucide-react"
 import { ChatInterface } from "@/components/chat/ChatInterface"
 import { cn } from "@/lib/utils"
 import { useWatchlist } from "@/contexts/WatchlistContext"
 import { useMarket } from "@/context/MarketContext"
 import { StockChart } from "@/components/charts/StockChart"
 import { StockNews } from "@/components/screener/StockNews"
+import { FinancialReports } from "@/components/screener/FinancialReports"
+import { HistoricalData } from "@/components/screener/HistoricalData"
+import { StockNotes } from "@/components/screener/StockNotes"
+import { DCFValuation } from "@/components/screener/DCFValuation"
+import { AnalystRatings } from "@/components/screener/AnalystRatings"
 
 const API_BASE_URL = "http://localhost:8000";
 
 // Navigation tabs
-const NAV_TABS = ["Overview", "Financials", "Historical Data", "Congress", "News"] as const;
+const NAV_TABS = ["Overview", "Financial Reports", "Historical Data", "DCF", "Congress", "News"] as const;
 type NavTab = typeof NAV_TABS[number];
 
 interface StockDetailSheetProps {
@@ -101,6 +106,7 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
   const [profile, setProfile] = useState<CompanyProfile | null>(null)
   const [loadingProfile, setLoadingProfile] = useState<boolean>(false)
   const [activeTab, setActiveTab] = useState<NavTab>("Overview")
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false)
   const { toggleWatchlist, isInWatchlist } = useWatchlist();
   const { isMarketOpen } = useMarket();
 
@@ -272,8 +278,8 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
         <div className="flex h-[calc(100vh-160px)]">
 
           {/* LEFT COLUMN - SCROLLABLE CONTENT */}
-          <div className="flex-1 overflow-y-auto bg-background">
-            <div className="p-8 space-y-6 max-w-[1200px]">
+          <div className="flex-1 overflow-y-auto bg-background scrollbar-slim">
+            <div className="p-8 space-y-6">
 
               {activeTab === "Overview" && (
                 <>
@@ -331,27 +337,37 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
                 </>
               )}
 
-              {activeTab === "Financials" && (
-                <div className="flex items-center justify-center h-64 text-zinc-500">
-                  <div className="text-center">
-                    <p className="text-lg font-medium mb-2">Financials</p>
-                    <p className="text-sm">Coming soon...</p>
+              {activeTab === "Financial Reports" && (
+                <div className="flex gap-6">
+                  {/* Financial Reports Table - Main Content (flexible width) */}
+                  <div className="flex-1 min-w-0">
+                    <FinancialReports ticker={currentStock.ticker} />
+                  </div>
+                  
+                  {/* Analyst Ratings - Fixed Right Side */}
+                  <div className="w-[420px] flex-shrink-0">
+                    <AnalystRatings 
+                      ticker={currentStock.ticker} 
+                      currentPrice={currentStock.price}
+                    />
                   </div>
                 </div>
               )}
 
               {activeTab === "Historical Data" && (
-                <div className="flex items-center justify-center h-64 text-zinc-500">
-                  <div className="text-center">
-                    <p className="text-lg font-medium mb-2">Historical Data</p>
-                    <p className="text-sm">Coming soon...</p>
-                  </div>
-                </div>
+                <HistoricalData ticker={currentStock.ticker} />
+              )}
+
+              {activeTab === "DCF" && (
+                <DCFValuation ticker={currentStock.ticker} />
               )}
 
               {activeTab === "Congress" && (
                 <div className="flex items-center justify-center h-64 text-zinc-500">
                   <div className="text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-800 flex items-center justify-center">
+                      <span className="text-2xl">🏛️</span>
+                    </div>
                     <p className="text-lg font-medium mb-2">Congressional Trading</p>
                     <p className="text-sm">Coming soon...</p>
                   </div>
@@ -365,57 +381,85 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
             </div>
           </div>
 
-          {/* RIGHT COLUMN - COMPANY INFO PANEL */}
-          <div className="w-[380px] border-l border-border bg-zinc-950/50 overflow-y-auto flex-shrink-0">
-            <div className="p-6">
-              {/* Company Info Section */}
-              <div className="space-y-0">
-                <InfoRow 
-                  label="Symbol" 
-                  value={currentStock.ticker} 
-                />
-                <InfoRow 
-                  label="Market Cap" 
-                  value={formatMarketCap(profile?.marketCap || currentStock.marketCap)} 
-                />
-                <InfoRow 
-                  label="IPO Date" 
-                  value={formatIpoDate(profile?.ipoDate)} 
-                />
-                <InfoRow 
-                  label="CEO" 
-                  value={profile?.ceo || "N/A"} 
-                />
-                <InfoRow 
-                  label="Fulltime Employees" 
-                  value={formatEmployees(profile?.fullTimeEmployees)} 
-                />
-                <InfoRow 
-                  label="Sector" 
-                  value={profile?.sector || currentStock.sector || "N/A"} 
-                />
-                <InfoRow 
-                  label="Industry" 
-                  value={profile?.industry || "N/A"} 
-                />
-                <InfoRow 
-                  label="Country" 
-                  value={profile?.country === "US" ? "United States" : (profile?.country || "N/A")} 
-                />
-                <InfoRow 
-                  label="Exchange" 
-                  value={profile?.exchangeFullName || profile?.exchange || "N/A"} 
-                />
-                {profile?.website && (
-                  <InfoRow 
-                    label="Website" 
-                    value={profile.website} 
-                    isLink 
-                  />
+          {/* RIGHT COLUMN - COMPANY INFO PANEL (Only for Overview tab) */}
+          {activeTab === "Overview" && (
+            <>
+              {/* Collapse Toggle Button */}
+              <button
+                onClick={() => setIsPanelCollapsed(!isPanelCollapsed)}
+                className="flex-shrink-0 w-6 bg-zinc-900 border-l border-r border-border hover:bg-zinc-800 transition-colors flex items-center justify-center"
+                title={isPanelCollapsed ? "Expand panel" : "Collapse panel"}
+              >
+                {isPanelCollapsed ? (
+                  <ChevronLeft className="w-4 h-4 text-zinc-500" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-zinc-500" />
                 )}
+              </button>
+
+              {/* Panel Content */}
+              <div 
+                className={cn(
+                  "border-l border-border bg-zinc-950/50 overflow-y-auto flex-shrink-0 transition-all duration-300 scrollbar-slim",
+                  isPanelCollapsed ? "w-0 opacity-0 overflow-hidden" : "w-[380px] opacity-100"
+                )}
+              >
+                <div className="p-6 space-y-6">
+                  {/* Company Info Section */}
+                  <div className="space-y-0">
+                    <InfoRow 
+                      label="Symbol" 
+                      value={currentStock.ticker} 
+                    />
+                    <InfoRow 
+                      label="Market Cap" 
+                      value={formatMarketCap(profile?.marketCap || currentStock.marketCap)} 
+                    />
+                    <InfoRow 
+                      label="IPO Date" 
+                      value={formatIpoDate(profile?.ipoDate)} 
+                    />
+                    <InfoRow 
+                      label="CEO" 
+                      value={profile?.ceo || "N/A"} 
+                    />
+                    <InfoRow 
+                      label="Fulltime Employees" 
+                      value={formatEmployees(profile?.fullTimeEmployees)} 
+                    />
+                    <InfoRow 
+                      label="Sector" 
+                      value={profile?.sector || currentStock.sector || "N/A"} 
+                    />
+                    <InfoRow 
+                      label="Industry" 
+                      value={profile?.industry || "N/A"} 
+                    />
+                    <InfoRow 
+                      label="Country" 
+                      value={profile?.country === "US" ? "United States" : (profile?.country || "N/A")} 
+                    />
+                    <InfoRow 
+                      label="Exchange" 
+                      value={profile?.exchangeFullName || profile?.exchange || "N/A"} 
+                    />
+                    {profile?.website && (
+                      <InfoRow 
+                        label="Website" 
+                        value={profile.website} 
+                        isLink 
+                      />
+                    )}
+                  </div>
+
+                  {/* Notes & Tags Section */}
+                  <div className="pt-4 border-t border-zinc-800">
+                    <StockNotes ticker={currentStock.ticker} />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            </>
+          )}
 
         </div>
       </SheetContent>

@@ -176,6 +176,102 @@ class FMPClient:
         """
         return self._make_request("/stable/profile", params={"symbol": symbol})
 
+    # ========= FINANCIAL STATEMENTS =========
+    def get_income_statement(self, symbol: str, period: str = "annual", limit: int = 5) -> List[Dict]:
+        """
+        Get income statement data.
+        period: 'annual' or 'quarter'
+        https://financialmodelingprep.com/stable/income-statement?symbol=AAPL&period=annual
+        """
+        return self._make_request(
+            "/stable/income-statement",
+            params={"symbol": symbol, "period": period, "limit": limit}
+        )
+
+    def get_balance_sheet(self, symbol: str, period: str = "annual", limit: int = 5) -> List[Dict]:
+        """
+        Get balance sheet data.
+        period: 'annual' or 'quarter'
+        https://financialmodelingprep.com/stable/balance-sheet-statement?symbol=AAPL&period=annual
+        """
+        return self._make_request(
+            "/stable/balance-sheet-statement",
+            params={"symbol": symbol, "period": period, "limit": limit}
+        )
+
+    def get_cash_flow_statement(self, symbol: str, period: str = "annual", limit: int = 5) -> List[Dict]:
+        """
+        Get cash flow statement data.
+        period: 'annual' or 'quarter'
+        https://financialmodelingprep.com/stable/cash-flow-statement?symbol=AAPL&period=annual
+        """
+        return self._make_request(
+            "/stable/cash-flow-statement",
+            params={"symbol": symbol, "period": period, "limit": limit}
+        )
+
+    def get_key_metrics(self, symbol: str, period: str = "annual", limit: int = 5) -> List[Dict]:
+        """
+        Get key financial metrics.
+        https://financialmodelingprep.com/stable/key-metrics?symbol=AAPL&period=annual
+        """
+        return self._make_request(
+            "/stable/key-metrics",
+            params={"symbol": symbol, "period": period, "limit": limit}
+        )
+
+    # ========= ANALYST RATINGS & ESTIMATES =========
+    def get_analyst_estimates(self, symbol: str, period: str = "annual", limit: int = 10) -> List[Dict]:
+        """
+        Get analyst estimates for EPS, revenue, etc.
+        https://financialmodelingprep.com/stable/analyst-estimates?symbol=AAPL
+        """
+        return self._make_request(
+            "/stable/analyst-estimates",
+            params={"symbol": symbol, "period": period, "limit": limit}
+        )
+
+    def get_ratings_historical(self, symbol: str, limit: int = 30) -> List[Dict]:
+        """
+        Get historical stock ratings (Strong Buy/Buy/Hold/Sell/Strong Sell counts).
+        https://financialmodelingprep.com/stable/ratings-historical?symbol=AAPL
+        """
+        return self._make_request(
+            "/stable/ratings-historical",
+            params={"symbol": symbol, "limit": limit}
+        )
+
+    def get_grades_consensus(self, symbol: str) -> List[Dict]:
+        """
+        Get analyst grades consensus (buy, overweight, hold, sell, etc.).
+        https://financialmodelingprep.com/stable/grades-consensus?symbol=AAPL
+        """
+        return self._make_request("/stable/grades-consensus", params={"symbol": symbol})
+
+    def get_price_target_consensus(self, symbol: str) -> List[Dict]:
+        """
+        Get analyst price target consensus (avg, high, low, number of analysts).
+        https://financialmodelingprep.com/stable/price-target-consensus?symbol=AAPL
+        """
+        return self._make_request("/stable/price-target-consensus", params={"symbol": symbol})
+
+    def get_price_target_summary(self, symbol: str) -> List[Dict]:
+        """
+        Get price target summary with last month/quarter statistics.
+        https://financialmodelingprep.com/stable/price-target-summary?symbol=AAPL
+        """
+        return self._make_request("/stable/price-target-summary", params={"symbol": symbol})
+
+    def get_analyst_grades(self, symbol: str, limit: int = 30) -> List[Dict]:
+        """
+        Get individual analyst grades (upgrades/downgrades history).
+        https://financialmodelingprep.com/stable/grades?symbol=AAPL
+        """
+        return self._make_request(
+            "/stable/grades",
+            params={"symbol": symbol, "limit": limit}
+        )
+
     # Compatibility helpers
     def get_index_quotes(self) -> List[Dict]:
         """Legacy helper: returns quotes for major indices via stable /quote."""
