@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useMarket } from '@/context/MarketContext';
-import { Newspaper, TrendingUp, TrendingDown, Minus, Clock, ExternalLink, Loader2, Bell } from 'lucide-react';
+import { Newspaper, Clock, ExternalLink, Loader2, Bell } from 'lucide-react';
 import type { MarketNewsItem } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -16,13 +16,8 @@ const categoryColors: Record<string, string> = {
   general: 'bg-muted text-muted-foreground border-border',
 };
 
-const sentimentConfig = {
-  bullish: { icon: TrendingUp, className: 'text-emerald-400' },
-  bearish: { icon: TrendingDown, className: 'text-rose-400' },
-  neutral: { icon: Minus, className: 'text-muted-foreground' },
-};
-
 function formatTimeAgo(dateString: string): string {
+  if (!dateString) return '';
   const now = new Date();
   const date = new Date(dateString);
   const diffMs = now.getTime() - date.getTime();
@@ -38,19 +33,17 @@ function formatTimeAgo(dateString: string): string {
 }
 
 function NewsItem({ item, isNew }: { item: MarketNewsItem; isNew?: boolean }) {
-  const SentimentIcon = sentimentConfig[item.sentiment].icon;
-  
   return (
-    <div 
+    <a 
+      href={item.url}
+      target="_blank"
+      rel="noopener noreferrer"
       className={cn(
-        "group p-3 rounded-lg border border-border/50 bg-card/50 hover:bg-accent/30 transition-all cursor-pointer",
+        "group block p-3 rounded-lg border border-border/50 bg-card/50 hover:bg-accent/30 transition-all cursor-pointer",
         isNew && "animate-in slide-in-from-top-2 duration-300 ring-1 ring-primary/30 bg-primary/5"
       )}
     >
       <div className="flex items-start gap-3">
-        <div className={`mt-0.5 ${sentimentConfig[item.sentiment].className}`}>
-          <SentimentIcon className="h-4 w-4" />
-        </div>
         <div className="flex-1 min-w-0 space-y-1.5">
           <div className="flex items-start justify-between gap-2">
             <h4 className="text-sm font-medium leading-tight line-clamp-2 group-hover:text-primary transition-colors">
@@ -62,8 +55,8 @@ function NewsItem({ item, isNew }: { item: MarketNewsItem; isNew?: boolean }) {
             {item.summary}
           </p>
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-5 ${categoryColors[item.category]}`}>
-              {item.category.charAt(0).toUpperCase() + item.category.slice(1)}
+            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-5 ${categoryColors[item.category] || categoryColors.general}`}>
+              {item.category ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : 'General'}
             </Badge>
             {item.tickers?.slice(0, 3).map((ticker) => (
               <Badge key={ticker} variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
@@ -77,7 +70,7 @@ function NewsItem({ item, isNew }: { item: MarketNewsItem; isNew?: boolean }) {
           </div>
         </div>
       </div>
-    </div>
+    </a>
   );
 }
 
@@ -99,26 +92,13 @@ export function MarketNewsSummary() {
     }
   }, [newNewsCount, markNewsAsRead]);
   
-  // Count sentiment distribution
-  const sentimentCounts = news.reduce(
-    (acc, item) => {
-      acc[item.sentiment]++;
-      return acc;
-    },
-    { bullish: 0, bearish: 0, neutral: 0 }
-  );
-  
-  const totalNews = news.length;
-  const bullishPercent = Math.round((sentimentCounts.bullish / totalNews) * 100);
-  const bearishPercent = Math.round((sentimentCounts.bearish / totalNews) * 100);
-
   return (
     <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Newspaper className="h-4 w-4 text-primary" />
-            <CardTitle className="text-sm font-medium">Market Summary</CardTitle>
+            <CardTitle className="text-sm font-medium">Market News</CardTitle>
             {newsLoading && (
               <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
             )}
@@ -138,39 +118,24 @@ export function MarketNewsSummary() {
             <span className="text-xs text-muted-foreground ml-2">{today}</span>
           </div>
         </div>
-        {/* Sentiment bar */}
-        <div className="mt-3 space-y-1.5">
-          <div className="flex items-center justify-between text-[10px]">
-            <span className="text-emerald-400">Bullish {bullishPercent}%</span>
-            <span className="text-rose-400">Bearish {bearishPercent}%</span>
-          </div>
-          <div className="h-1.5 rounded-full bg-muted overflow-hidden flex">
-            <div 
-              className="h-full bg-emerald-500 transition-all duration-500" 
-              style={{ width: `${bullishPercent}%` }} 
-            />
-            <div 
-              className="h-full bg-muted-foreground/30 transition-all duration-500" 
-              style={{ width: `${100 - bullishPercent - bearishPercent}%` }} 
-            />
-            <div 
-              className="h-full bg-rose-500 transition-all duration-500" 
-              style={{ width: `${bearishPercent}%` }} 
-            />
-          </div>
-        </div>
       </CardHeader>
       <CardContent className="pt-0">
         <ScrollArea className="h-[320px] pr-3" ref={scrollRef}>
-          <div className="space-y-2">
-            {news.map((item, index) => (
-              <NewsItem 
-                key={item.id} 
-                item={item} 
-                isNew={index === 0 && newNewsCount > 0}
-              />
-            ))}
-          </div>
+          {news.length === 0 && !newsLoading ? (
+            <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+              No news available
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {news.map((item, index) => (
+                <NewsItem 
+                  key={item.id || index} 
+                  item={item} 
+                  isNew={index === 0 && newNewsCount > 0}
+                />
+              ))}
+            </div>
+          )}
         </ScrollArea>
       </CardContent>
     </Card>

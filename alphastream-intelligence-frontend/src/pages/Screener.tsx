@@ -31,7 +31,7 @@ import { useWatchlist } from '@/contexts/WatchlistContext';
 
 const API_BASE_URL = 'http://localhost:8000';
 
-type SortOption = 'ticker' | 'change1D' | 'marketCap' | 'change1Y' | 'price' | 'peRatio' | 'eps' | 'dividendYield' | 'grossMargin' | 'roe' | 'beta';
+type SortOption = 'ticker' | 'change1D' | 'marketCap' | 'change1Y' | 'price' | 'peRatio' | 'eps' | 'priceToSales' | 'dividendYield' | 'grossMargin' | 'roe' | 'beta' | 'debtToEquity';
 
 // Filter operators
 type FilterOperator = 'gt' | 'lt' | 'eq' | 'gte' | 'lte';
@@ -69,10 +69,12 @@ function formatRatio(value: number | null | undefined, decimals = 1): string {
 const RATIO_COLUMNS = [
   { key: 'peRatio', label: 'P/E', format: (v: number) => formatRatio(v) },
   { key: 'eps', label: 'EPS', format: (v: number) => `$${formatRatio(v, 2)}` },
+  { key: 'priceToSales', label: 'P/S', format: (v: number) => formatRatio(v, 2) },
   { key: 'dividendYield', label: 'Div%', format: (v: number) => `${formatRatio(v * 100)}%` },
   { key: 'grossMargin', label: 'Gross%', format: (v: number) => `${formatRatio(v * 100)}%` },
   { key: 'roe', label: 'ROE', format: (v: number) => `${formatRatio(v * 100)}%` },
   { key: 'beta', label: 'Beta', format: (v: number) => formatRatio(v, 2) },
+  { key: 'debtToEquity', label: 'D/E', format: (v: number) => formatRatio(v, 2) },
 ];
 
 // Filter options UI
@@ -97,10 +99,12 @@ function FilterRow({
         <SelectContent className="bg-zinc-900 border-zinc-700">
           <SelectItem value="peRatio">P/E Ratio</SelectItem>
           <SelectItem value="eps">EPS</SelectItem>
+          <SelectItem value="priceToSales">P/S Ratio</SelectItem>
           <SelectItem value="dividendYield">Dividend %</SelectItem>
           <SelectItem value="grossMargin">Gross Margin</SelectItem>
           <SelectItem value="roe">ROE</SelectItem>
           <SelectItem value="beta">Beta</SelectItem>
+          <SelectItem value="debtToEquity">Debt/Equity</SelectItem>
           <SelectItem value="marketCap">Market Cap</SelectItem>
         </SelectContent>
       </Select>
@@ -151,7 +155,7 @@ export default function Screener() {
   const [page, setPage] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
   const [ratioFilters, setRatioFilters] = useState<RatioFilter[]>([]);
-  const pageSize = 100; // 100 rows per page
+  const pageSize = 50; // 50 rows per page
   
   const { openStockDetail } = useStockDetail();
   const { watchlist, toggleWatchlist } = useWatchlist();
@@ -173,6 +177,7 @@ export default function Screener() {
       });
   }, []);
 
+  // Handle URL params for stock detail
   useEffect(() => {
     const stockParam = searchParams.get('stock');
     if (stockParam && stocks.length) {
@@ -183,6 +188,43 @@ export default function Screener() {
       }
     }
   }, [searchParams, stocks, setSearchParams, openStockDetail]);
+
+  // Handle URL params for sector and filters from ThemesExplorer
+  useEffect(() => {
+    const sectorParam = searchParams.get('sector');
+    const filtersParam = searchParams.get('filters');
+    
+    let hasChanges = false;
+    
+    if (sectorParam) {
+      setSelectedSectors([sectorParam as Sector]);
+      hasChanges = true;
+    }
+    
+    if (filtersParam) {
+      try {
+        const parsedFilters = JSON.parse(filtersParam);
+        if (Array.isArray(parsedFilters)) {
+          const newFilters: RatioFilter[] = parsedFilters.map((f: any) => ({
+            field: f.field || 'peRatio',
+            operator: f.operator || 'lt',
+            value: f.value !== undefined ? f.value : null,
+            enabled: true,
+          }));
+          setRatioFilters(newFilters);
+          setShowFilters(true);
+          hasChanges = true;
+        }
+      } catch (err) {
+        console.error('Error parsing filters from URL:', err);
+      }
+    }
+    
+    // Clear URL params after applying
+    if (hasChanges) {
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
 
   const sectors = useMemo(() => {
     const unique = new Set<Sector>();

@@ -144,30 +144,34 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [loadMarketData]);
 
-  // Poll for new news
+  // Poll for real news from FMP API
   useEffect(() => {
-    const pollNews = () => {
+    const pollNews = async () => {
       setNewsLoading(true);
-      
-      // Simulate fetching - 30% chance of new news each poll
-      setTimeout(() => {
-        if (Math.random() < 0.3) {
-          const newItem = generateNewNewsItem();
-          setNews(prev => {
-            const updated = [newItem, ...prev].slice(0, MAX_NEWS_ITEMS);
-            // Count unread news
-            const unreadCount = updated.filter(
-              item => new Date(item.publishedAt) > new Date(lastReadTimestamp.current)
-            ).length;
-            setNewNewsCount(unreadCount);
-            return updated;
-          });
+      try {
+        const response = await fetch(`${API_BASE}/api/news/general?limit=20`);
+        if (response.ok) {
+          const newsData = await response.json();
+          setNews(newsData.slice(0, MAX_NEWS_ITEMS));
+
+          // Count unread news
+          const unreadCount = newsData.filter(
+            (item: MarketNewsItem) => new Date(item.publishedAt) > new Date(lastReadTimestamp.current)
+          ).length;
+          setNewNewsCount(unreadCount);
         }
+      } catch (error) {
+        console.error('Error fetching news:', error);
+      } finally {
         setNewsLoading(false);
-      }, 500);
+      }
     };
 
-    const interval = setInterval(pollNews, NEWS_POLL_INTERVAL);
+    // Initial fetch
+    pollNews();
+
+    // Poll every 5 minutes
+    const interval = setInterval(pollNews, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 

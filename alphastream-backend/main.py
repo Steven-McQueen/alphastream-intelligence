@@ -1,3 +1,4 @@
+# AlphaStream API Backend - Updated 2026-01-13 - v2
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 
@@ -245,13 +246,24 @@ def get_universe_core():
             raise HTTPException(status_code=503, detail="Data not available")
         result = []
         for stock in stocks:
+            # Calculate P/S ratio if we have the data
+            price = stock.get("price") or 0
+            revenue_ttm = stock.get("revenue_ttm") or 0
+            shares_outstanding = stock.get("shares_outstanding") or 0
+            market_cap = stock.get("market_cap") or 0
+            
+            # P/S = Market Cap / Revenue
+            price_to_sales = None
+            if revenue_ttm and revenue_ttm > 0 and market_cap:
+                price_to_sales = market_cap / revenue_ttm
+            
             result.append(
                 {
                     "ticker": stock["ticker"],
                     "name": stock["name"],
                     "sector": stock["sector"],
                     "industry": stock["industry"],
-                    "price": stock["price"],
+                    "price": price,
                     "change1D": stock["change_1d"],
                     "change1W": stock["change_1w"],
                     "change1M": stock["change_1m"],
@@ -260,12 +272,15 @@ def get_universe_core():
                     "peRatio": stock["pe_ratio"],
                     "eps": stock["eps"],
                     "dividendYield": stock["dividend_yield"],
-                    "marketCap": stock["market_cap"],
+                    "marketCap": market_cap,
                     "netProfitMargin": stock["net_profit_margin"],
                     "grossMargin": stock["gross_margin"],
                     "roe": stock["roe"],
-                    "revenue": stock["revenue_ttm"],
+                    "revenue": revenue_ttm,
                     "beta": stock["beta"],
+                    "sharesOutstanding": shares_outstanding,
+                    "debtToEquity": stock.get("debt_to_equity"),
+                    "priceToSales": price_to_sales,
                     "institutionalOwnership": stock["institutional_ownership"],
                     "yearFounded": stock["year_founded"],
                     "website": stock["website"],
@@ -496,6 +511,57 @@ def _next_friday(start_date: datetime.date) -> datetime.date:
     return start_date + timedelta(days=days_ahead)
 
 
+@app.get("/api/earnings/calendar")
+def get_earnings_calendar_range(
+    from_date: str = None,
+    to_date: str = None,
+    limit: int = 500,
+):
+    """
+    Get earnings calendar for a date range.
+    Returns earnings grouped by date for calendar display.
+    """
+    try:
+        today = datetime.now().date()
+        
+        # Default: 30 days from today
+        if not from_date:
+            from_date = today.strftime("%Y-%m-%d")
+        if not to_date:
+            to_date = (today + timedelta(days=30)).strftime("%Y-%m-%d")
+        
+        print(f"[DATA] Fetching earnings calendar from {from_date} to {to_date}")
+        
+        # Fetch from FMP
+        earnings_data = fmp_client.get_earnings_calendar_range(from_date, to_date)
+        
+        if not earnings_data:
+            return []
+        
+        # Get stock name map for enrichment
+        all_stocks = db.get_all_stocks()
+        name_map = {s["ticker"].upper(): s.get("name", s["ticker"]) for s in all_stocks if s.get("ticker")}
+        
+        # Process and enrich earnings data
+        result = []
+        for earning in earnings_data[:limit]:
+            ticker = (earning.get("symbol") or "").upper()
+            result.append({
+                "symbol": ticker,
+                "date": earning.get("date"),
+                "company_name": name_map.get(ticker) or ticker,
+                "eps_estimated": earning.get("epsEstimated"),
+                "eps_actual": earning.get("epsActual"),
+                "revenue_estimated": earning.get("revenueEstimated"),
+                "revenue_actual": earning.get("revenueActual"),
+            })
+        
+        return result
+    except Exception as exc:
+        print(f"Error in get_earnings_calendar_range: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @app.get("/api/earnings")
 def get_earnings(
     mode: str = "upcoming",
@@ -561,14 +627,86 @@ def get_earnings(
         total = len(filtered)
         paged = filtered[offset : offset + limit]
 
-        # Enrich company name
+        # Enrich company name and calculate last surprise
         for r in paged:
             tk = (r.get("ticker") or "").upper()
             r["company_name"] = name_map.get(tk) or name_map.get(_normalize_ticker_dot_hyphen(tk)) or r.get("company_name") or tk
 
+            # Calculate last surprise from FMP API
+            # Get the previous earnings report (the one before the current/next one)
+            try:
+                earnings_history = fmp_client.get_earnings_history(tk, limit=10)
+                if earnings_history:
+                    # Find the most recent past earnings with actual data
+                    today_str = datetime.now().strftime("%Y-%m-%d")
+                    past_earnings = [
+                        e for e in earnings_history
+                        if e.get("date") and e.get("date") < today_str
+                           and e.get("epsActual") is not None
+                           and e.get("epsEstimated") is not None
+                    ]
+                    if past_earnings:
+                        # Sort by date descending and take the most recent
+                        past_earnings.sort(key=lambda x: x.get("date", ""), reverse=True)
+                        last_report = past_earnings[0]
+                        surprise = last_report.get("epsActual") - last_report.get("epsEstimated")
+                        r["last_surprise"] = surprise
+                    else:
+                        r["last_surprise"] = None
+                else:
+                    r["last_surprise"] = None
+            except Exception as e:
+                print(f"Error calculating last surprise for {tk}: {e}")
+                r["last_surprise"] = None
+
         return {"items": paged, "total": total}
     except Exception as exc:
         print(f"Error in get_earnings: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/api/earnings/{symbol}")
+def get_stock_earnings(symbol: str, limit: int = 4):
+    """
+    Get earnings history for a specific stock with calculated surprises.
+    Returns upcoming and past earnings with EPS surprise calculations.
+    """
+    try:
+        ticker = symbol.upper()
+        print(f"[DATA] Fetching earnings for {ticker}")
+
+        # Fetch earnings data from FMP
+        earnings_data = fmp_client.get_earnings_history(ticker, limit=limit)
+
+        if not earnings_data:
+            print(f"[WARN] No earnings data returned for {ticker}")
+            return []
+
+        # Process earnings data and calculate surprises
+        result = []
+        for earning in earnings_data:
+            eps_actual = earning.get("epsActual")
+            eps_estimated = earning.get("epsEstimated")
+
+            # Calculate surprise if both actual and estimated exist
+            surprise = None
+            if eps_actual is not None and eps_estimated is not None:
+                surprise = eps_actual - eps_estimated
+
+            result.append({
+                "symbol": earning.get("symbol"),
+                "date": earning.get("date"),
+                "epsActual": eps_actual,
+                "epsEstimated": eps_estimated,
+                "revenueActual": earning.get("revenueActual"),
+                "revenueEstimated": earning.get("revenueEstimated"),
+                "surprise": surprise,
+                "lastUpdated": earning.get("lastUpdated"),
+            })
+
+        return result
+    except Exception as exc:
+        print(f"Error in get_stock_earnings: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
 
 
@@ -652,7 +790,8 @@ def get_top_movers(limit: int = 10):
 @app.get("/api/watchlist/prices")
 def get_watchlist_prices(tickers: str):
     """
-    Return current price and 1W return for provided tickers (CSV).
+    Return current price, metrics, and 1W return for provided tickers (CSV).
+    Includes: P/E, ROE, Gross Margin, Net Margin, Beta, Volume
     """
     try:
         if not tickers:
@@ -666,6 +805,42 @@ def get_watchlist_prices(tickers: str):
                 quote = db.get_all_stocks(order_by="market_cap DESC")
                 stock = next((s for s in quote if s.get("ticker") == t), None)
             change_1w = compute_return_from_eod(t, window_days=7)
+
+            # Fetch additional metrics from FMP API
+            pe_ratio = None
+            roe = None
+            gross_margin = None
+            net_margin = None
+            beta = None
+            volume = stock.get("volume") if stock else None
+
+            try:
+                # Get key metrics (includes ROE) - use annual as quarterly requires premium
+                metrics = fmp_client.get_key_metrics(t, period="annual", limit=1)
+                if metrics and len(metrics) > 0:
+                    m = metrics[0]
+                    roe = m.get("returnOnEquity")
+
+                # Get financial ratios (includes gross margin, net margin, P/E)
+                ratios = fmp_client.get_ratios(t, period="annual", limit=1)
+                if ratios and len(ratios) > 0:
+                    r = ratios[0]
+                    gross_margin = r.get("grossProfitMargin")
+                    net_margin = r.get("netProfitMargin")
+                    pe_ratio = r.get("priceToEarningsRatio")  # Fixed: correct field name
+
+                # Get company profile for beta
+                profile = fmp_client.get_company_profile(t)
+                if profile and len(profile) > 0:
+                    p = profile[0]
+                    beta = p.get("beta")
+                    # Also get volume from profile if not in stock
+                    if not volume:
+                        volume = p.get("volAvg")
+
+            except Exception as e:
+                print(f"Error fetching metrics for {t}: {e}")
+
             results.append(
                 {
                     "ticker": t,
@@ -674,6 +849,12 @@ def get_watchlist_prices(tickers: str):
                     "change1D": stock.get("change_1d") if stock else None,
                     "change1W": change_1w,
                     "price": stock.get("price") if stock else None,
+                    "peRatio": pe_ratio,
+                    "roe": roe,
+                    "grossMargin": gross_margin,
+                    "netMargin": net_margin,
+                    "beta": beta,
+                    "volume": volume,
                 }
             )
         return results
@@ -700,23 +881,43 @@ def get_standouts(limit: int = 10):
 # Simple in-memory cache for intraday indices
 _intraday_cache: Dict[str, Dict] = {}
 
+# Symbol mapping from frontend names to FMP API symbols
+INDEX_SYMBOL_MAP = {
+    "SPX": "^GSPC",
+    "NDX": "^IXIC",
+    "DJI": "^DJI",
+    "RUT": "^RUT",
+    "VIX": "^VIX",
+    # Also support symbols with ^ prefix directly
+    "^GSPC": "^GSPC",
+    "^IXIC": "^IXIC",
+    "^DJI": "^DJI",
+    "^RUT": "^RUT",
+    "^VIX": "^VIX",
+}
+
 
 @app.get("/api/market/indices/intraday")
 def get_indices_intraday(symbols: str, interval: str = "5min"):
     """
     Return intraday series for indices (5min). Cached for 60s.
     Response shape: {symbol: [{date, value}]}
+    Accepts symbols like SPX, NDX, DJI or ^GSPC, ^IXIC, ^DJI
     """
     try:
         symbol_list = [s.strip() for s in symbols.split(",") if s.strip()]
         now_ts = datetime.now().timestamp()
         result: Dict[str, List[Dict]] = {}
         for sym in symbol_list:
+            # Map to FMP API symbol
+            fmp_symbol = INDEX_SYMBOL_MAP.get(sym.upper(), sym)
+
             cache_entry = _intraday_cache.get(sym)
             if cache_entry and now_ts - cache_entry["ts"] < 60:
                 result[sym] = cache_entry["data"]
                 continue
-            series = fmp_client.get_index_intraday_chart(sym, interval=interval)
+
+            series = fmp_client.get_index_intraday_chart(fmp_symbol, interval=interval)
             mapped = [
                 {"date": item.get("date"), "value": item.get("close")}
                 for item in series
@@ -727,6 +928,49 @@ def get_indices_intraday(symbols: str, interval: str = "5min"):
         return result
     except Exception as exc:
         print(f"Error in get_indices_intraday: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# Cache for stock sparklines
+_sparkline_cache: Dict[str, Dict] = {}
+
+
+@app.get("/api/market/sparklines")
+def get_sparklines(symbols: str, limit: int = 30):
+    """
+    Return simplified sparkline data (array of close prices) for multiple stock symbols.
+    Cached for 60s. Used for minicharts on front page and standouts.
+    Response shape: {symbol: [close1, close2, ...]}
+    """
+    try:
+        symbol_list = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+        now_ts = datetime.now().timestamp()
+        result: Dict[str, List[float]] = {}
+        
+        for sym in symbol_list:
+            cache_entry = _sparkline_cache.get(sym)
+            if cache_entry and now_ts - cache_entry["ts"] < 60:
+                result[sym] = cache_entry["data"]
+                continue
+            
+            # Fetch intraday 5min data
+            series = fmp_client.get_intraday_chart(sym, interval="5min")
+            
+            # Extract just the closing prices (most recent 'limit' bars)
+            closes = [
+                item.get("close")
+                for item in series[:limit]
+                if item.get("close") is not None
+            ]
+            # Reverse to chronological order (oldest first for charting)
+            closes = list(reversed(closes))
+            
+            _sparkline_cache[sym] = {"ts": now_ts, "data": closes}
+            result[sym] = closes
+        
+        return result
+    except Exception as exc:
+        print(f"Error in get_sparklines: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
 
 
@@ -790,6 +1034,126 @@ def news(category: str = "general"):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
+@app.get("/api/congress/trades/recent")
+def get_recent_congress_trades(limit: int = 50):
+    """
+    Get recent congressional trades aggregated from both Senate and House.
+    Uses a predefined list of key congress members to fetch efficiently.
+    """
+    try:
+        print(f"[DATA] Fetching recent congress trades, limit={limit}")
+
+        # List of key senators and representatives (last names)
+        senators = ["tuberville", "pelosi", "cruz", "scott", "warren", "rubio", "burr", "capito"]
+        representatives = ["comer", "pelosi", "johnson", "jeffries", "scalise", "ocasio-cortez"]
+
+        all_trades = []
+
+        # Fetch senate trades
+        for senator in senators:
+            try:
+                trades = fmp_client.get_senate_trades_by_name(senator)
+                if trades:
+                    all_trades.extend(trades[:10])  # Limit per person
+            except Exception as e:
+                print(f"Error fetching trades for senator {senator}: {e}")
+                continue
+
+        # Fetch house trades
+        for rep in representatives:
+            try:
+                trades = fmp_client.get_house_trades_by_name(rep)
+                if trades:
+                    all_trades.extend(trades[:10])  # Limit per person
+            except Exception as e:
+                print(f"Error fetching trades for rep {rep}: {e}")
+                continue
+
+        # Sort by disclosure date descending
+        all_trades.sort(key=lambda x: x.get("disclosureDate", ""), reverse=True)
+
+        # Return limited results
+        return all_trades[:limit]
+    except Exception as exc:
+        print(f"Error in get_recent_congress_trades: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/api/congress/trades/{symbol}")
+def get_congress_trades_for_stock(symbol: str, limit: int = 100):
+    """
+    Get all congressional trades for a specific stock symbol.
+    Combines both Senate and House trades.
+    """
+    try:
+        ticker = symbol.upper()
+        print(f"[DATA] Fetching congress trades for {ticker}")
+
+        all_trades = []
+
+        # Fetch senate trades
+        try:
+            senate_trades = fmp_client.get_senate_trades_by_symbol(ticker)
+            if senate_trades:
+                all_trades.extend(senate_trades)
+        except Exception as e:
+            print(f"Error fetching senate trades for {ticker}: {e}")
+
+        # Fetch house trades
+        try:
+            house_trades = fmp_client.get_house_trades_by_symbol(ticker)
+            if house_trades:
+                all_trades.extend(house_trades)
+        except Exception as e:
+            print(f"Error fetching house trades for {ticker}: {e}")
+
+        # Sort by disclosure date descending
+        all_trades.sort(key=lambda x: x.get("disclosureDate", ""), reverse=True)
+
+        # Return limited results
+        return all_trades[:limit]
+    except Exception as exc:
+        print(f"Error in get_congress_trades_for_stock: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/api/news/general")
+def general_news(limit: int = 20):
+    """
+    Get general latest market news from FMP API.
+    Returns news formatted for MarketNewsSummary component.
+    """
+    try:
+        print(f"[DATA] Fetching general news, limit={limit}")
+
+        # Fetch general news from FMP
+        articles = fmp_client.get_general_latest_news(page=0, limit=limit)
+
+        if not articles:
+            print("[WARN] No general news returned from FMP")
+            return []
+
+        # Format for frontend MarketNewsItem type
+        result = []
+        for article in articles:
+            result.append({
+                "id": article.get("url") or article.get("title", ""),
+                "headline": article.get("title", ""),
+                "summary": article.get("text", "")[:200],  # Truncate to 200 chars
+                "source": article.get("publisher", ""),
+                "publishedAt": article.get("publishedDate", ""),
+                "category": "general",
+                "sentiment": "neutral",
+                "tickers": [],
+                "url": article.get("url", ""),
+            })
+
+        return result
+    except Exception as exc:
+        print(f"Error in general_news: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @app.get("/api/news/{ticker}")
 def company_news(ticker: str):
     """
@@ -802,7 +1166,7 @@ def company_news(ticker: str):
         if not articles:
             refresh_ticker_news([symbol], limit=20)
             articles = db.get_news_for_ticker(symbol, limit=20)
-        
+
         # Return format expected by frontend StockNews component
         return [
             {
@@ -861,6 +1225,156 @@ def get_stock_chart(ticker: str, timeframe: str = "1day", limit: int = 2000):
         raise
     except Exception as exc:
         print(f"Error in get_stock_chart: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/api/index/{symbol}/chart")
+def get_index_chart(symbol: str, timeframe: str = "1day", limit: int = 2000):
+    """
+    Get chart data for an index symbol (e.g., ^GSPC, ^IXIC, ^DJI).
+    Timeframes supported:
+      - intraday: 5min, 15min, 30min, 1hour
+      - eod: 1day (supports historical data for 1M to 5Y)
+    Uses FMP historical-price-eod/full endpoint for daily data.
+    """
+    try:
+        # Normalize symbol - accept both ^GSPC and GSPC formats
+        if not symbol.startswith("^"):
+            symbol = f"^{symbol}"
+
+        tf = timeframe.lower()
+
+        if tf in ["5min", "15min", "30min", "1hour"]:
+            # Use intraday endpoint
+            bars = fmp_client.get_index_intraday_chart(symbol, interval=tf)
+            return [
+                {
+                    "date": bar.get("date"),
+                    "open": bar.get("open"),
+                    "high": bar.get("high"),
+                    "low": bar.get("low"),
+                    "close": bar.get("close"),
+                    "volume": bar.get("volume"),
+                }
+                for bar in bars[:limit]
+            ]
+
+        elif tf in ["1day", "1d", "eod"]:
+            # Use EOD endpoint for daily data
+            # Calculate date range based on limit (approx trading days)
+            from_date = (datetime.now() - timedelta(days=int(limit * 1.5))).strftime("%Y-%m-%d")
+            to_date = datetime.now().strftime("%Y-%m-%d")
+
+            eod_data = fmp_client.get_index_eod_history(symbol, from_date=from_date, to_date=to_date)
+
+            if not eod_data:
+                return []
+
+            return [
+                {
+                    "date": bar.get("date"),
+                    "open": bar.get("open"),
+                    "high": bar.get("high"),
+                    "low": bar.get("low"),
+                    "close": bar.get("close"),
+                    "volume": bar.get("volume"),
+                }
+                for bar in eod_data[:limit]
+            ]
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported timeframe")
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"Error in get_index_chart: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/api/index/{symbol}/quote")
+def get_index_quote(symbol: str):
+    """
+    Get detailed quote for an index symbol (e.g., ^GSPC, ^IXIC, ^DJI).
+    Returns current value, change, day high/low, 52-week range, etc.
+    """
+    try:
+        print(f"[DATA] Fetching quote for index {symbol}")
+        quote_data = fmp_client.get_quote(symbol)
+        
+        if not quote_data:
+            raise HTTPException(status_code=404, detail=f"Quote not found for {symbol}")
+        
+        # Get intraday data to calculate day range if needed
+        intraday = fmp_client.get_index_intraday_chart(symbol, interval="5min")
+        
+        day_high = quote_data.get("dayHigh")
+        day_low = quote_data.get("dayLow")
+        volume = quote_data.get("volume", 0)
+        
+        # If no day range from quote, calculate from intraday
+        if intraday and (day_high is None or day_low is None):
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            today_bars = [b for b in intraday if b.get("date", "").startswith(today_str)]
+            if today_bars:
+                day_high = max(b.get("high", 0) for b in today_bars)
+                day_low = min(b.get("low", float("inf")) for b in today_bars)
+                volume = sum(b.get("volume", 0) for b in today_bars)
+        
+        result = {
+            "symbol": quote_data.get("symbol") or symbol,
+            "name": quote_data.get("name") or symbol,
+            "price": quote_data.get("price"),
+            "change": quote_data.get("change") or 0,
+            "changePercent": quote_data.get("changesPercentage") or 0,
+            "previousClose": quote_data.get("previousClose"),
+            "open": quote_data.get("open"),
+            "dayHigh": day_high,
+            "dayLow": day_low,
+            "yearHigh": quote_data.get("yearHigh"),
+            "yearLow": quote_data.get("yearLow"),
+            "volume": volume,
+            "avgVolume": quote_data.get("avgVolume") or quote_data.get("priceAvg50"),
+            "timestamp": quote_data.get("timestamp"),
+        }
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"Error in get_index_quote: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/api/index/{symbol}/intraday")
+def get_index_intraday(symbol: str, interval: str = "5min"):
+    """
+    Get intraday chart data for an index symbol (e.g., ^GSPC, ^IXIC, ^DJI).
+    Returns up to 14 days of intraday data at specified interval (5min, 15min, 30min, 1hour).
+    Uses FMP /stable/historical-chart/{interval} endpoint.
+    """
+    try:
+        print(f"[DATA] Fetching intraday chart for {symbol} at {interval}")
+        chart_data = fmp_client.get_index_intraday_chart(symbol, interval=interval)
+
+        if not chart_data:
+            print(f"[WARN] No intraday data returned for {symbol}")
+            return []
+
+        # Return data in format expected by frontend
+        # FMP returns: date, open, low, high, close, volume
+        return [
+            {
+                "date": bar.get("date"),
+                "open": bar.get("open"),
+                "high": bar.get("high"),
+                "low": bar.get("low"),
+                "close": bar.get("close"),
+                "volume": bar.get("volume"),
+            }
+            for bar in chart_data
+        ]
+    except Exception as exc:
+        print(f"Error in get_index_intraday: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
 
 
@@ -1722,3 +2236,4 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(app, host="0.0.0.0", port=8000)
+

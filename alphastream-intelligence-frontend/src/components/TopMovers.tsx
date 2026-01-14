@@ -49,30 +49,30 @@ export function TopMovers() {
 
   if (loading) {
     return (
-      <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800">
+      <div className="bg-zinc-900/50 rounded-xl p-6 border border-zinc-800/50 h-full">
         <h2 className="text-lg font-semibold text-white mb-4">Top Movers</h2>
-        <div className="text-zinc-400">Loading...</div>
+        <div className="text-zinc-400 animate-pulse">Loading movers...</div>
       </div>
     );
   }
 
   return (
-    <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800">
+    <div className="bg-zinc-900/50 rounded-xl p-6 border border-zinc-800/50 h-full">
       <h2 className="text-lg font-semibold text-white mb-4">Top Movers</h2>
 
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-1.5 mb-4 p-1 bg-zinc-800/50 rounded-lg w-fit">
         {(["gainers", "losers", "volume"] as TabType[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
               activeTab === tab
                 ? tab === "gainers"
-                  ? "bg-green-600 text-white"
+                  ? "bg-emerald-500/20 text-emerald-400"
                   : tab === "losers"
-                  ? "bg-red-600 text-white"
-                  : "bg-blue-600 text-white"
-                : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                  ? "bg-red-500/20 text-red-400"
+                  : "bg-cyan-500/20 text-cyan-400"
+                : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
             {tab === "gainers" ? "Gainers" : tab === "losers" ? "Losers" : "Volume"}

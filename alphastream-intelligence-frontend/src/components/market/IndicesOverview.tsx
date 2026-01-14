@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMarket } from '@/context/MarketContext';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Area, AreaChart, ResponsiveContainer } from 'recharts';
+import { Area, AreaChart, ResponsiveContainer, YAxis } from 'recharts';
 import { useIndicesIntraday } from '@/hooks/useIndicesIntraday';
 
 type FlashDir = 'up' | 'down' | null;
@@ -66,33 +66,51 @@ function IndexCard({ symbol, name, value, change, changePercent, flashDir, serie
       
       {/* Sparkline Chart */}
       <div className="h-16 -mx-2 my-2">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={intradayData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id={`gradient-${symbol}`} x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="0%"
-                  stopColor={isPositive ? 'hsl(var(--positive))' : 'hsl(var(--negative))'}
-                  stopOpacity={0.3}
+        {intradayData.length > 0 ? (() => {
+          // Calculate min/max for zoomed Y-axis
+          const values = intradayData.map(d => d.value);
+          const min = Math.min(...values);
+          const max = Math.max(...values);
+          const range = max - min;
+          const padding = range > 0 ? range * 0.1 : max * 0.001;
+          const yMin = min - padding;
+          const yMax = max + padding;
+
+          return (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={intradayData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id={`gradient-${symbol}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="0%"
+                      stopColor={isPositive ? 'hsl(var(--positive))' : 'hsl(var(--negative))'}
+                      stopOpacity={0.3}
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor={isPositive ? 'hsl(var(--positive))' : 'hsl(var(--negative))'}
+                      stopOpacity={0}
+                    />
+                  </linearGradient>
+                </defs>
+                <YAxis domain={[yMin, yMax]} hide />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke={isPositive ? 'hsl(var(--positive))' : 'hsl(var(--negative))'}
+                  strokeWidth={2}
+                  fill={`url(#gradient-${symbol})`}
+                  dot={false}
+                  isAnimationActive={false}
                 />
-                <stop
-                  offset="100%"
-                  stopColor={isPositive ? 'hsl(var(--positive))' : 'hsl(var(--negative))'}
-                  stopOpacity={0}
-                />
-              </linearGradient>
-            </defs>
-            <Area
-              type="monotone"
-              dataKey="value"
-              stroke={isPositive ? 'hsl(var(--positive))' : 'hsl(var(--negative))'}
-              strokeWidth={2}
-              fill={`url(#gradient-${symbol})`}
-              dot={false}
-              isAnimationActive={false}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+              </AreaChart>
+            </ResponsiveContainer>
+          );
+        })() : (
+          <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">
+            Loading...
+          </div>
+        )}
       </div>
       
       {/* Current Value */}

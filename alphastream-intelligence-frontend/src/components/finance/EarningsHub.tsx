@@ -156,11 +156,15 @@ export function EarningsHub() {
                       <span
                         className={cn(
                           'font-mono',
-                          (item.eps_actual ?? 0) >= 0 ? 'text-positive' : 'text-negative'
+                          item.last_surprise !== undefined && item.last_surprise !== null
+                            ? item.last_surprise >= 0
+                              ? 'text-positive'
+                              : 'text-negative'
+                            : 'text-muted-foreground'
                         )}
                       >
-                        {item.eps_actual !== undefined && item.eps_actual !== null
-                          ? Number(item.eps_actual).toFixed(2)
+                        {item.last_surprise !== undefined && item.last_surprise !== null
+                          ? `${item.last_surprise >= 0 ? '+' : ''}$${Number(item.last_surprise).toFixed(2)}`
                           : '—'}
                       </span>
                     </td>

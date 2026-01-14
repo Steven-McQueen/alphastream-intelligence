@@ -48,6 +48,9 @@ export interface Stock {
   institutionalOwnership?: number;
   debtToEquity?: number | null;
   
+  // Valuation ratios
+  priceToSales?: number | null;
+  
   // Company Info (NEW)
   yearFounded?: number;
   website?: string;

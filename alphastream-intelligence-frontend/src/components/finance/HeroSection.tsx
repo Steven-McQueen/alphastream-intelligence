@@ -83,47 +83,50 @@ export function HeroSection() {
   };
 
   return (
-    <Card className="border-border bg-gradient-to-br from-card to-card/80">
-      <CardContent className="p-6">
+    <div className="rounded-2xl bg-gradient-to-br from-zinc-900/80 via-zinc-900/60 to-zinc-950/80 border border-zinc-800/50 overflow-hidden">
+      <div className="p-8">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
           {/* Left: Brand & Query */}
           <div className="lg:col-span-3 space-y-6">
-            <div className="space-y-2">
+            <div className="space-y-3">
               <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                AlphaStream Finance
+                AlphaStream
               </h1>
-              <p className="text-muted-foreground text-lg">
-                AI-powered dashboard for markets, sectors, and your portfolio.
+              <p className="text-muted-foreground text-base max-w-xl">
+                Your AI-powered financial intelligence platform. Ask anything about markets, stocks, or your portfolio.
               </p>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <PerplexityChatInput
                 onSubmit={(text) => handleSubmit(text)}
-                placeholder="Ask about today's markets, a sector, or a stock (e.g. 'What happened to NVDA today?')…"
+                placeholder="Ask about markets, sectors, or any stock..."
               />
-            <div className="flex flex-wrap gap-2">
-              {suggestedPrompts.map((prompt, i) => (
+              <div className="flex flex-wrap gap-2">
+                {suggestedPrompts.map((prompt, i) => (
                   <Badge
-                  key={i}
-                  variant="outline"
-                    className="text-xs cursor-pointer hover:bg-muted"
-                  onClick={() => handleSubmit(prompt.prompt)}
-                >
-                  {prompt.text}
+                    key={i}
+                    variant="outline"
+                    className="text-xs cursor-pointer hover:bg-zinc-800 transition-colors border-zinc-700"
+                    onClick={() => handleSubmit(prompt.prompt)}
+                  >
+                    {prompt.text}
                   </Badge>
-              ))}
+                ))}
               </div>
             </div>
           </div>
 
           {/* Right: Market Snapshot */}
           <div className="lg:col-span-2">
-            <div className="bg-muted/30 rounded-lg p-4 space-y-4">
+            <div className="bg-zinc-900/50 rounded-xl p-5 border border-zinc-800/50 space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-muted-foreground">Today's Snapshot</span>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className={cn('text-[10px]', getSentimentColor())}>
+                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-sm font-medium text-foreground">Live Markets</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className={cn('text-[10px] border-zinc-700', getSentimentColor())}>
                     {marketState.regime}
                   </Badge>
                   <Button
@@ -131,38 +134,41 @@ export function HeroSection() {
                     size="sm"
                     onClick={handleRefresh}
                     disabled={isLoadingSnapshot}
-                    className="text-muted-foreground hover:text-foreground"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
                   >
-                    <RefreshCw className={`w-4 h-4 ${isLoadingSnapshot ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSnapshot ? 'animate-spin' : ''}`} />
                   </Button>
                 </div>
               </div>
 
               {isLoadingSnapshot && (
-                <div className="text-xs text-muted-foreground">Loading snapshot...</div>
+                <div className="text-xs text-muted-foreground">Loading...</div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 {['SPX', 'NDX', 'DJI', 'RUT'].map((symbol, idx) => {
                   const item = snapshotIndices[idx];
                   const changePercent = item?.changePercent ?? 0;
                   return (
                     <div
                       key={symbol}
-                      className="bg-card/50 rounded-md p-2.5 border border-border/50"
+                      className="bg-zinc-800/40 rounded-lg p-3 hover:bg-zinc-800/60 transition-colors cursor-pointer"
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-muted-foreground">{symbol}</span>
-                        {!isLoadingSnapshot && item && (
-                          changePercent >= 0 ? (
-                            <TrendingUp className="h-3 w-3 text-positive" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3 text-negative" />
-                          )
-                        )}
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-zinc-400">{symbol}</span>
+                        <span
+                          className={cn(
+                            'text-[10px] font-mono px-1.5 py-0.5 rounded',
+                            changePercent >= 0
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : 'bg-red-500/20 text-red-400'
+                          )}
+                        >
+                          {changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%
+                        </span>
                       </div>
 
-                      <div className="text-sm font-mono font-semibold text-foreground">
+                      <div className="text-base font-mono font-semibold text-foreground">
                         {!isLoadingSnapshot && item?.value !== undefined
                           ? item.value.toLocaleString(undefined, {
                               minimumFractionDigits: 2,
@@ -170,39 +176,31 @@ export function HeroSection() {
                             })
                           : '—'}
                       </div>
-
-                      <div
-                        className={cn(
-                          'text-xs font-mono',
-                          changePercent >= 0 ? 'text-positive' : 'text-negative'
-                        )}
-                      >
-                        {changePercent >= 0 ? '+' : ''}
-                        {changePercent.toFixed(2)}%
-                      </div>
                     </div>
                   );
                 })}
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                {macroEntries.map((entry) => (
-                  <div key={entry.label} className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">{entry.label}</span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono">{entry.value}</span>
-                      <span className={cn('font-mono', entry.color)}>
-                        {entry.change >= 0 ? '+' : ''}
-                        {entry.change.toFixed(2)}
-                      </span>
+              <div className="pt-2 border-t border-zinc-800/50">
+                <div className="grid grid-cols-2 gap-3">
+                  {macroEntries.map((entry) => (
+                    <div key={entry.label} className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">{entry.label}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono">{entry.value}</span>
+                        <span className={cn('font-mono', entry.color)}>
+                          {entry.change >= 0 ? '+' : ''}
+                          {entry.change.toFixed(2)}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

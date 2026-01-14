@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs cat:*)",
+      "Bash(curl:*)",
+      "Bash(python -c:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(powershell.exe -Command \"cd ''c:\\\\Dev\\\\alphastream-intelligence\\\\alphastream-intelligence-frontend''; npm run build 2>&1 | Select-Object -First 50\")",
+      "Bash(powershell.exe -Command \"Get-Process python* -ErrorAction SilentlyContinue | Format-Table -Property Id,ProcessName,MainWindowTitle -AutoSize\")"
+    ]
+  }
+}

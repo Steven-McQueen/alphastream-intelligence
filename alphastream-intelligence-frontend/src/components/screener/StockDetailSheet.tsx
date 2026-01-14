@@ -15,11 +15,12 @@ import { HistoricalData } from "@/components/screener/HistoricalData"
 import { StockNotes } from "@/components/screener/StockNotes"
 import { DCFValuation } from "@/components/screener/DCFValuation"
 import { AnalystRatings } from "@/components/screener/AnalystRatings"
+import { PoliticianTrades } from "@/components/screener/PoliticianTrades"
 
 const API_BASE_URL = "http://localhost:8000";
 
 // Navigation tabs
-const NAV_TABS = ["Overview", "Financial Reports", "Historical Data", "DCF", "Congress", "News"] as const;
+const NAV_TABS = ["Overview", "Financial Reports", "Historical Data", "DCF", "Politicians", "News"] as const;
 type NavTab = typeof NAV_TABS[number];
 
 interface StockDetailSheetProps {
@@ -362,16 +363,8 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
                 <DCFValuation ticker={currentStock.ticker} />
               )}
 
-              {activeTab === "Congress" && (
-                <div className="flex items-center justify-center h-64 text-zinc-500">
-                  <div className="text-center">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-800 flex items-center justify-center">
-                      <span className="text-2xl">🏛️</span>
-                    </div>
-                    <p className="text-lg font-medium mb-2">Congressional Trading</p>
-                    <p className="text-sm">Coming soon...</p>
-                  </div>
-                </div>
+              {activeTab === "Politicians" && (
+                <PoliticianTrades ticker={currentStock.ticker} />
               )}
 
               {activeTab === "News" && (

@@ -20,20 +20,52 @@ export function StandoutsCard() {
           ...(data.losers || []),
           ...(data.actives || []),
         ].slice(0, 10);
-        // synthesize tags/sparkline placeholders
-        setStandouts(
-          combined.map((s: any) => ({
-            ...s,
-            tags: ['Mover'],
-            sparklineData: [0, s.change1D ?? s.change_percent ?? 0],
-          }))
+
+        // Fetch intraday chart data for each stock
+        const standoutsWithCharts = await Promise.all(
+          combined.map(async (s: any) => {
+            try {
+              const chartRes = await fetch(
+                `http://localhost:8000/api/stock/${encodeURIComponent(s.ticker)}/chart?timeframe=5min&limit=78`
+              );
+              const chartData = await chartRes.json();
+
+              // Only use today's data
+              const today = new Date().toISOString().split('T')[0];
+              const todayData = chartData.filter((bar: any) =>
+                bar.date && bar.date.startsWith(today)
+              );
+
+              // If no today data (market closed), use most recent 78 bars (1 trading day at 5min)
+              const chartBars = todayData.length > 0 ? todayData : chartData.slice(-78);
+
+              return {
+                ...s,
+                tags: ['Mover'],
+                sparklineData: chartBars.map((bar: any) => ({ close: bar.close })),
+              };
+            } catch (error) {
+              console.error(`Error fetching chart for ${s.ticker}:`, error);
+              return {
+                ...s,
+                tags: ['Mover'],
+                sparklineData: [],
+              };
+            }
+          })
         );
+
+        setStandouts(standoutsWithCharts);
       } catch (err) {
         console.error('Error fetching standouts', err);
         setStandouts([]);
       }
     };
     fetchStandouts();
+
+    // Refresh every 5 minutes during market hours
+    const interval = setInterval(fetchStandouts, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleAskWhy = () => {
@@ -81,19 +113,25 @@ export function StandoutsCard() {
                 {stock.explanation}
               </p>
             </div>
-            <div className="w-16 h-10 flex-shrink-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={stock.sparklineData.map((v, i) => ({ i, v }))}>
-                  <Line
-                    type="monotone"
-                    dataKey="v"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={1.5}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            {stock.sparklineData && stock.sparklineData.length > 0 && (
+              <div className="w-20 h-10 flex-shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={stock.sparklineData}>
+                    <Line
+                      type="monotone"
+                      dataKey="close"
+                      stroke={
+                        (stock.change1D ?? stock.change_percent ?? 0) >= 0
+                          ? 'hsl(var(--positive))'
+                          : 'hsl(var(--negative))'
+                      }
+                      strokeWidth={1.5}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
         ))}
         <Button

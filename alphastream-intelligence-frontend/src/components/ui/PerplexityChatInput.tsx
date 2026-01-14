@@ -55,7 +55,7 @@ export function PerplexityChatInput({
   placeholder = 'Ask about markets, stocks, earnings...',
   disabled = false,
   defaultValue = '',
-  defaultModel = 'claude',
+  defaultModel = 'gemini-flash',
   className,
   value,
   onValueChange,

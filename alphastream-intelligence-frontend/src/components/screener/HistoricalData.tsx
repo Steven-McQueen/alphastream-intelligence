@@ -330,15 +330,7 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
     return calculateStatistics(chronologicalData);
   }, [chronologicalData]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-zinc-500" />
-      </div>
-    );
-  }
-  
-  // Prepare chart data for returns distribution
+  // Prepare chart data for returns distribution - MUST be before early returns (React Hooks rule)
   const returnsDistribution = useMemo(() => {
     if (!chronologicalData || chronologicalData.length < 2) return [];
     const returns = calculateDailyReturns(chronologicalData);
@@ -365,7 +357,7 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
     return buckets;
   }, [chronologicalData]);
   
-  // Prepare cumulative returns chart data
+  // Prepare cumulative returns chart data - MUST be before early returns (React Hooks rule)
   const cumulativeReturns = useMemo(() => {
     if (!chronologicalData || chronologicalData.length < 2) return [];
     const basePrice = chronologicalData[0]?.close;
@@ -376,6 +368,18 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
       close: bar.close
     }));
   }, [chronologicalData]);
+
+  // Unique gradient ID to prevent SVG conflicts when multiple charts are rendered
+  const gradientId = `returnGradient-${ticker}`;
+
+  // Early returns MUST come after all hooks
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-zinc-500" />
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -473,7 +477,7 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={cumulativeReturns} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
               <defs>
-                <linearGradient id="returnGradient" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={stats.totalReturn >= 0 ? "#10b981" : "#ef4444"} stopOpacity={0.3} />
                   <stop offset="95%" stopColor={stats.totalReturn >= 0 ? "#10b981" : "#ef4444"} stopOpacity={0} />
                 </linearGradient>
@@ -502,7 +506,7 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
                 type="monotone" 
                 dataKey="return" 
                 stroke={stats.totalReturn >= 0 ? "#10b981" : "#ef4444"}
-                fill="url(#returnGradient)"
+                fill={`url(#${gradientId})`}
                 strokeWidth={2}
               />
             </AreaChart>

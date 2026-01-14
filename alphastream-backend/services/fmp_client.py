@@ -169,6 +169,19 @@ class FMPClient:
             f"/stable/historical-chart/{interval}", params={"symbol": symbol}
         )
 
+    def get_index_eod_history(self, symbol: str, from_date: str = None, to_date: str = None) -> List[Dict]:
+        """
+        Get end-of-day historical data for index symbols.
+        Uses %5E encoding for ^ in symbol (e.g., ^GSPC becomes %5EGSPC).
+        https://financialmodelingprep.com/stable/historical-price-eod/full?symbol=%5EGSPC&from=2026-01-01&to=2026-01-13
+        """
+        params = {"symbol": symbol}
+        if from_date:
+            params["from"] = from_date
+        if to_date:
+            params["to"] = to_date
+        return self._make_request("/stable/historical-price-eod/full", params=params)
+
     def get_company_profile(self, symbol: str) -> List[Dict]:
         """
         Get company profile including description, logo, CEO, employees, etc.
@@ -217,6 +230,16 @@ class FMPClient:
         """
         return self._make_request(
             "/stable/key-metrics",
+            params={"symbol": symbol, "period": period, "limit": limit}
+        )
+
+    def get_ratios(self, symbol: str, period: str = "annual", limit: int = 5) -> List[Dict]:
+        """
+        Get financial ratios including P/E, gross margin, net margin.
+        https://financialmodelingprep.com/stable/ratios?symbol=AAPL&period=annual
+        """
+        return self._make_request(
+            "/stable/ratios",
             params={"symbol": symbol, "period": period, "limit": limit}
         )
 
@@ -270,6 +293,58 @@ class FMPClient:
         return self._make_request(
             "/stable/grades",
             params={"symbol": symbol, "limit": limit}
+        )
+
+    # ========= EARNINGS =========
+    def get_earnings_history(self, symbol: str, limit: int = 10) -> List[Dict]:
+        """
+        Get historical and upcoming earnings for a symbol.
+        https://financialmodelingprep.com/stable/earnings?symbol=AAPL&limit=10
+        """
+        return self._make_request(
+            "/stable/earnings",
+            params={"symbol": symbol, "limit": limit}
+        )
+
+    # ========= CONGRESSIONAL TRADING =========
+    def get_senate_trades_by_symbol(self, symbol: str) -> List[Dict]:
+        """
+        Get senate trades for a specific stock symbol.
+        https://financialmodelingprep.com/stable/senate-trades?symbol=AAPL
+        """
+        return self._make_request(
+            "/stable/senate-trades",
+            params={"symbol": symbol}
+        )
+
+    def get_senate_trades_by_name(self, name: str) -> List[Dict]:
+        """
+        Get senate trades by senator's last name.
+        https://financialmodelingprep.com/stable/senate-trades-by-name?name=tuberville
+        """
+        return self._make_request(
+            "/stable/senate-trades-by-name",
+            params={"name": name.lower()}
+        )
+
+    def get_house_trades_by_symbol(self, symbol: str) -> List[Dict]:
+        """
+        Get house trades for a specific stock symbol.
+        https://financialmodelingprep.com/stable/house-trades?symbol=AAPL
+        """
+        return self._make_request(
+            "/stable/house-trades",
+            params={"symbol": symbol}
+        )
+
+    def get_house_trades_by_name(self, name: str) -> List[Dict]:
+        """
+        Get house trades by representative's last name.
+        https://financialmodelingprep.com/stable/house-trades-by-name?name=Comer
+        """
+        return self._make_request(
+            "/stable/house-trades-by-name",
+            params={"name": name}
         )
 
     # Compatibility helpers

@@ -41,6 +41,7 @@ interface ChatInterfaceProps {
   onSubmit?: (message: string, model: ModelId) => Promise<string>;
   className?: string;
   compact?: boolean;
+  defaultModel?: ModelId;
 }
 
 // Animated gradient mesh background component
@@ -146,11 +147,12 @@ export function ChatInterface({
   onSubmit,
   className,
   compact = false,
+  defaultModel = 'gemini-flash',
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<ModelId>('claude');
+  const [selectedModel, setSelectedModel] = useState<ModelId>(defaultModel);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 

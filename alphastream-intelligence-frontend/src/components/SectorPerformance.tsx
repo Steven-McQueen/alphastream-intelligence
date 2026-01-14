@@ -60,42 +60,44 @@ export function SectorPerformance() {
 
   if (loading) {
     return (
-      <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800">
+      <div className="bg-zinc-900/50 rounded-xl p-6 border border-zinc-800/50 h-full">
         <h2 className="text-lg font-semibold text-white mb-4">Sector Performance</h2>
-        <div className="text-zinc-400">Loading...</div>
+        <div className="text-zinc-400 animate-pulse">Loading sectors...</div>
       </div>
     );
   }
 
   return (
-    <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800">
-      <h2 className="text-lg font-semibold text-white mb-4">Sector Performance</h2>
-
-      <div className="flex gap-2 mb-4">
-        {(["1D", "1W", "1M"] as TimeFrame[]).map((tf) => (
-          <button
-            key={tf}
-            onClick={() => setTimeFrame(tf)}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-              timeFrame === tf ? "bg-blue-600 text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+    <div className="bg-zinc-900/50 rounded-xl p-6 border border-zinc-800/50 h-full">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-white">Sector Performance</h2>
+        <div className="flex gap-1 p-1 bg-zinc-800/50 rounded-lg">
+          {(["1D", "1W", "1M"] as TimeFrame[]).map((tf) => (
+            <button
+              key={tf}
+              onClick={() => setTimeFrame(tf)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                timeFrame === tf ? "bg-cyan-500/20 text-cyan-400" : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
             {tf}
           </button>
         ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2">
         {sectors.map((sector) => {
           const change = getChangeForTimeFrame(sector);
+          const isPositive = change >= 0;
           return (
             <div
               key={sector.sector}
-              className={`p-4 rounded-lg border transition-colors ${getColorClass(change)}`}
+              className="p-3 rounded-lg bg-zinc-800/40 hover:bg-zinc-800/60 transition-colors cursor-pointer"
             >
-              <div className="text-sm font-medium text-white mb-1">{sector.sector}</div>
-              <div className={`text-lg font-semibold ${getTextColorClass(change)}`}>
-                {change >= 0 ? "+" : ""}
+              <div className="text-xs font-medium text-zinc-400 mb-1 truncate">{sector.sector}</div>
+              <div className={`text-base font-semibold font-mono ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+                {isPositive ? "+" : ""}
                 {change.toFixed(2)}%
               </div>
             </div>
