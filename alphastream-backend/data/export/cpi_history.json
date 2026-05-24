@@ -1,0 +1,86 @@
+[
+  {
+    "date": "2024-11-01",
+    "cpi_value": 316.45,
+    "mom_change": 0.28,
+    "yoy_change": 2.71,
+    "last_updated": "2026-01-08T19:52:42.074223"
+  },
+  {
+    "date": "2024-12-01",
+    "cpi_value": 317.6,
+    "mom_change": 0.36,
+    "yoy_change": 2.87,
+    "last_updated": "2026-01-08T19:52:42.084719"
+  },
+  {
+    "date": "2025-01-01",
+    "cpi_value": 319.09,
+    "mom_change": 0.47,
+    "yoy_change": 3.0,
+    "last_updated": "2026-01-08T19:52:42.093887"
+  },
+  {
+    "date": "2025-02-01",
+    "cpi_value": 319.77,
+    "mom_change": 0.22,
+    "yoy_change": 2.81,
+    "last_updated": "2026-01-08T19:52:42.103389"
+  },
+  {
+    "date": "2025-03-01",
+    "cpi_value": 319.62,
+    "mom_change": -0.05,
+    "yoy_change": 2.41,
+    "last_updated": "2026-01-08T19:52:42.114161"
+  },
+  {
+    "date": "2025-04-01",
+    "cpi_value": 320.32,
+    "mom_change": 0.22,
+    "yoy_change": 2.33,
+    "last_updated": "2026-01-08T19:52:42.121724"
+  },
+  {
+    "date": "2025-05-01",
+    "cpi_value": 320.58,
+    "mom_change": 0.08,
+    "yoy_change": 2.38,
+    "last_updated": "2026-01-08T19:52:42.130967"
+  },
+  {
+    "date": "2025-06-01",
+    "cpi_value": 321.5,
+    "mom_change": 0.29,
+    "yoy_change": 2.67,
+    "last_updated": "2026-01-08T19:52:42.140250"
+  },
+  {
+    "date": "2025-07-01",
+    "cpi_value": 322.13,
+    "mom_change": 0.2,
+    "yoy_change": 2.73,
+    "last_updated": "2026-01-08T19:52:42.147957"
+  },
+  {
+    "date": "2025-08-01",
+    "cpi_value": 323.36,
+    "mom_change": 0.38,
+    "yoy_change": 2.94,
+    "last_updated": "2026-01-08T19:52:42.156431"
+  },
+  {
+    "date": "2025-09-01",
+    "cpi_value": 324.37,
+    "mom_change": 0.31,
+    "yoy_change": 3.02,
+    "last_updated": "2026-01-08T19:52:42.165466"
+  },
+  {
+    "date": "2025-11-01",
+    "cpi_value": 325.03,
+    "mom_change": 0.2,
+    "yoy_change": 3.0,
+    "last_updated": "2026-01-08T19:52:42.174366"
+  }
+]

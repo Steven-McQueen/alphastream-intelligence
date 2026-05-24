@@ -1,0 +1,57 @@
+[
+  {
+    "sector": "Basic Materials",
+    "change_percent": -0.31558532311151133,
+    "last_updated": "2026-01-15T13:11:59.278192"
+  },
+  {
+    "sector": "Communication Services",
+    "change_percent": -0.4290826070036058,
+    "last_updated": "2026-01-15T13:11:59.307454"
+  },
+  {
+    "sector": "Consumer Cyclical",
+    "change_percent": -0.8909633133724948,
+    "last_updated": "2026-01-15T13:11:59.319216"
+  },
+  {
+    "sector": "Consumer Defensive",
+    "change_percent": 1.0111375438816683,
+    "last_updated": "2026-01-15T13:11:59.332972"
+  },
+  {
+    "sector": "Energy",
+    "change_percent": 0.29597830130319025,
+    "last_updated": "2026-01-15T13:11:59.344499"
+  },
+  {
+    "sector": "Financial Services",
+    "change_percent": 0.7568689899982939,
+    "last_updated": "2026-01-15T13:11:59.358515"
+  },
+  {
+    "sector": "Healthcare",
+    "change_percent": 0.640587732532083,
+    "last_updated": "2026-01-15T13:11:59.372285"
+  },
+  {
+    "sector": "Industrials",
+    "change_percent": 0.6004859588930156,
+    "last_updated": "2026-01-15T13:11:59.392059"
+  },
+  {
+    "sector": "Real Estate",
+    "change_percent": 0.4066000989750629,
+    "last_updated": "2026-01-15T13:11:59.409578"
+  },
+  {
+    "sector": "Technology",
+    "change_percent": -0.8501564153603147,
+    "last_updated": "2026-01-15T13:11:59.414388"
+  },
+  {
+    "sector": "Utilities",
+    "change_percent": 0.45371837543497495,
+    "last_updated": "2026-01-15T13:11:59.446663"
+  }
+]

@@ -1,0 +1,66 @@
+[
+  {
+    "indicator_id": "US_10Y_YIELD",
+    "name": "US 10Y Treasury Yield",
+    "value": 4.18,
+    "change": -0.01,
+    "unit": "%",
+    "last_updated": "2026-01-15T13:12:01.378101"
+  },
+  {
+    "indicator_id": "US_2Y_YIELD",
+    "name": "US 2Y Treasury Yield",
+    "value": 3.53,
+    "change": -0.01,
+    "unit": "%",
+    "last_updated": "2026-01-15T13:12:01.787633"
+  },
+  {
+    "indicator_id": "FED_FUNDS_RATE",
+    "name": "Fed Funds Rate",
+    "value": 3.64,
+    "change": null,
+    "unit": "%",
+    "last_updated": "2026-01-15T13:12:02.267575"
+  },
+  {
+    "indicator_id": "UNEMPLOYMENT",
+    "name": "Unemployment Rate",
+    "value": 4.4,
+    "change": -0.1,
+    "unit": "%",
+    "last_updated": "2026-01-15T13:12:02.525543"
+  },
+  {
+    "indicator_id": "CPI_YOY",
+    "name": "CPI (YoY)",
+    "value": 2.65,
+    "change": -0.06,
+    "unit": "%",
+    "last_updated": "2026-01-15T13:12:02.801577"
+  },
+  {
+    "indicator_id": "CORE_PCE_YOY",
+    "name": "Core PCE (YoY)",
+    "value": 2.83,
+    "change": -0.08,
+    "unit": "%",
+    "last_updated": "2026-01-15T13:12:03.044897"
+  },
+  {
+    "indicator_id": "GDP_GROWTH",
+    "name": "GDP Growth (QoQ Annual)",
+    "value": 4.3,
+    "change": 0.5,
+    "unit": "%",
+    "last_updated": "2026-01-15T13:12:03.233096"
+  },
+  {
+    "indicator_id": "DXY",
+    "name": "Dollar Index (DXY)",
+    "value": 99.18,
+    "change": 0.05,
+    "unit": "index",
+    "last_updated": "2026-01-15T13:12:03.349955"
+  }
+]

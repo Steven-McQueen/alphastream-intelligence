@@ -1,11 +1,44 @@
+"""
+Database Manager for AlphaStream Intelligence
+Supports PostgreSQL (Supabase) and SQLite (local fallback).
+"""
+
+# Load environment variables BEFORE checking DATABASE_URL
+from dotenv import load_dotenv
+load_dotenv()
+
+import os
 import sqlite3
 import threading
 from pathlib import Path
 from typing import List, Optional
 from datetime import datetime, timedelta
 
+# Import PostgreSQL manager
+try:
+    from database.postgres_manager import PostgresDatabaseManager
+    POSTGRES_AVAILABLE = True
+except ImportError:
+    POSTGRES_AVAILABLE = False
 
-class DatabaseManager:
+
+def get_database_manager():
+    """
+    Factory function to get the appropriate database manager.
+    Uses PostgreSQL if DATABASE_URL is set, otherwise falls back to SQLite.
+    """
+    database_url = os.getenv("DATABASE_URL", "")
+    use_sqlite_fallback = os.getenv("USE_SQLITE_FALLBACK", "false").lower() == "true"
+
+    if database_url and POSTGRES_AVAILABLE and not use_sqlite_fallback:
+        print("Using PostgreSQL database (Supabase)")
+        return PostgresDatabaseManager(database_url)
+    else:
+        print("Using SQLite database (local fallback)")
+        return SQLiteDatabaseManager()
+
+
+class SQLiteDatabaseManager:
   """Manages SQLite database for stock data caching"""
 
   def __init__(self, db_path: str = "data/stocks.db"):
@@ -102,11 +135,26 @@ class DatabaseManager:
 
   def get_all_stocks(self, order_by: str = "market_cap DESC") -> List[dict]:
     """Get all stocks"""
+    allowed_columns = {"market_cap", "ticker", "name", "change_1d", "volume", "sector"}
+    allowed_directions = {"asc", "desc"}
+
+    parts = order_by.split()
+    col = parts[0].lower() if parts else ""
+    direction = parts[1].lower() if len(parts) > 1 else "desc"
+
+    if col not in allowed_columns:
+        col = "market_cap"
+        direction = "desc"
+    if direction not in allowed_directions:
+        direction = "desc"
+
+    safe_order = f"{col} {direction.upper()}"
+
     conn = self.connect()
     cursor = conn.cursor()
 
     try:
-      cursor.execute(f"SELECT * FROM stocks ORDER BY {order_by}")
+      cursor.execute(f"SELECT * FROM stocks ORDER BY {safe_order}")
       rows = cursor.fetchall()
       return [dict(row) for row in rows]
     finally:
@@ -138,7 +186,7 @@ class DatabaseManager:
 
     try:
       cursor.execute("""
-        SELECT * FROM stocks 
+        SELECT * FROM stocks
         WHERE sector = ?
         ORDER BY market_cap DESC
       """, (sector,))
@@ -147,6 +195,79 @@ class DatabaseManager:
       return [dict(row) for row in rows]
     finally:
       self.close()
+
+  def upsert_stocks_from_screener(self, updates: List[dict]) -> int:
+    """Update stocks from screener results for cross-view caching."""
+    if not updates:
+      return 0
+    conn = self.connect()
+    cursor = conn.cursor()
+    success_count = 0
+    now = datetime.utcnow().isoformat()
+
+    try:
+      for item in updates:
+        try:
+          cursor.execute("""
+            INSERT OR REPLACE INTO stocks (
+              ticker, name, sector, industry,
+              price, market_cap, beta, dividend_yield, volume,
+              last_updated
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          """, (
+            item.get("ticker"),
+            item.get("name"),
+            item.get("sector"),
+            item.get("industry"),
+            item.get("price"),
+            item.get("market_cap"),
+            item.get("beta"),
+            item.get("dividend_yield"),
+            item.get("volume"),
+            now,
+          ))
+          success_count += 1
+        except Exception as e:
+          print(f"[DB] Error upserting stock {item.get('ticker')}: {e}")
+      conn.commit()
+      return success_count
+    finally:
+      self.close()
+
+  def get_cached_profile(self, symbol: str) -> Optional[dict]:
+    """Get cached company profile (SQLite stub - returns None)."""
+    return None
+
+  def set_cached_profile(self, symbol: str, data: dict) -> None:
+    """Cache company profile (SQLite stub - no-op)."""
+    pass
+
+  def get_stock_with_age(self, ticker: str) -> tuple:
+    """Get stock with age in seconds since last update."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      cursor.execute("""
+        SELECT *,
+          (julianday('now') - julianday(last_updated)) * 86400 as age_seconds
+        FROM stocks WHERE ticker = ?
+      """, (ticker.upper(),))
+      row = cursor.fetchone()
+      if row:
+        row_dict = dict(row)
+        age = row_dict.pop("age_seconds", None)
+        return row_dict, age
+      return None, None
+    finally:
+      self.close()
+
+  def increment_stock_view_count(self, ticker: str) -> None:
+    """Increment view count for a stock (SQLite stub - no-op)."""
+    pass
+
+  def get_popular_stocks(self, limit: int = 100) -> List[dict]:
+    """Get most viewed stocks (SQLite stub - returns empty)."""
+    return []
 
   def log_refresh(self, stocks_updated: int, data_source: str,
                   success: bool, duration: float, error_msg: Optional[str] = None):
@@ -881,6 +1002,9 @@ class DatabaseManager:
       self.close()
 
 
-# Global database instance
-db = DatabaseManager()
+# Global database instance - uses PostgreSQL if DATABASE_URL is set, otherwise SQLite
+db = get_database_manager()
+
+# Backward compatibility alias
+DatabaseManager = SQLiteDatabaseManager
 

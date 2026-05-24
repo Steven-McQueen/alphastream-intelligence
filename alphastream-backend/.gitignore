@@ -3,3 +3,5 @@ __pycache__/
 *.pyc 
 venv/ 
 data/sp500_fallback.json 
+data/*.db
+data/*.sqlite

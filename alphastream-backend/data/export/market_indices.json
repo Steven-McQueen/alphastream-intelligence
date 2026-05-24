@@ -1,0 +1,42 @@
+[
+  {
+    "symbol": "SPX",
+    "name": "S&P 500",
+    "value": 6926.6,
+    "change": -37.14,
+    "change_pct": -0.53,
+    "last_updated": "2026-01-15T13:11:58.264714"
+  },
+  {
+    "symbol": "NDX",
+    "name": "Nasdaq Composite",
+    "value": 23471.75,
+    "change": -238.12,
+    "change_pct": -1.0,
+    "last_updated": "2026-01-15T13:11:58.375396"
+  },
+  {
+    "symbol": "DJI",
+    "name": "Dow Jones Industrial Average",
+    "value": 49149.63,
+    "change": -42.36,
+    "change_pct": -0.09,
+    "last_updated": "2026-01-15T13:11:58.471550"
+  },
+  {
+    "symbol": "RUT",
+    "name": "Russell 2000",
+    "value": 2651.64,
+    "change": 18.53,
+    "change_pct": 0.7,
+    "last_updated": "2026-01-15T13:11:58.579450"
+  },
+  {
+    "symbol": "VIX",
+    "name": "CBOE Volatility Index",
+    "value": 16.18,
+    "change": -0.57,
+    "change_pct": -3.4,
+    "last_updated": "2026-01-15T13:11:58.736510"
+  }
+]

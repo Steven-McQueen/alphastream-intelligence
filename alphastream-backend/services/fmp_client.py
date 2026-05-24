@@ -4,10 +4,12 @@ Financial Modeling Prep API client.
 
 import os
 import time
+import asyncio
 from pathlib import Path
 from typing import Dict, List, Optional
 
 import requests
+import aiohttp
 from dotenv import load_dotenv
 
 
@@ -22,6 +24,11 @@ class FMPClient:
 
     def __init__(self) -> None:
         self.api_key = os.getenv("FMP_API_KEY")
+        # Debug: Show if API key is loaded (masked for security)
+        if self.api_key:
+            print(f"[FMP] API Key loaded: Yes ({self.api_key[:8]}...)")
+        else:
+            print("[FMP] API Key loaded: NO - MISSING!")
         if not self.api_key:
             raise ValueError("FMP_API_KEY not found in .env file")
 
@@ -86,6 +93,7 @@ class FMPClient:
     def get_batch_quotes(self, symbols: List[str]) -> List[Dict]:
         """
         Get quotes for multiple stocks by aggregating single-symbol calls.
+        DEPRECATED: Use get_batch_quotes_optimized() for better performance.
         """
         if not symbols:
             return []
@@ -98,11 +106,118 @@ class FMPClient:
             time.sleep(0.05)
         return results
 
-    # ========= NEWS (STABLE) =========
+    def get_batch_quotes_optimized(self, symbols: List[str], batch_size: int = 200) -> List[Dict]:
+        """
+        Get quotes for multiple stocks.
+
+        NOTE: FMP's /stable/quote endpoint only supports ONE symbol at a time.
+        Comma-separated symbols return empty []. We must call sequentially.
+
+        This method calls the API once per symbol with rate limiting.
+        """
+        if not symbols:
+            return []
+
+        all_quotes = []
+        errors_logged = 0
+
+        print(f"[FMP] Fetching quotes for {len(symbols)} symbols (sequential calls)...")
+
+        for i, symbol in enumerate(symbols):
+            try:
+                data = self._make_request("/stable/quote", params={"symbol": symbol})
+
+                # Handle successful response (list with one quote)
+                if isinstance(data, list) and len(data) > 0:
+                    item = data[0]
+                    all_quotes.append({
+                        "symbol": item.get("symbol"),
+                        "name": item.get("name"),
+                        "price": item.get("price", 0),
+                        "change": item.get("change", 0),
+                        "changesPercentage": item.get("changePercentage", 0),
+                        "volume": item.get("volume"),
+                        "dayLow": item.get("dayLow"),
+                        "dayHigh": item.get("dayHigh"),
+                        "yearHigh": item.get("yearHigh"),
+                        "yearLow": item.get("yearLow"),
+                        "marketCap": item.get("marketCap"),
+                        "priceAvg50": item.get("priceAvg50"),
+                        "priceAvg200": item.get("priceAvg200"),
+                        "open": item.get("open"),
+                        "previousClose": item.get("previousClose"),
+                        "exchange": item.get("exchange"),
+                        "timestamp": item.get("timestamp"),
+                        "pe": item.get("pe"),
+                        "eps": item.get("eps"),
+                        "sharesOutstanding": item.get("sharesOutstanding"),
+                    })
+                # Handle error response (dict with error message)
+                elif isinstance(data, dict):
+                    error_msg = data.get("Error Message", data.get("error", str(data)))
+                    if errors_logged < 3:
+                        print(f"[FMP ERROR] {symbol}: {error_msg}")
+                        errors_logged += 1
+                    if errors_logged == 3:
+                        print(f"[FMP ERROR] Suppressing further error logs...")
+                # Empty list means symbol not found
+                elif isinstance(data, list) and len(data) == 0:
+                    if errors_logged < 5:
+                        print(f"[FMP WARN] No data for symbol: {symbol}")
+                        errors_logged += 1
+
+                # Progress logging every 100 symbols
+                if (i + 1) % 100 == 0:
+                    print(f"[FMP] Progress: {i + 1}/{len(symbols)} symbols ({len(all_quotes)} quotes)")
+
+            except Exception as e:
+                if errors_logged < 3:
+                    print(f"[FMP ERROR] Exception for {symbol}: {e}")
+                    errors_logged += 1
+
+            time.sleep(0.05)  # Rate limit: 20 calls/sec max
+
+        print(f"[FMP] Batch quotes complete: {len(all_quotes)} quotes from {len(symbols)} symbols")
+        return all_quotes
+
+    # ========= STOCK LIST (UNIVERSE) =========
+    def get_stock_list(self) -> List[Dict]:
+        """
+        Fetch ALL actively trading stocks from FMP (excludes inactive companies).
+        Returns list of {symbol, name}.
+        """
+        try:
+            data = self._make_request("/stable/actively-trading-list")
+            if isinstance(data, list):
+                print(f"[FMP] Fetched {len(data)} symbols from actively-trading-list")
+                return data
+            return []
+        except Exception as e:
+            print(f"[FMP] Error fetching actively trading list: {e}")
+            return []
+
+    def get_sp500_constituents(self) -> List[Dict]:
+        """
+        Fetch S&P 500 constituent list from FMP.
+        Returns list of {symbol, name, sector, subSector, ...}.
+        """
+        try:
+            data = self._make_request("/sp500_constituent")
+            if isinstance(data, list):
+                print(f"[FMP] Fetched {len(data)} S&P 500 constituents")
+                return data
+            return []
+        except Exception as e:
+            print(f"[FMP] Error fetching S&P 500 constituents: {e}")
+            return []
+
+    # ========= NEWS =========
     def get_general_latest_news(self, page: int = 0, limit: int = 20) -> List[Dict]:
-        """General market news feed."""
+        """General market news feed with images.
+        Uses stock-latest (same format as stock news, includes image field).
+        """
         return self._make_request(
-            "/stable/news/general-latest", params={"page": page, "limit": limit}
+            "/stable/news/stock-latest", params={"page": page, "limit": limit}
         )
 
     def get_stock_latest_news(self, page: int = 0, limit: int = 20) -> List[Dict]:
@@ -356,6 +471,150 @@ class FMPClient:
     def get_sector_performance(self) -> List[Dict]:
         """Legacy helper: returns latest sector performance snapshot."""
         return self.get_sector_performance_snapshot()
+
+    # ========= SCREENER (NEW) =========
+    def call_company_screener(
+        self,
+        sector: str = None,
+        industry: str = None,
+        market_cap_more_than: float = None,
+        market_cap_lower_than: float = None,
+        beta_more_than: float = None,
+        beta_lower_than: float = None,
+        price_more_than: float = None,
+        price_lower_than: float = None,
+        dividend_more_than: float = None,
+        dividend_lower_than: float = None,
+        volume_more_than: int = None,
+        volume_lower_than: int = None,
+        limit: int = 1000,
+    ) -> List[Dict]:
+        """
+        Call FMP company-screener endpoint with dynamic filters.
+        Always sets isEtf=false and isFund=false.
+        Only includes filter params that are set.
+
+        Returns list of:
+        {symbol, companyName, marketCap, sector, industry, beta, price, lastAnnualDividend, volume, ...}
+        """
+        params = {
+            "isEtf": "false",
+            "isFund": "false",
+            "limit": min(limit, 1000),
+        }
+
+        # Only add params that are set
+        if sector:
+            params["sector"] = sector
+        if industry:
+            params["industry"] = industry
+        if market_cap_more_than is not None:
+            params["marketCapMoreThan"] = int(market_cap_more_than)
+        if market_cap_lower_than is not None:
+            params["marketCapLowerThan"] = int(market_cap_lower_than)
+        if beta_more_than is not None:
+            params["betaMoreThan"] = beta_more_than
+        if beta_lower_than is not None:
+            params["betaLowerThan"] = beta_lower_than
+        if price_more_than is not None:
+            params["priceMoreThan"] = price_more_than
+        if price_lower_than is not None:
+            params["priceLowerThan"] = price_lower_than
+        if dividend_more_than is not None:
+            params["dividendMoreThan"] = dividend_more_than
+        if dividend_lower_than is not None:
+            params["dividendLowerThan"] = dividend_lower_than
+        if volume_more_than is not None:
+            params["volumeMoreThan"] = int(volume_more_than)
+        if volume_lower_than is not None:
+            params["volumeLowerThan"] = int(volume_lower_than)
+
+        try:
+            data = self._make_request("/stable/company-screener", params=params)
+            if isinstance(data, list):
+                print(f"[FMP] Company screener returned {len(data)} results")
+                return data
+            return []
+        except Exception as e:
+            print(f"[FMP] Error calling company screener: {e}")
+            return []
+
+    # ========= ASYNC BATCH QUOTES (NEW) =========
+    async def _fetch_single_quote_async(
+        self, session: aiohttp.ClientSession, symbol: str
+    ) -> Optional[Dict]:
+        """Fetch a single quote asynchronously."""
+        url = f"https://financialmodelingprep.com/stable/quote"
+        params = {"symbol": symbol, "apikey": self.api_key}
+        try:
+            async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if isinstance(data, list) and len(data) > 0:
+                        item = data[0]
+                        return {
+                            "symbol": item.get("symbol"),
+                            "name": item.get("name"),
+                            "price": item.get("price", 0),
+                            "change": item.get("change", 0),
+                            "changePercent": item.get("changePercentage", 0),
+                            "volume": item.get("volume"),
+                            "dayLow": item.get("dayLow"),
+                            "dayHigh": item.get("dayHigh"),
+                            "yearHigh": item.get("yearHigh"),
+                            "yearLow": item.get("yearLow"),
+                            "marketCap": item.get("marketCap"),
+                            "open": item.get("open"),
+                            "previousClose": item.get("previousClose"),
+                            "pe": item.get("pe"),
+                            "eps": item.get("eps"),
+                        }
+        except Exception as e:
+            print(f"[FMP ASYNC] Error fetching {symbol}: {e}")
+        return None
+
+    async def fetch_quotes_parallel(self, symbols: List[str], max_concurrent: int = 20) -> List[Dict]:
+        """
+        Fetch multiple quotes in parallel using asyncio.
+        Much faster than sequential fetching.
+
+        Args:
+            symbols: List of stock symbols to fetch
+            max_concurrent: Max concurrent requests (default 20 to avoid rate limits)
+
+        Returns:
+            List of quote dicts for symbols that succeeded
+        """
+        if not symbols:
+            return []
+
+        print(f"[FMP ASYNC] Fetching {len(symbols)} quotes in parallel (max {max_concurrent} concurrent)...")
+
+        results = []
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async def fetch_with_semaphore(session: aiohttp.ClientSession, symbol: str):
+            async with semaphore:
+                return await self._fetch_single_quote_async(session, symbol)
+
+        connector = aiohttp.TCPConnector(limit=max_concurrent)
+        async with aiohttp.ClientSession(connector=connector) as session:
+            tasks = [fetch_with_semaphore(session, sym) for sym in symbols]
+            responses = await asyncio.gather(*tasks, return_exceptions=True)
+
+            for resp in responses:
+                if isinstance(resp, dict) and resp is not None:
+                    results.append(resp)
+
+        print(f"[FMP ASYNC] Completed: {len(results)}/{len(symbols)} quotes fetched")
+        return results
+
+    def fetch_quotes_parallel_sync(self, symbols: List[str], max_concurrent: int = 20) -> List[Dict]:
+        """
+        Synchronous wrapper for fetch_quotes_parallel.
+        Use this from sync code (FastAPI endpoints run in event loop, so use the async version there).
+        """
+        return asyncio.run(self.fetch_quotes_parallel(symbols, max_concurrent))
 
 
 # Shared client instance

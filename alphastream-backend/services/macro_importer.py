@@ -313,6 +313,20 @@ def refresh_all_macro_data():
   }
 
 
+def refresh_macro_history():
+  """Refresh historical macro data (treasury, CPI, VIX) to keep charts current."""
+  print("\n[MACRO] Refreshing macro history data...")
+  treasury_count = fetch_and_import_treasury_history()
+  cpi_count = fetch_and_import_cpi_history()
+  vix_count = fetch_and_import_vix_history()
+  print(f"[MACRO] History refresh: {treasury_count} treasury, {cpi_count} CPI, {vix_count} VIX")
+  return {
+    'treasury': treasury_count,
+    'cpi': cpi_count,
+    'vix': vix_count,
+  }
+
+
 def initialize_all_macro_data():
   """Initialize both current and historical data (called once on setup)"""
   print("\n" + "=" * 60)

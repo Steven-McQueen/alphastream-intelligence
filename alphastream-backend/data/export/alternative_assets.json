@@ -1,0 +1,52 @@
+[
+  {
+    "symbol": "BTC",
+    "name": "Bitcoin",
+    "asset_type": "crypto",
+    "value": 96613.8,
+    "change": -315.52,
+    "change_percent": -0.33,
+    "last_updated": "2026-01-15T13:12:03.449888",
+    "fetch_error": null
+  },
+  {
+    "symbol": "ETH",
+    "name": "Ethereum",
+    "asset_type": "crypto",
+    "value": 3352.38,
+    "change": -2.35,
+    "change_percent": -0.07,
+    "last_updated": "2026-01-15T13:12:03.564554",
+    "fetch_error": null
+  },
+  {
+    "symbol": "GOLD",
+    "name": "Gold Futures",
+    "asset_type": "commodity",
+    "value": 4624.6,
+    "change": -1.7,
+    "change_percent": -0.04,
+    "last_updated": "2026-01-15T13:12:03.679459",
+    "fetch_error": null
+  },
+  {
+    "symbol": "OIL",
+    "name": "WTI Crude Oil",
+    "asset_type": "commodity",
+    "value": 59.85,
+    "change": -2.17,
+    "change_percent": -3.5,
+    "last_updated": "2026-01-15T13:12:03.784016",
+    "fetch_error": null
+  },
+  {
+    "symbol": "NOKUSD",
+    "name": "Norwegian Krone",
+    "asset_type": "currency",
+    "value": 0.0994,
+    "change": 0.0002,
+    "change_percent": 0.21,
+    "last_updated": "2026-01-15T13:12:03.877157",
+    "fetch_error": null
+  }
+]

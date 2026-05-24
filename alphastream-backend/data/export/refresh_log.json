@@ -1,0 +1,1343 @@
+[
+  {
+    "id": 1,
+    "refresh_time": "2026-01-08 18:52:33",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 341.4993441104889
+  },
+  {
+    "id": 2,
+    "refresh_time": "2026-01-08 19:05:54",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 375.14610862731934
+  },
+  {
+    "id": 3,
+    "refresh_time": "2026-01-08 19:25:27",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 335.37939381599426
+  },
+  {
+    "id": 4,
+    "refresh_time": "2026-01-08 19:40:45",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 333.23429322242737
+  },
+  {
+    "id": 5,
+    "refresh_time": "2026-01-08 20:01:39",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 340.647825717926
+  },
+  {
+    "id": 6,
+    "refresh_time": "2026-01-08 20:22:20",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 326.4620101451874
+  },
+  {
+    "id": 7,
+    "refresh_time": "2026-01-08 20:44:23",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 408.06339502334595
+  },
+  {
+    "id": 8,
+    "refresh_time": "2026-01-08 21:01:53",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 400.9976291656494
+  },
+  {
+    "id": 9,
+    "refresh_time": "2026-01-08 21:38:20",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 381.2282292842865
+  },
+  {
+    "id": 10,
+    "refresh_time": "2026-01-08 23:30:26",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 336.41913533210754
+  },
+  {
+    "id": 11,
+    "refresh_time": "2026-01-08 23:51:42",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 323.96162033081055
+  },
+  {
+    "id": 12,
+    "refresh_time": "2026-01-09 04:15:01",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 399.8935010433197
+  },
+  {
+    "id": 13,
+    "refresh_time": "2026-01-09 05:21:24",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 363.53486490249634
+  },
+  {
+    "id": 14,
+    "refresh_time": "2026-01-09 12:50:15",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 344.24068307876587
+  },
+  {
+    "id": 15,
+    "refresh_time": "2026-01-09 14:28:37",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 322.2207646369934
+  },
+  {
+    "id": 16,
+    "refresh_time": "2026-01-09 14:44:39",
+    "stocks_updated": 500,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 377.71242809295654
+  },
+  {
+    "id": 17,
+    "refresh_time": "2026-01-09 14:58:23",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 335.28367614746094
+  },
+  {
+    "id": 18,
+    "refresh_time": "2026-01-09 15:10:37",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 339.3920958042145
+  },
+  {
+    "id": 19,
+    "refresh_time": "2026-01-09 15:14:58",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 353.154865026474
+  },
+  {
+    "id": 20,
+    "refresh_time": "2026-01-09 15:25:56",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 353.39544773101807
+  },
+  {
+    "id": 21,
+    "refresh_time": "2026-01-09 15:47:13",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 337.15938091278076
+  },
+  {
+    "id": 22,
+    "refresh_time": "2026-01-09 15:47:40",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 331.0026695728302
+  },
+  {
+    "id": 23,
+    "refresh_time": "2026-01-09 16:07:29",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 323.87773847579956
+  },
+  {
+    "id": 24,
+    "refresh_time": "2026-01-09 16:08:48",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 330.6223075389862
+  },
+  {
+    "id": 25,
+    "refresh_time": "2026-01-09 16:29:50",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 320.275190114975
+  },
+  {
+    "id": 26,
+    "refresh_time": "2026-01-09 16:51:04",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 325.99958181381226
+  },
+  {
+    "id": 27,
+    "refresh_time": "2026-01-09 17:12:36",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 350.1747317314148
+  },
+  {
+    "id": 28,
+    "refresh_time": "2026-01-09 17:33:49",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 325.71158719062805
+  },
+  {
+    "id": 29,
+    "refresh_time": "2026-01-09 17:55:37",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 323.550518989563
+  },
+  {
+    "id": 30,
+    "refresh_time": "2026-01-09 18:17:29",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 367.93977308273315
+  },
+  {
+    "id": 31,
+    "refresh_time": "2026-01-09 18:40:27",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 430.4325110912323
+  },
+  {
+    "id": 32,
+    "refresh_time": "2026-01-09 19:01:51",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 331.6229660511017
+  },
+  {
+    "id": 33,
+    "refresh_time": "2026-01-09 19:22:55",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 321.4434304237366
+  },
+  {
+    "id": 34,
+    "refresh_time": "2026-01-09 19:44:10",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 326.7218825817108
+  },
+  {
+    "id": 35,
+    "refresh_time": "2026-01-09 20:05:57",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 359.5255045890808
+  },
+  {
+    "id": 36,
+    "refresh_time": "2026-01-09 20:27:21",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 340.78490710258484
+  },
+  {
+    "id": 37,
+    "refresh_time": "2026-01-09 20:30:05",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 333.8535966873169
+  },
+  {
+    "id": 38,
+    "refresh_time": "2026-01-09 20:38:30",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 328.4891948699951
+  },
+  {
+    "id": 39,
+    "refresh_time": "2026-01-09 20:40:17",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 339.94431805610657
+  },
+  {
+    "id": 40,
+    "refresh_time": "2026-01-09 20:49:12",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 356.39656233787537
+  },
+  {
+    "id": 41,
+    "refresh_time": "2026-01-09 21:04:01",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 337.8739643096924
+  },
+  {
+    "id": 42,
+    "refresh_time": "2026-01-09 21:48:41",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 325.8440158367157
+  },
+  {
+    "id": 43,
+    "refresh_time": "2026-01-09 23:06:01",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 319.4342112541199
+  },
+  {
+    "id": 44,
+    "refresh_time": "2026-01-09 23:31:31",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 321.04514598846436
+  },
+  {
+    "id": 45,
+    "refresh_time": "2026-01-10 00:31:22",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 305.71856689453125
+  },
+  {
+    "id": 46,
+    "refresh_time": "2026-01-10 01:38:30",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 407.42113161087036
+  },
+  {
+    "id": 47,
+    "refresh_time": "2026-01-10 02:43:55",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 307.5143766403198
+  },
+  {
+    "id": 48,
+    "refresh_time": "2026-01-10 02:53:46",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 317.3465313911438
+  },
+  {
+    "id": 49,
+    "refresh_time": "2026-01-10 03:54:25",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 346.2783000469208
+  },
+  {
+    "id": 50,
+    "refresh_time": "2026-01-10 05:02:18",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 437.3831527233124
+  },
+  {
+    "id": 51,
+    "refresh_time": "2026-01-10 06:08:34",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 321.36815905570984
+  },
+  {
+    "id": 52,
+    "refresh_time": "2026-01-10 07:16:50",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 448.14415073394775
+  },
+  {
+    "id": 53,
+    "refresh_time": "2026-01-10 13:00:07",
+    "stocks_updated": 483,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 16951.336639642715
+  },
+  {
+    "id": 54,
+    "refresh_time": "2026-01-10 14:05:53",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 312.3292100429535
+  },
+  {
+    "id": 55,
+    "refresh_time": "2026-01-10 15:11:44",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 320.05449891090393
+  },
+  {
+    "id": 56,
+    "refresh_time": "2026-01-10 16:17:32",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 312.20200514793396
+  },
+  {
+    "id": 57,
+    "refresh_time": "2026-01-10 17:23:19",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 311.9949667453766
+  },
+  {
+    "id": 58,
+    "refresh_time": "2026-01-10 18:29:01",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 308.96687388420105
+  },
+  {
+    "id": 59,
+    "refresh_time": "2026-01-10 19:34:49",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 312.2977216243744
+  },
+  {
+    "id": 60,
+    "refresh_time": "2026-01-10 20:40:39",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 311.9363396167755
+  },
+  {
+    "id": 61,
+    "refresh_time": "2026-01-10 21:47:28",
+    "stocks_updated": 498,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 372.68526005744934
+  },
+  {
+    "id": 62,
+    "refresh_time": "2026-01-10 22:53:13",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 313.00501894950867
+  },
+  {
+    "id": 63,
+    "refresh_time": "2026-01-10 23:58:58",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 308.02150082588196
+  },
+  {
+    "id": 64,
+    "refresh_time": "2026-01-11 01:04:44",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 314.43663692474365
+  },
+  {
+    "id": 65,
+    "refresh_time": "2026-01-11 02:10:27",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 309.9796118736267
+  },
+  {
+    "id": 66,
+    "refresh_time": "2026-01-11 03:16:12",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 313.96894669532776
+  },
+  {
+    "id": 67,
+    "refresh_time": "2026-01-11 04:21:55",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 311.31264781951904
+  },
+  {
+    "id": 68,
+    "refresh_time": "2026-01-11 05:27:37",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 305.40345668792725
+  },
+  {
+    "id": 69,
+    "refresh_time": "2026-01-11 06:33:24",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 312.25050258636475
+  },
+  {
+    "id": 70,
+    "refresh_time": "2026-01-11 07:39:01",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 305.4181761741638
+  },
+  {
+    "id": 71,
+    "refresh_time": "2026-01-11 08:44:39",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 307.18258810043335
+  },
+  {
+    "id": 72,
+    "refresh_time": "2026-01-11 09:50:26",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 312.15493535995483
+  },
+  {
+    "id": 73,
+    "refresh_time": "2026-01-11 10:56:07",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 315.2248022556305
+  },
+  {
+    "id": 74,
+    "refresh_time": "2026-01-11 12:01:46",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 307.67792081832886
+  },
+  {
+    "id": 75,
+    "refresh_time": "2026-01-11 13:07:35",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 311.36448860168457
+  },
+  {
+    "id": 76,
+    "refresh_time": "2026-01-11 14:13:30",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 306.6737804412842
+  },
+  {
+    "id": 77,
+    "refresh_time": "2026-01-11 15:19:17",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 315.1334390640259
+  },
+  {
+    "id": 78,
+    "refresh_time": "2026-01-11 15:45:29",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 413.4170923233032
+  },
+  {
+    "id": 79,
+    "refresh_time": "2026-01-11 16:44:58",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 373.7725250720978
+  },
+  {
+    "id": 80,
+    "refresh_time": "2026-01-11 20:54:22",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 405.75514960289
+  },
+  {
+    "id": 81,
+    "refresh_time": "2026-01-11 23:06:52",
+    "stocks_updated": 462,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 4746.736527919769
+  },
+  {
+    "id": 82,
+    "refresh_time": "2026-01-12 00:13:13",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 370.06867599487305
+  },
+  {
+    "id": 83,
+    "refresh_time": "2026-01-12 01:20:10",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 396.2650923728943
+  },
+  {
+    "id": 84,
+    "refresh_time": "2026-01-12 13:31:06",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 400.6508278846741
+  },
+  {
+    "id": 85,
+    "refresh_time": "2026-01-12 14:45:35",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 345.9277744293213
+  },
+  {
+    "id": 86,
+    "refresh_time": "2026-01-12 15:06:26",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 333.9740409851074
+  },
+  {
+    "id": 87,
+    "refresh_time": "2026-01-12 15:27:04",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 320.5771474838257
+  },
+  {
+    "id": 88,
+    "refresh_time": "2026-01-12 15:47:55",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 334.9797394275665
+  },
+  {
+    "id": 89,
+    "refresh_time": "2026-01-12 16:08:53",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 336.76251912117004
+  },
+  {
+    "id": 90,
+    "refresh_time": "2026-01-12 16:29:27",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 319.66310477256775
+  },
+  {
+    "id": 91,
+    "refresh_time": "2026-01-12 16:53:28",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 524.8074042797089
+  },
+  {
+    "id": 92,
+    "refresh_time": "2026-01-12 17:14:18",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 325.66271233558655
+  },
+  {
+    "id": 93,
+    "refresh_time": "2026-01-12 17:35:10",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 334.6814272403717
+  },
+  {
+    "id": 94,
+    "refresh_time": "2026-01-12 17:56:10",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 345.62931752204895
+  },
+  {
+    "id": 95,
+    "refresh_time": "2026-01-12 18:17:09",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 333.70835614204407
+  },
+  {
+    "id": 96,
+    "refresh_time": "2026-01-12 18:38:15",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 341.164160490036
+  },
+  {
+    "id": 97,
+    "refresh_time": "2026-01-12 18:59:14",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 333.5208296775818
+  },
+  {
+    "id": 98,
+    "refresh_time": "2026-01-12 19:20:20",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 333.9206941127777
+  },
+  {
+    "id": 99,
+    "refresh_time": "2026-01-12 19:41:04",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 318.7673716545105
+  },
+  {
+    "id": 100,
+    "refresh_time": "2026-01-12 20:01:42",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 318.0978436470032
+  },
+  {
+    "id": 101,
+    "refresh_time": "2026-01-12 20:24:47",
+    "stocks_updated": 499,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 466.5668020248413
+  },
+  {
+    "id": 102,
+    "refresh_time": "2026-01-12 20:50:21",
+    "stocks_updated": 0,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 0,
+    "error_message": "disk I/O error",
+    "duration_seconds": 554.1680419445038
+  },
+  {
+    "id": 103,
+    "refresh_time": "2026-01-12 21:18:40",
+    "stocks_updated": 500,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 354.1333544254303
+  },
+  {
+    "id": 104,
+    "refresh_time": "2026-01-12 22:19:20",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 385.07933473587036
+  },
+  {
+    "id": 105,
+    "refresh_time": "2026-01-13 00:47:31",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 448.8834583759308
+  },
+  {
+    "id": 106,
+    "refresh_time": "2026-01-13 01:54:02",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 366.946852684021
+  },
+  {
+    "id": 107,
+    "refresh_time": "2026-01-13 03:01:36",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 436.02552342414856
+  },
+  {
+    "id": 108,
+    "refresh_time": "2026-01-13 04:09:56",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 471.51738715171814
+  },
+  {
+    "id": 109,
+    "refresh_time": "2026-01-13 05:17:26",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 428.576541185379
+  },
+  {
+    "id": 110,
+    "refresh_time": "2026-01-13 06:54:00",
+    "stocks_updated": 500,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 348.1721305847168
+  },
+  {
+    "id": 111,
+    "refresh_time": "2026-01-13 08:00:20",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 363.4978017807007
+  },
+  {
+    "id": 112,
+    "refresh_time": "2026-01-13 09:07:30",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 413.5349702835083
+  },
+  {
+    "id": 113,
+    "refresh_time": "2026-01-13 10:15:38",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 464.2549867630005
+  },
+  {
+    "id": 114,
+    "refresh_time": "2026-01-13 13:26:01",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 317.43744134902954
+  },
+  {
+    "id": 115,
+    "refresh_time": "2026-01-13 14:34:01",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 464.66765570640564
+  },
+  {
+    "id": 116,
+    "refresh_time": "2026-01-13 14:41:31",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 315.1418147087097
+  },
+  {
+    "id": 117,
+    "refresh_time": "2026-01-13 14:59:24",
+    "stocks_updated": 50,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 154.99607920646667
+  },
+  {
+    "id": 118,
+    "refresh_time": "2026-01-13 15:20:47",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 374.57017755508423
+  },
+  {
+    "id": 119,
+    "refresh_time": "2026-01-13 15:42:03",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 356.70448303222656
+  },
+  {
+    "id": 120,
+    "refresh_time": "2026-01-13 16:03:35",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 369.47438955307007
+  },
+  {
+    "id": 121,
+    "refresh_time": "2026-01-13 16:22:58",
+    "stocks_updated": 235,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 245.01830434799194
+  },
+  {
+    "id": 122,
+    "refresh_time": "2026-01-13 16:44:09",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 370.3727641105652
+  },
+  {
+    "id": 123,
+    "refresh_time": "2026-01-13 18:21:09",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 403.38866233825684
+  },
+  {
+    "id": 124,
+    "refresh_time": "2026-01-13 18:42:23",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 352.139285326004
+  },
+  {
+    "id": 125,
+    "refresh_time": "2026-01-13 19:01:32",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 334.2601914405823
+  },
+  {
+    "id": 126,
+    "refresh_time": "2026-01-13 19:16:41",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 338.0384666919708
+  },
+  {
+    "id": 127,
+    "refresh_time": "2026-01-13 19:57:29",
+    "stocks_updated": 498,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 629.0016963481903
+  },
+  {
+    "id": 128,
+    "refresh_time": "2026-01-13 20:27:13",
+    "stocks_updated": 500,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 853.6986713409424
+  },
+  {
+    "id": 129,
+    "refresh_time": "2026-01-13 20:55:24",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 767.9819574356079
+  },
+  {
+    "id": 130,
+    "refresh_time": "2026-01-14 07:29:13",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 437.7913727760315
+  },
+  {
+    "id": 131,
+    "refresh_time": "2026-01-14 08:34:40",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 313.30834221839905
+  },
+  {
+    "id": 132,
+    "refresh_time": "2026-01-14 10:53:47",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 404.28551864624023
+  },
+  {
+    "id": 133,
+    "refresh_time": "2026-01-14 14:21:33",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 378.8978636264801
+  },
+  {
+    "id": 134,
+    "refresh_time": "2026-01-14 14:44:17",
+    "stocks_updated": 502,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 445.4217691421509
+  },
+  {
+    "id": 135,
+    "refresh_time": "2026-01-14 15:05:48",
+    "stocks_updated": 500,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 368.8662157058716
+  },
+  {
+    "id": 136,
+    "refresh_time": "2026-01-14 15:44:38",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 511.362277507782
+  },
+  {
+    "id": 137,
+    "refresh_time": "2026-01-14 16:06:38",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 393.04541754722595
+  },
+  {
+    "id": 138,
+    "refresh_time": "2026-01-14 16:29:02",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 427.3690450191498
+  },
+  {
+    "id": 139,
+    "refresh_time": "2026-01-14 16:52:04",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 458.52085304260254
+  },
+  {
+    "id": 140,
+    "refresh_time": "2026-01-14 18:50:27",
+    "stocks_updated": 443,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 6176.154450893402
+  },
+  {
+    "id": 141,
+    "refresh_time": "2026-01-14 19:11:12",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 322.43768095970154
+  },
+  {
+    "id": 142,
+    "refresh_time": "2026-01-14 19:31:45",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 318.99786949157715
+  },
+  {
+    "id": 143,
+    "refresh_time": "2026-01-14 19:54:07",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 429.1802315711975
+  },
+  {
+    "id": 144,
+    "refresh_time": "2026-01-14 20:15:46",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 378.2157654762268
+  },
+  {
+    "id": 145,
+    "refresh_time": "2026-01-14 20:38:58",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 468.5934669971466
+  },
+  {
+    "id": 146,
+    "refresh_time": "2026-01-14 21:00:59",
+    "stocks_updated": 408,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 399.30155754089355
+  },
+  {
+    "id": 147,
+    "refresh_time": "2026-01-14 22:04:20",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 343.26421880722046
+  },
+  {
+    "id": 148,
+    "refresh_time": "2026-01-14 23:05:36",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 411.84074449539185
+  },
+  {
+    "id": 149,
+    "refresh_time": "2026-01-15 12:11:57",
+    "stocks_updated": 501,
+    "data_source": "hybrid_sp500live_fmp",
+    "success": 1,
+    "error_message": null,
+    "duration_seconds": 325.7323307991028
+  }
+]

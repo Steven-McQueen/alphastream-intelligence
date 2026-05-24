@@ -109,20 +109,10 @@ def fetch_and_import_sp500_hybrid() -> int:
         # Map original -> normalized for FMP
         ticker_map = {sym: _normalize_ticker_for_fmp(sym) for sym in symbols}
         fmp_symbols = list(ticker_map.values())
-        all_quotes: List[Dict] = []
-        total_batches = (len(fmp_symbols) - 1) // BATCH_SIZE + 1
-        print(f"Fetching quotes from FMP ({len(fmp_symbols)} stocks)...")
-        for i in range(0, len(fmp_symbols), BATCH_SIZE):
-            batch = fmp_symbols[i : i + BATCH_SIZE]
-            batch_num = i // BATCH_SIZE + 1
-            print(f"  Batch {batch_num}/{total_batches}...", end=" ")
-            try:
-                quotes = fmp_client.get_batch_quotes(batch)
-                all_quotes.extend(quotes)
-                print(f"[OK] {len(quotes)} quotes")
-            except Exception as exc:
-                print(f"[ERROR] Error: {exc}")
-            time.sleep(0.3)  # stay under rate limits
+
+        # Use optimized batch quotes (200 symbols per API call instead of 1)
+        print(f"Fetching quotes from FMP ({len(fmp_symbols)} stocks) using optimized batch...")
+        all_quotes = fmp_client.get_batch_quotes_optimized(fmp_symbols)
 
         print(f"[OK] Total quotes fetched: {len(all_quotes)}")
         quote_map = {q.get("symbol"): q for q in all_quotes if q.get("symbol")}

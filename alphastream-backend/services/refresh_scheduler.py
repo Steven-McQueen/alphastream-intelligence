@@ -1,14 +1,20 @@
 """Background scheduler for automatic database refresh"""
+import logging
 import schedule
 import time
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
+
+logger = logging.getLogger(__name__)
+
+# Stop flag for graceful scheduler shutdown
+_scheduler_stop = threading.Event()
 from services.hybrid_importer import (
     refresh_all_hybrid_data,
     fetch_and_import_market_movers_from_fmp,
 )
-from services.macro_importer import refresh_all_macro_data
+from services.macro_importer import refresh_all_macro_data, refresh_macro_history
 from services.news_importer import (
     refresh_general_news,
     refresh_stock_latest,
@@ -68,6 +74,9 @@ def schedule_refresh():
     # Daily sector history backfill (early morning)
     schedule.every().day.at("04:00").do(lambda: backfill_sector_history(days=45))
 
+    # Daily macro history refresh (treasury, CPI, VIX) to keep charts current
+    schedule.every().day.at("05:00").do(refresh_macro_history)
+
     # Earnings refresh
     schedule.every().hour.do(lambda: earnings_job(hourly=True))
     schedule.every().day.at("04:30").do(lambda: earnings_job(hourly=False))
@@ -75,18 +84,31 @@ def schedule_refresh():
     # Prune old news daily
     schedule.every().day.at("03:00").do(lambda: prune_old_news(7))
 
+    # Chat thread retention — delete expired threads daily at 03:30
+    schedule.every().day.at("03:30").do(chat_retention_job)
+
+    # Market summary (Gemini) — hourly during market hours only
+    schedule.every().hour.do(market_summary_job)
+
     print("Refresh scheduler initialized")
     print("   - Market hours (Mon-Fri 9:30 AM - 4:00 PM ET): Every 15 minutes")
     print("   - Outside market hours: Every hour")
     print("   - News: Every 10 minutes (general + stock latest)")
     print("   - News prune: Daily at 03:00")
+    print("   - Market summary (Gemini): Every hour during market hours")
 
 
 def run_scheduler():
     """Run the scheduler in a loop"""
-    while True:
+    while not _scheduler_stop.is_set():
         schedule.run_pending()
-        time.sleep(30)
+        _scheduler_stop.wait(30)
+
+
+def stop_scheduler():
+    """Signal the background scheduler loop to exit."""
+    _scheduler_stop.set()
+    logger.info("[SCHEDULER] Shutdown requested")
 
 
 def start_scheduler_background():
@@ -101,6 +123,7 @@ def start_scheduler_background():
             news_job()
             fast_market_job()
             earnings_job(hourly=False)
+            refresh_macro_history()
             print("[SCHEDULER] Initial refresh completed")
         except Exception as e:
             print(f"[SCHEDULER] Initial refresh error: {e}")
@@ -109,9 +132,31 @@ def start_scheduler_background():
     init_thread = threading.Thread(target=initial_refresh, daemon=True)
     init_thread.start()
 
+    def startup_market_summary():
+        try:
+            from services.market_summary_generator import maybe_generate_on_startup
+
+            maybe_generate_on_startup()
+        except Exception as e:
+            print(f"[SCHEDULER] Market summary startup error: {e}")
+
+    summary_thread = threading.Thread(target=startup_market_summary, daemon=True)
+    summary_thread.start()
+
+    _scheduler_stop.clear()
     scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
     print("[SCHEDULER] Background scheduler started\n")
+
+
+def market_summary_job():
+    """Hourly Gemini market summary refresh (market hours only)."""
+    try:
+        from services.market_summary_generator import market_summary_job as _run
+
+        _run()
+    except Exception as e:
+        print(f"[MARKET_SUMMARY] Scheduled job error: {e}")
 
 
 def news_job():
@@ -152,4 +197,16 @@ def earnings_job(hourly: bool = False):
         print(f"[OK] Earnings refresh: {inserted} rows ({start} -> {end})")
     except Exception as e:
         print(f"Earnings refresh failed: {e}")
+
+
+def chat_retention_job():
+    """Delete chat threads that have been inactive for 14+ days."""
+    try:
+        from database.chat_store import delete_expired_threads
+
+        count = delete_expired_threads()
+        if count:
+            print(f"[OK] Chat retention: deleted {count} expired threads")
+    except Exception as e:
+        print(f"Chat retention cleanup failed: {e}")
 
