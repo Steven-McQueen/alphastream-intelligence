@@ -18,24 +18,24 @@ export function MonteCarloStats({ result, initialValue, targetReturn }: MonteCar
       value: `$${result.expectedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
       subValue: `+${expectedReturn.toFixed(1)}% return`,
       icon: TrendingUp,
-      color: 'text-emerald-500',
-      bgColor: 'bg-emerald-500/10',
+      color: 'text-positive',
+      bgColor: 'bg-positive/10',
     },
     {
       label: `P(>${targetReturn}% Return)`,
       value: `${(result.probabilityOfTarget * 100).toFixed(1)}%`,
       subValue: `Target: +${targetReturn}%`,
       icon: Target,
-      color: result.probabilityOfTarget > 0.5 ? 'text-emerald-500' : 'text-amber-500',
-      bgColor: result.probabilityOfTarget > 0.5 ? 'bg-emerald-500/10' : 'bg-amber-500/10',
+      color: result.probabilityOfTarget > 0.5 ? 'text-positive' : 'text-amber-500',
+      bgColor: result.probabilityOfTarget > 0.5 ? 'bg-positive/10' : 'bg-amber-500/10',
     },
     {
       label: 'Probability of Loss',
       value: `${(result.probabilityOfLoss * 100).toFixed(1)}%`,
       subValue: 'Below initial value',
       icon: TrendingDown,
-      color: result.probabilityOfLoss < 0.2 ? 'text-emerald-500' : 'text-red-500',
-      bgColor: result.probabilityOfLoss < 0.2 ? 'bg-emerald-500/10' : 'bg-red-500/10',
+      color: result.probabilityOfLoss < 0.2 ? 'text-positive' : 'text-negative',
+      bgColor: result.probabilityOfLoss < 0.2 ? 'bg-positive/10' : 'bg-negative/10',
     },
     {
       label: 'Outcome Volatility',
@@ -73,7 +73,7 @@ export function MonteCarloStats({ result, initialValue, targetReturn }: MonteCar
       <Card className="bg-card border-border">
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-4">
-            <ShieldAlert className="w-4 h-4 text-red-500" />
+            <ShieldAlert className="w-4 h-4 text-negative" />
             <span className="text-sm font-medium">Risk Metrics</span>
             <Badge variant="outline" className="text-[10px] ml-auto">Value at Risk</Badge>
           </div>
@@ -85,7 +85,7 @@ export function MonteCarloStats({ result, initialValue, targetReturn }: MonteCar
                 <span className="text-xs text-muted-foreground">VaR (95%)</span>
                 <Badge variant="secondary" className="text-[9px] px-1 py-0">5% worst</Badge>
               </div>
-              <p className="text-lg font-semibold text-red-500">
+              <p className="text-lg font-semibold text-negative">
                 -${result.var95.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </p>
               <p className="text-xs text-muted-foreground font-mono">
@@ -99,7 +99,7 @@ export function MonteCarloStats({ result, initialValue, targetReturn }: MonteCar
                 <span className="text-xs text-muted-foreground">VaR (99%)</span>
                 <Badge variant="secondary" className="text-[9px] px-1 py-0">1% worst</Badge>
               </div>
-              <p className="text-lg font-semibold text-red-500">
+              <p className="text-lg font-semibold text-negative">
                 -${result.var99.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </p>
               <p className="text-xs text-muted-foreground font-mono">

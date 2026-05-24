@@ -215,51 +215,51 @@ const CustomTooltip = ({
     showReturns ? `${val > 0 ? '+' : ''}${val.toFixed(2)}%` : `$${val.toFixed(2)}`;
 
   return (
-    <div className="bg-zinc-900 border border-zinc-700 rounded-lg shadow-lg p-3 min-w-[180px]">
-      <div className="text-xs text-zinc-400 mb-2">
+    <div className="bg-card border border-secondary rounded-lg shadow-lg p-3 min-w-[180px]">
+      <div className="text-xs text-muted-foreground mb-2">
         {formatDate(data.timestamp, timeRange)}
       </div>
       
       {chartType === "candle" ? (
         <div className="space-y-1.5">
           <div className="flex justify-between gap-4">
-            <span className="text-xs text-zinc-400">O</span>
-            <span className="text-xs font-medium text-white">
+            <span className="text-xs text-muted-foreground">O</span>
+            <span className="text-xs font-medium text-foreground">
               {formatValue(data.open)}
             </span>
           </div>
           <div className="flex justify-between gap-4">
-            <span className="text-xs text-zinc-400">H</span>
-            <span className="text-xs font-medium text-green-500">
+            <span className="text-xs text-muted-foreground">H</span>
+            <span className="text-xs font-medium text-positive">
               {formatValue(data.high)}
             </span>
           </div>
           <div className="flex justify-between gap-4">
-            <span className="text-xs text-zinc-400">L</span>
-            <span className="text-xs font-medium text-red-500">
+            <span className="text-xs text-muted-foreground">L</span>
+            <span className="text-xs font-medium text-negative">
               {formatValue(data.low)}
             </span>
           </div>
           <div className="flex justify-between gap-4">
-            <span className="text-xs text-zinc-400">C</span>
-            <span className="text-xs font-semibold text-white">
+            <span className="text-xs text-muted-foreground">C</span>
+            <span className="text-xs font-semibold text-foreground">
               {formatValue(data.close)}
             </span>
           </div>
         </div>
       ) : (
         <div className="flex justify-between gap-4">
-          <span className="text-xs text-zinc-400">
+          <span className="text-xs text-muted-foreground">
             {showReturns ? "Return" : "Price"}
           </span>
-          <span className="text-xs font-semibold text-white">
+          <span className="text-xs font-semibold text-foreground">
             {formatValue(data.close)}
           </span>
         </div>
       )}
       
       {movingAverage !== "none" && maValue && (
-        <div className="border-t border-zinc-700 mt-2 pt-2">
+        <div className="border-t border-secondary mt-2 pt-2">
           <div className="flex justify-between gap-4">
             <span className="text-xs font-medium text-blue-400">
               {getMALabel()}
@@ -271,10 +271,10 @@ const CustomTooltip = ({
         </div>
       )}
       
-      <div className="border-t border-zinc-700 mt-2 pt-2">
+      <div className="border-t border-secondary mt-2 pt-2">
         <div className="flex justify-between gap-4">
-          <span className="text-xs text-zinc-400">Vol</span>
-          <span className="text-xs font-medium text-white">
+          <span className="text-xs text-muted-foreground">Vol</span>
+          <span className="text-xs font-medium text-foreground">
             {(data.volume / 1000000).toFixed(2)}M
           </span>
         </div>
@@ -565,44 +565,44 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
         <div 
           ref={chartContainerRef}
           className={cn(
-            "bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden transition-all duration-500 ease-in-out",
+            "bg-card rounded-xl border border-border overflow-hidden transition-all duration-500 ease-in-out",
             isFullscreen && "fixed inset-4 z-50 animate-in zoom-in-95 fade-in duration-300"
           )}
         >
         {/* Header */}
-        <div className="p-5 border-b border-zinc-800">
+        <div className="p-5 border-b border-border">
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <h2 className="text-sm font-medium text-zinc-400">
+                <h2 className="text-sm font-medium text-muted-foreground">
                   {symbol}
                 </h2>
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-dim">
                   {companyName}
                 </span>
                 {lastUpdated && (
-                  <span className="text-xs text-zinc-600">
+                  <span className="text-xs text-dim">
                     · Updated {lastUpdated.toLocaleTimeString()}
                   </span>
                 )}
               </div>
               <div className="flex items-baseline gap-3">
                 {isLoading && data.length === 0 ? (
-                  <div className="flex items-center gap-2 text-zinc-400">
+                  <div className="flex items-center gap-2 text-muted-foreground">
                     <Loader2 className="w-5 h-5 animate-spin" />
                     <span>Loading...</span>
                   </div>
                 ) : (
                   <>
-                    <div className="text-3xl font-semibold text-white">
+                    <div className="text-3xl font-semibold text-foreground">
                       {showReturns ? `${currentPrice > 0 ? '+' : ''}${currentPrice.toFixed(2)}%` : `$${currentPrice.toFixed(2)}`}
                     </div>
                     <div
                       className={cn(
                         "flex items-center gap-1 text-sm font-medium",
                         isPositive
-                          ? "text-green-500"
-                          : "text-red-500"
+                          ? "text-positive"
+                          : "text-negative"
                       )}
                     >
                       <span>
@@ -621,7 +621,7 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
 
             {/* Time Range Controls */}
             <div className="flex items-center gap-2">
-              <div className="flex gap-1 bg-zinc-800 rounded-lg p-1">
+              <div className="flex gap-1 bg-muted rounded-lg p-1">
                 {timeRanges.map((range) => (
                   <button
                     key={range}
@@ -629,8 +629,8 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                     className={cn(
                       "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
                       timeRange === range
-                        ? "bg-zinc-700 text-white shadow-sm"
-                        : "text-zinc-400 hover:text-zinc-200"
+                        ? "bg-secondary text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {range}
@@ -641,29 +641,29 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
               <button
                 onClick={() => refetch()}
                 disabled={isLoading}
-                className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-all disabled:opacity-50"
+                className="p-2 bg-muted hover:bg-secondary rounded-lg transition-all disabled:opacity-50"
                 title="Refresh data"
               >
-                <RefreshCw className={cn("w-4 h-4 text-zinc-400", isLoading && "animate-spin")} />
+                <RefreshCw className={cn("w-4 h-4 text-muted-foreground", isLoading && "animate-spin")} />
               </button>
 
               <button
                 onClick={handleCapture}
-                className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-all"
+                className="p-2 bg-muted hover:bg-secondary rounded-lg transition-all"
                 title="Capture chart"
               >
-                <Camera className="w-4 h-4 text-zinc-400" />
+                <Camera className="w-4 h-4 text-muted-foreground" />
               </button>
 
               <button
                 onClick={handleFullscreen}
-                className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-all transform hover:scale-105"
+                className="p-2 bg-muted hover:bg-secondary rounded-lg transition-all transform hover:scale-105"
                 title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
               >
                 {isFullscreen ? (
-                  <Minimize2 className="w-4 h-4 text-zinc-400" />
+                  <Minimize2 className="w-4 h-4 text-muted-foreground" />
                 ) : (
-                  <Maximize2 className="w-4 h-4 text-zinc-400" />
+                  <Maximize2 className="w-4 h-4 text-muted-foreground" />
                 )}
               </button>
             </div>
@@ -671,14 +671,14 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
 
           {/* Chart Controls */}
           <div className="mt-4 flex items-center gap-3 flex-wrap">
-            <div className="flex gap-1 bg-zinc-800 rounded-lg p-1">
+            <div className="flex gap-1 bg-muted rounded-lg p-1">
               <button
                 onClick={() => setChartType("line")}
                 className={cn(
                   "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
                   chartType === "line"
-                    ? "bg-zinc-700 text-white shadow-sm"
-                    : "text-zinc-400 hover:text-zinc-200"
+                    ? "bg-secondary text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 Line
@@ -688,22 +688,22 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                 className={cn(
                   "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
                   chartType === "candle"
-                    ? "bg-zinc-700 text-white shadow-sm"
-                    : "text-zinc-400 hover:text-zinc-200"
+                    ? "bg-secondary text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 Candlestick
               </button>
             </div>
 
-            <div className="h-4 w-px bg-zinc-700" />
+            <div className="h-4 w-px bg-secondary" />
 
             {/* Moving Averages Dropdown */}
             <Select value={movingAverage} onValueChange={(value) => setMovingAverage(value as MovingAverage)}>
-              <SelectTrigger className="w-[240px] h-8 text-xs bg-zinc-800 border-zinc-700">
+              <SelectTrigger className="w-[240px] h-8 text-xs bg-muted border-secondary">
                 <SelectValue placeholder="Moving Average" />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-800 border-zinc-700 w-[280px]">
+              <SelectContent className="bg-muted border-secondary w-[280px]">
                 {maOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value} className="text-xs">
                     {option.label}
@@ -712,11 +712,11 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
               </SelectContent>
             </Select>
 
-            <div className="h-4 w-px bg-zinc-700" />
+            <div className="h-4 w-px bg-secondary" />
 
             {/* Returns Toggle */}
             <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-zinc-400">
+              <label className="text-xs font-medium text-muted-foreground">
                 Returns
               </label>
               <Switch checked={showReturns} onCheckedChange={setShowReturns} />
@@ -725,7 +725,7 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
             {/* Zoom Indicator */}
             {zoomDomain && (
               <>
-                <div className="h-4 w-px bg-zinc-700" />
+                <div className="h-4 w-px bg-secondary" />
                 <button
                   onClick={() => setZoomDomain(null)}
                   className="px-3 py-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 transition-all"
@@ -750,7 +750,7 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
           {error ? (
             <div className="h-[400px] flex items-center justify-center">
               <div className="text-center">
-                <p className="text-red-400 mb-2">{error}</p>
+                <p className="text-negative mb-2">{error}</p>
                 <button 
                   onClick={() => refetch()} 
                   className="text-sm text-blue-400 hover:text-blue-300"
@@ -761,10 +761,10 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
             </div>
           ) : data.length === 0 && isLoading ? (
             <div className="h-[400px] flex items-center justify-center">
-              <Loader2 className="w-8 h-8 animate-spin text-zinc-500" />
+              <Loader2 className="w-8 h-8 animate-spin text-dim" />
             </div>
           ) : data.length === 0 ? (
-            <div className="h-[400px] flex items-center justify-center text-zinc-500">
+            <div className="h-[400px] flex items-center justify-center text-dim">
               No data available for this time range
             </div>
           ) : (
@@ -852,7 +852,7 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                       activeDot={{
                         r: 4,
                         fill: chartConfig.price.color,
-                        stroke: "#18181b",
+                        stroke: "hsl(var(--tooltip-bg))",
                         strokeWidth: 2,
                       }}
                       animationDuration={500}
@@ -897,36 +897,36 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
               {/* Row 1: OHLC */}
               <div className="grid grid-cols-4 gap-4">
                 <div className="space-y-1">
-                  <div className="text-xs text-zinc-500">Open</div>
-                  <div className="text-sm font-medium text-white">
+                  <div className="text-xs text-dim">Open</div>
+                  <div className="text-sm font-medium text-foreground">
                     ${(footerMetrics.open ?? 0).toFixed(2)}
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs text-zinc-500">High</div>
-                  <div className="text-sm font-medium text-green-500">
+                  <div className="text-xs text-dim">High</div>
+                  <div className="text-sm font-medium text-positive">
                     ${(footerMetrics.high ?? 0).toFixed(2)}
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs text-zinc-500">Low</div>
-                  <div className="text-sm font-medium text-red-500">
+                  <div className="text-xs text-dim">Low</div>
+                  <div className="text-sm font-medium text-negative">
                     ${(footerMetrics.low ?? 0).toFixed(2)}
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs text-zinc-500">Close</div>
-                  <div className="text-sm font-medium text-white">
+                  <div className="text-xs text-dim">Close</div>
+                  <div className="text-sm font-medium text-foreground">
                     ${(footerMetrics.close ?? 0).toFixed(2)}
                   </div>
                 </div>
               </div>
 
               {/* Row 2: Additional metrics */}
-              <div className="grid grid-cols-4 gap-4 pt-3 border-t border-zinc-800">
+              <div className="grid grid-cols-4 gap-4 pt-3 border-t border-border">
                 <div className="space-y-1">
-                  <div className="text-xs text-zinc-500">52W Range</div>
-                  <div className="text-sm font-medium text-white">
+                  <div className="text-xs text-dim">52W Range</div>
+                  <div className="text-sm font-medium text-foreground">
                     {metrics?.yearLow !== undefined && metrics?.yearHigh !== undefined
                       ? `$${metrics.yearLow.toFixed(0)} - $${metrics.yearHigh.toFixed(0)}`
                       : "N/A"
@@ -934,14 +934,14 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs text-zinc-500">Volume</div>
-                  <div className="text-sm font-medium text-white">
+                  <div className="text-xs text-dim">Volume</div>
+                  <div className="text-sm font-medium text-foreground">
                     {rawData.length > 0 ? formatVolume(rawData[rawData.length - 1].volume) : "N/A"}
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs text-zinc-500">Avg Volume</div>
-                  <div className="text-sm font-medium text-white">
+                  <div className="text-xs text-dim">Avg Volume</div>
+                  <div className="text-sm font-medium text-foreground">
                     {metrics?.avgVolume !== undefined 
                       ? formatVolume(metrics.avgVolume) 
                       : calculatedAvgVolume !== undefined 
@@ -950,8 +950,8 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs text-zinc-500">Market Cap</div>
-                  <div className="text-sm font-medium text-white">
+                  <div className="text-xs text-dim">Market Cap</div>
+                  <div className="text-sm font-medium text-foreground">
                     {formatLargeNumber(metrics?.marketCap)}
                   </div>
                 </div>
@@ -963,32 +963,32 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
               {/* Row 1: Return Statistics */}
               <div className="grid grid-cols-4 gap-4">
                 <div className="space-y-1">
-                  <div className="text-xs text-zinc-500">Average</div>
-                  <div className="text-sm font-medium text-white">
+                  <div className="text-xs text-dim">Average</div>
+                  <div className="text-sm font-medium text-foreground">
                     {rawData.length > 0 && rawData[0].close 
                       ? ((footerMetrics.avg - rawData[0].close) / rawData[0].close * 100).toFixed(2) 
                       : "0.00"}%
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs text-zinc-500">Median</div>
-                  <div className="text-sm font-medium text-white">
+                  <div className="text-xs text-dim">Median</div>
+                  <div className="text-sm font-medium text-foreground">
                     {rawData.length > 0 && rawData[0].close 
                       ? ((footerMetrics.median - rawData[0].close) / rawData[0].close * 100).toFixed(2) 
                       : "0.00"}%
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs text-zinc-500">Period High</div>
-                  <div className="text-sm font-medium text-green-500">
+                  <div className="text-xs text-dim">Period High</div>
+                  <div className="text-sm font-medium text-positive">
                     {rawData.length > 0 && rawData[0].close 
                       ? ((footerMetrics.high - rawData[0].close) / rawData[0].close * 100).toFixed(2) 
                       : "0.00"}%
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs text-zinc-500">Period Low</div>
-                  <div className="text-sm font-medium text-red-500">
+                  <div className="text-xs text-dim">Period Low</div>
+                  <div className="text-sm font-medium text-negative">
                     {rawData.length > 0 && rawData[0].close 
                       ? ((footerMetrics.low - rawData[0].close) / rawData[0].close * 100).toFixed(2) 
                       : "0.00"}%
@@ -997,35 +997,35 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
               </div>
 
               {/* Row 2: Technical Indicators */}
-              <div className="grid grid-cols-4 gap-4 pt-3 border-t border-zinc-800">
+              <div className="grid grid-cols-4 gap-4 pt-3 border-t border-border">
                 <div className="text-center">
-                  <div className="text-xs text-zinc-500 mb-1">RSI (14)</div>
+                  <div className="text-xs text-dim mb-1">RSI (14)</div>
                   <div className={cn(
                     "text-sm font-semibold",
-                    (footerMetrics.rsi ?? 50) > 70 ? "text-red-500" : 
-                    (footerMetrics.rsi ?? 50) < 30 ? "text-green-500" : "text-white"
+                    (footerMetrics.rsi ?? 50) > 70 ? "text-negative" : 
+                    (footerMetrics.rsi ?? 50) < 30 ? "text-positive" : "text-foreground"
                   )}>
                     {(footerMetrics.rsi ?? 50).toFixed(1)}
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-xs text-zinc-500 mb-1">ADX</div>
-                  <div className="text-sm font-semibold text-white">
+                  <div className="text-xs text-dim mb-1">ADX</div>
+                  <div className="text-sm font-semibold text-foreground">
                     {(footerMetrics.adx ?? 25).toFixed(1)}
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-xs text-zinc-500 mb-1">StdDev</div>
-                  <div className="text-sm font-semibold text-white">
+                  <div className="text-xs text-dim mb-1">StdDev</div>
+                  <div className="text-sm font-semibold text-foreground">
                     {(footerMetrics.stddev ?? 0).toFixed(2)}
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-xs text-zinc-500 mb-1">Williams %R</div>
+                  <div className="text-xs text-dim mb-1">Williams %R</div>
                   <div className={cn(
                     "text-sm font-semibold",
-                    (footerMetrics.williams ?? -50) > -20 ? "text-red-500" : 
-                    (footerMetrics.williams ?? -50) < -80 ? "text-green-500" : "text-white"
+                    (footerMetrics.williams ?? -50) > -20 ? "text-negative" : 
+                    (footerMetrics.williams ?? -50) < -80 ? "text-positive" : "text-foreground"
                   )}>
                     {(footerMetrics.williams ?? -50).toFixed(1)}
                   </div>

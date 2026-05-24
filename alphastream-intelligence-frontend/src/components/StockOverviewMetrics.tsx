@@ -14,7 +14,7 @@ function MetricRow({ label, value, format, className = "" }: MetricRowProps) {
   if (typeof value === "number") {
     if (format === "percent") {
       const numValue = value as number;
-      const colorClass = numValue >= 0 ? "text-green-500" : "text-red-500";
+      const colorClass = numValue >= 0 ? "text-positive" : "text-negative";
       displayValue = (
         <span className={colorClass}>
           {numValue >= 0 ? "+" : ""}
@@ -29,13 +29,13 @@ function MetricRow({ label, value, format, className = "" }: MetricRowProps) {
       displayValue = value.toFixed(2);
     }
   } else if (value === null || value === undefined) {
-    displayValue = <span className="text-zinc-500">N/A</span>;
+    displayValue = <span className="text-dim">N/A</span>;
   }
 
   return (
     <div className={`flex justify-between items-center py-2 ${className}`}>
-      <span className="text-sm text-zinc-400">{label}</span>
-      <span className="text-sm font-medium text-white">{displayValue}</span>
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium text-foreground">{displayValue}</span>
     </div>
   );
 }
@@ -48,7 +48,7 @@ export function StockOverviewMetrics({ stock }: StockOverviewMetricsProps) {
   return (
     <div className="space-y-6 p-4">
       <section>
-        <h3 className="text-sm font-semibold text-white mb-3 border-b border-zinc-800 pb-2">
+        <h3 className="text-sm font-semibold text-foreground mb-3 border-b border-border pb-2">
           Performance
         </h3>
         <div className="space-y-1">
@@ -61,7 +61,7 @@ export function StockOverviewMetrics({ stock }: StockOverviewMetricsProps) {
       </section>
 
       <section>
-        <h3 className="text-sm font-semibold text-white mb-3 border-b border-zinc-800 pb-2">
+        <h3 className="text-sm font-semibold text-foreground mb-3 border-b border-border pb-2">
           Valuation
         </h3>
         <div className="space-y-1">
@@ -82,7 +82,7 @@ export function StockOverviewMetrics({ stock }: StockOverviewMetricsProps) {
       </section>
 
       <section>
-        <h3 className="text-sm font-semibold text-white mb-3 border-b border-zinc-800 pb-2">
+        <h3 className="text-sm font-semibold text-foreground mb-3 border-b border-border pb-2">
           Profitability
         </h3>
         <div className="space-y-1">
@@ -97,7 +97,7 @@ export function StockOverviewMetrics({ stock }: StockOverviewMetricsProps) {
       </section>
 
       <section>
-        <h3 className="text-sm font-semibold text-white mb-3 border-b border-zinc-800 pb-2">
+        <h3 className="text-sm font-semibold text-foreground mb-3 border-b border-border pb-2">
           Ownership & Risk
         </h3>
         <div className="space-y-1">
@@ -117,7 +117,7 @@ export function StockOverviewMetrics({ stock }: StockOverviewMetricsProps) {
       </section>
 
       <section>
-        <h3 className="text-sm font-semibold text-white mb-3 border-b border-zinc-800 pb-2">
+        <h3 className="text-sm font-semibold text-foreground mb-3 border-b border-border pb-2">
           Company Info
         </h3>
         <div className="space-y-1">
@@ -138,7 +138,7 @@ export function StockOverviewMetrics({ stock }: StockOverviewMetricsProps) {
           />
           {stock.website && (
             <div className="flex justify-between items-center py-2">
-              <span className="text-sm text-zinc-400">Website</span>
+              <span className="text-sm text-muted-foreground">Website</span>
               <a
                 href={stock.website}
                 target="_blank"

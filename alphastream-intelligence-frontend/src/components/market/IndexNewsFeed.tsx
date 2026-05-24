@@ -18,7 +18,7 @@ const sentimentConfig = {
 
 const categoryColors: Record<string, string> = {
   macro: 'bg-blue-500/10 text-blue-500',
-  earnings: 'bg-emerald-500/10 text-emerald-500',
+  earnings: 'bg-positive/10 text-positive',
   sector: 'bg-violet-500/10 text-violet-500',
   geopolitical: 'bg-amber-500/10 text-amber-500',
   fed: 'bg-rose-500/10 text-rose-500',

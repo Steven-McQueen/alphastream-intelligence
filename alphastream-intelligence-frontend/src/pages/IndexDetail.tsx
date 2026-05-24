@@ -1,19 +1,16 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMemo, useState, useEffect, useCallback } from 'react';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, TrendingUp, TrendingDown, Loader2, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Loader2, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMarket } from '@/context/MarketContext';
 import {
   Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, ReferenceLine,
   BarChart, Bar
 } from 'recharts';
 import { cn } from '@/lib/utils';
-import { IndexChat } from '@/components/market/IndexChat';
-
-const API_BASE_URL = 'http://localhost:8000';
+import { ChatOverlay } from '@/components/chat/ChatOverlay';
+import { API_BASE_URL } from '@/config/api';
 
 type TimeRange = '1D' | '5D' | '1M' | '6M' | 'YTD' | '1Y' | '5Y';
 type NavTab = 'Overview' | 'Historical Data' | 'News';
@@ -316,8 +313,8 @@ export default function IndexDetail() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
-          <span className="text-zinc-400">Loading index data...</span>
+          <Loader2 className="w-8 h-8 animate-spin text-positive" />
+          <span className="text-muted-foreground">Loading index data...</span>
         </div>
       </div>
     );
@@ -325,61 +322,68 @@ export default function IndexDetail() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 px-6 pt-4 pb-2 border-b border-border bg-background">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/market')} className="mb-3 -ml-2">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Market
-        </Button>
-
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold text-foreground">{indexName}</h1>
-              <Badge variant="outline" className="text-xs">{normalizedSymbol} · INDEX</Badge>
+      {/* HEADER - STICKY */}
+      <div className="sticky top-0 z-50 bg-background">
+        {/* Main Header Row */}
+        <div className="flex items-center justify-between px-8 py-4 border-b border-border">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/market')} className="-ml-2">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-serif)' }}>{indexName}</h2>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="font-medium">{normalizedSymbol}</span>
+                <span>·</span>
+                <span>INDEX</span>
+              </div>
             </div>
-            <div className="flex items-baseline gap-3">
-              <span className="text-3xl font-mono font-semibold text-foreground">
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right mr-4">
+              <div className="text-3xl font-bold">
                 {currentValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-              <span className={cn('flex items-center gap-1 text-lg font-medium', isPositive ? 'text-positive' : 'text-negative')}>
-                {isPositive ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
-                {change >= 0 ? '+' : ''}{change.toFixed(2)}
-                <span className="text-base">({isPositive ? '+' : ''}{changePercent.toFixed(2)}%)</span>
-              </span>
+              </div>
+              <div className={cn('text-sm font-medium', isPositive ? 'text-positive' : 'text-negative')}>
+                {change >= 0 ? '+' : ''}{change.toFixed(2)} ({isPositive ? '+' : ''}{changePercent.toFixed(2)}%)
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} EST
-            </p>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex gap-1 mt-4 border-b border-border">
-          {(['Overview', 'Historical Data', 'News'] as NavTab[]).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                'px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                activeTab === tab
-                  ? 'text-foreground border-primary'
-                  : 'text-muted-foreground border-transparent hover:text-foreground'
-              )}
-            >
-              {tab}
-            </button>
-          ))}
+        <div className="border-b border-border bg-background px-8">
+          <nav className="flex gap-1">
+            {(['Overview', 'Historical Data', 'News'] as NavTab[]).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  "px-4 py-3 text-sm font-medium transition-colors relative",
+                  activeTab === tab
+                    ? "text-foreground"
+                    : "text-dim hover:text-soft"
+                )}
+              >
+                {tab}
+                {activeTab === tab && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />
+                )}
+              </button>
+            ))}
+          </nav>
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto bg-background scrollbar-slim">
+        <div className="p-8 space-y-6">
           {activeTab === 'Overview' && (
             <>
               {/* Chart Section */}
-              <Card className="p-4 bg-card border-border">
+              <div className="bg-card border border-border rounded-xl p-6">
                 <div className="flex items-center justify-between mb-4">
                   <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)}>
                     <TabsList className="bg-muted/50">
@@ -388,14 +392,14 @@ export default function IndexDetail() {
                       ))}
                     </TabsList>
                   </Tabs>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-sm text-dim">
                     Prev close: <span className="font-mono text-foreground">{prevClose.toFixed(2)}</span>
                   </div>
                 </div>
 
                 <div className="h-[300px]">
                   {chartLoading ? (
-                    <div className="h-full flex items-center justify-center text-muted-foreground">
+                    <div className="h-full flex items-center justify-center text-dim">
                       <Loader2 className="w-6 h-6 animate-spin mr-2" />Loading chart...
                     </div>
                   ) : chartData.length > 0 ? (
@@ -403,48 +407,85 @@ export default function IndexDetail() {
                       <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                         <defs>
                           <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor={isPositive ? 'hsl(var(--positive))' : 'hsl(var(--negative))'} stopOpacity={0.3} />
-                            <stop offset="100%" stopColor={isPositive ? 'hsl(var(--positive))' : 'hsl(var(--negative))'} stopOpacity={0} />
+                            <stop offset="0%" stopColor={isPositive ? '#22c55e' : '#ef4444'} stopOpacity={0.3} />
+                            <stop offset="100%" stopColor={isPositive ? '#22c55e' : '#ef4444'} stopOpacity={0} />
                           </linearGradient>
                         </defs>
-                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} interval="preserveStartEnd" />
-                        <YAxis domain={['auto', 'auto']} axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} tickFormatter={(val) => val.toLocaleString()} width={60} />
-                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} formatter={(value: number) => [value.toLocaleString(undefined, { minimumFractionDigits: 2 }), 'Value']} />
-                        <ReferenceLine y={prevClose} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" strokeOpacity={0.5} />
-                        <Area type="monotone" dataKey="value" stroke={isPositive ? 'hsl(var(--positive))' : 'hsl(var(--negative))'} strokeWidth={2} fill="url(#chartGradient)" dot={false} />
+                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#71717a', fontSize: 11 }} interval="preserveStartEnd" />
+                        <YAxis domain={['auto', 'auto']} axisLine={false} tickLine={false} tick={{ fill: '#71717a', fontSize: 11 }} tickFormatter={(val) => val.toLocaleString()} width={60} />
+                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--tooltip-bg))', border: '1px solid hsl(var(--tooltip-border))', borderRadius: '8px', fontSize: '12px' }} formatter={(value: number) => [value.toLocaleString(undefined, { minimumFractionDigits: 2 }), 'Value']} />
+                        <ReferenceLine y={prevClose} stroke="#71717a" strokeDasharray="3 3" strokeOpacity={0.5} />
+                        <Area type="monotone" dataKey="value" stroke={isPositive ? '#22c55e' : '#ef4444'} strokeWidth={2} fill="url(#chartGradient)" dot={false} />
                       </AreaChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="h-full flex items-center justify-center text-muted-foreground">No data available</div>
+                    <div className="h-full flex items-center justify-center text-dim">No data available</div>
                   )}
                 </div>
+              </div>
 
-                {/* Key Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-border">
-                  <div><div className="text-sm text-muted-foreground">Prev Close</div><div className="text-lg font-mono font-medium">{prevClose.toFixed(2)}</div></div>
-                  <div><div className="text-sm text-muted-foreground">52W Range</div><div className="text-lg font-mono font-medium">{quote?.yearLow?.toFixed(2) || '-'} - {quote?.yearHigh?.toFixed(2) || '-'}</div></div>
-                  <div><div className="text-sm text-muted-foreground">Open</div><div className="text-lg font-mono font-medium">{quote?.open?.toFixed(2) || '-'}</div></div>
-                  <div><div className="text-sm text-muted-foreground">Day Range</div><div className="text-lg font-mono font-medium">{quote?.dayLow?.toFixed(2) || '-'} - {quote?.dayHigh?.toFixed(2) || '-'}</div></div>
-                  <div><div className="text-sm text-muted-foreground">Volume</div><div className="text-lg font-mono font-medium">{quote?.volume ? formatVolume(quote.volume) : '-'}</div></div>
-                  <div><div className="text-sm text-muted-foreground">Avg Volume</div><div className="text-lg font-mono font-medium">{quote?.avgVolume ? formatVolume(quote.avgVolume) : '-'}</div></div>
-                  <div><div className="text-sm text-muted-foreground">Day Change</div><div className={cn('text-lg font-mono font-medium', isPositive ? 'text-positive' : 'text-negative')}>{change >= 0 ? '+' : ''}{change.toFixed(2)}</div></div>
-                  <div><div className="text-sm text-muted-foreground">Change %</div><div className={cn('text-lg font-mono font-medium', isPositive ? 'text-positive' : 'text-negative')}>{changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%</div></div>
+              {/* Key Stats */}
+              <div className="bg-card border border-border rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-foreground mb-4 tracking-tight">Key Statistics</h3>
+                <div className="space-y-0">
+                  <div className="flex items-center justify-between py-3 border-b border-border/50">
+                    <span className="text-sm text-dim">Previous Close</span>
+                    <span className="text-sm font-medium text-foreground">{prevClose.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-3 border-b border-border/50">
+                    <span className="text-sm text-dim">Open</span>
+                    <span className="text-sm font-medium text-foreground">{quote?.open?.toFixed(2) || '-'}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-3 border-b border-border/50">
+                    <span className="text-sm text-dim">Day Range</span>
+                    <span className="text-sm font-medium text-foreground">{quote?.dayLow?.toFixed(2) || '-'} - {quote?.dayHigh?.toFixed(2) || '-'}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-3 border-b border-border/50">
+                    <span className="text-sm text-dim">52 Week Range</span>
+                    <span className="text-sm font-medium text-foreground">{quote?.yearLow?.toFixed(2) || '-'} - {quote?.yearHigh?.toFixed(2) || '-'}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-3 border-b border-border/50">
+                    <span className="text-sm text-dim">Volume</span>
+                    <span className="text-sm font-medium text-foreground">{quote?.volume ? formatVolume(quote.volume) : '-'}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-3 border-b border-border/50">
+                    <span className="text-sm text-dim">Avg Volume</span>
+                    <span className="text-sm font-medium text-foreground">{quote?.avgVolume ? formatVolume(quote.avgVolume) : '-'}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-3 border-b border-border/50">
+                    <span className="text-sm text-dim">Day Change</span>
+                    <span className={cn('text-sm font-medium', isPositive ? 'text-positive' : 'text-negative')}>{change >= 0 ? '+' : ''}{change.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-3">
+                    <span className="text-sm text-dim">Change %</span>
+                    <span className={cn('text-sm font-medium', isPositive ? 'text-positive' : 'text-negative')}>{changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%</span>
+                  </div>
                 </div>
-              </Card>
+              </div>
 
               {/* AI Chat */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <IndexChat indexName={indexName} indexSymbol={displaySymbol} />
+                <ChatOverlay
+                  mode="embedded"
+                  contextLabel={indexName}
+                  suggestedPrompts={[
+                    `What's driving ${displaySymbol} today?`,
+                    `Key factors affecting ${displaySymbol}`,
+                    `${displaySymbol} outlook for this week`,
+                    `Compare ${displaySymbol} to other indices`,
+                  ]}
+                  className="h-[400px]"
+                />
               </div>
             </>
           )}
 
           {activeTab === 'Historical Data' && (
-            <Card className="p-4 bg-card border-border">
+            <div className="bg-card border border-border rounded-xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-lg font-semibold">Historical Data</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <h3 className="text-lg font-semibold text-foreground tracking-tight">Historical Data</h3>
+                  <p className="text-sm text-dim">
                     {timeRange === '1D' || timeRange === '5D' ? '5 minute interval' : 'Daily interval'}
                   </p>
                 </div>
@@ -466,7 +507,7 @@ export default function IndexDetail() {
               <div className="h-24 mb-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData.slice(-50)} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                    <Bar dataKey="volume" fill="hsl(var(--muted-foreground))" opacity={0.5} />
+                    <Bar dataKey="volume" fill="#71717a" opacity={0.5} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -474,7 +515,7 @@ export default function IndexDetail() {
               {/* Table */}
               {chartLoading ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  <Loader2 className="w-6 h-6 animate-spin text-dim" />
                 </div>
               ) : (
                 <>
@@ -482,13 +523,13 @@ export default function IndexDetail() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-border">
-                          <th className="text-left py-3 px-2 text-muted-foreground font-medium">Date</th>
-                          <th className="text-right py-3 px-2 text-muted-foreground font-medium">Open</th>
-                          <th className="text-right py-3 px-2 text-muted-foreground font-medium">High</th>
-                          <th className="text-right py-3 px-2 text-muted-foreground font-medium">Low</th>
-                          <th className="text-right py-3 px-2 text-muted-foreground font-medium">Close</th>
-                          <th className="text-right py-3 px-2 text-muted-foreground font-medium">Change</th>
-                          <th className="text-right py-3 px-2 text-muted-foreground font-medium">Volume</th>
+                          <th className="text-left py-3 px-2 text-dim font-medium">Date</th>
+                          <th className="text-right py-3 px-2 text-dim font-medium">Open</th>
+                          <th className="text-right py-3 px-2 text-dim font-medium">High</th>
+                          <th className="text-right py-3 px-2 text-dim font-medium">Low</th>
+                          <th className="text-right py-3 px-2 text-dim font-medium">Close</th>
+                          <th className="text-right py-3 px-2 text-dim font-medium">Change</th>
+                          <th className="text-right py-3 px-2 text-dim font-medium">Volume</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -506,7 +547,7 @@ export default function IndexDetail() {
                               <td className={cn('py-3 px-2 text-right font-mono', dayChangePositive ? 'text-positive' : 'text-negative')}>
                                 {dayChange !== 0 ? `${dayChangePositive ? '+' : ''}${dayChange.toFixed(2)}%` : '-'}
                               </td>
-                              <td className="py-3 px-2 text-right font-mono text-muted-foreground">{formatVolume(bar.volume)}</td>
+                              <td className="py-3 px-2 text-right font-mono text-dim">{formatVolume(bar.volume)}</td>
                             </tr>
                           );
                         })}
@@ -517,7 +558,7 @@ export default function IndexDetail() {
                   {/* Pagination */}
                   {totalPages > 1 && (
                     <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm text-dim">
                         Page {currentPage + 1} of {totalPages} ({historicalData.length} records)
                       </div>
                       <div className="flex gap-2">
@@ -532,47 +573,45 @@ export default function IndexDetail() {
                   )}
                 </>
               )}
-            </Card>
+            </div>
           )}
 
           {activeTab === 'News' && (
-            <Card className="p-4 bg-card border-border">
-              <h3 className="text-lg font-semibold mb-4">Market News</h3>
+            <div className="bg-card border border-border rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4 tracking-tight">Market News</h3>
               {newsLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  <Loader2 className="w-6 h-6 animate-spin text-dim" />
                 </div>
               ) : news.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No news available</div>
+                <div className="text-center py-8 text-dim">No news available</div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-0">
                   {news.map((article, idx) => (
                     <a
                       key={article.id || idx}
                       href={article.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block p-4 rounded-lg border border-border/50 hover:border-primary/50 hover:bg-muted/30 transition-all"
+                      className="flex items-start gap-4 py-4 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors rounded-lg px-2 -mx-2"
                     >
-                      <div className="flex items-start gap-4">
-                        {article.image && (
-                          <img src={article.image} alt="" className="w-20 h-20 rounded-lg object-cover flex-shrink-0" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-medium text-foreground line-clamp-2 mb-1">{article.headline || article.title}</h4>
-                          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{article.summary || article.text}</p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>{article.source || article.publisher}</span>
-                            <span>·</span>
-                            <span>{formatTimeAgo(article.publishedAt || article.publishedDate || '')}</span>
-                          </div>
+                      {article.image && (
+                        <img src={article.image} alt="" className="w-20 h-20 rounded-lg object-cover flex-shrink-0" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-medium text-foreground line-clamp-2 mb-1">{article.headline || article.title}</h4>
+                        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{article.summary || article.text}</p>
+                        <div className="flex items-center gap-2 text-xs text-dim">
+                          <span>{article.source || article.publisher}</span>
+                          <span>·</span>
+                          <span>{formatTimeAgo(article.publishedAt || article.publishedDate || '')}</span>
                         </div>
                       </div>
                     </a>
                   ))}
                 </div>
               )}
-            </Card>
+            </div>
           )}
         </div>
       </div>

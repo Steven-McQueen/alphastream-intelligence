@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { API_BASE_URL } from '@/config/api';
 
 export interface MarketIndex {
   symbol: string;
@@ -9,7 +10,7 @@ export interface MarketIndex {
   updatedAt?: string;
 }
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = API_BASE_URL;
 
 export function useMarketIndices() {
   return useQuery({

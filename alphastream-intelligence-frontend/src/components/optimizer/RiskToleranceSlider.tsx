@@ -34,7 +34,7 @@ export function RiskToleranceSlider({
             <Target className="w-4 h-4" />
             Risk Tolerance
           </CardTitle>
-          <Badge variant="secondary" className={`${riskLevel.color} text-white`}>
+          <Badge variant="secondary" className={`${riskLevel.color} text-foreground`}>
             {riskLevel.label}
           </Badge>
         </div>

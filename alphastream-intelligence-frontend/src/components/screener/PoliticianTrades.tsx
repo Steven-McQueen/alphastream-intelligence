@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { Loader2, ExternalLink, TrendingUp, TrendingDown, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
-const API_BASE_URL = 'http://localhost:8000';
+import { API_BASE_URL } from '@/config/api';
 
 interface CongressTrade {
   symbol: string;
@@ -84,8 +84,8 @@ export function PoliticianTrades({ ticker }: PoliticianTradesProps) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
-          <span className="text-sm text-zinc-400">Loading congressional trades...</span>
+          <Loader2 className="w-8 h-8 animate-spin text-positive" />
+          <span className="text-sm text-muted-foreground">Loading congressional trades...</span>
         </div>
       </div>
     );
@@ -95,10 +95,10 @@ export function PoliticianTrades({ ticker }: PoliticianTradesProps) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-800 flex items-center justify-center">
-            <Users className="w-8 h-8 text-zinc-500" />
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+            <Users className="w-8 h-8 text-dim" />
           </div>
-          <p className="text-sm text-zinc-400">{error}</p>
+          <p className="text-sm text-muted-foreground">{error}</p>
         </div>
       </div>
     );
@@ -108,11 +108,11 @@ export function PoliticianTrades({ ticker }: PoliticianTradesProps) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-800 flex items-center justify-center">
-            <Users className="w-8 h-8 text-zinc-500" />
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+            <Users className="w-8 h-8 text-dim" />
           </div>
-          <p className="text-lg font-medium text-white mb-2">No Congressional Trades</p>
-          <p className="text-sm text-zinc-400">No recent trades found for {ticker}</p>
+          <p className="text-lg font-medium text-foreground mb-2">No Congressional Trades</p>
+          <p className="text-sm text-muted-foreground">No recent trades found for {ticker}</p>
         </div>
       </div>
     );
@@ -123,17 +123,17 @@ export function PoliticianTrades({ ticker }: PoliticianTradesProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-white">Politicians Trading {ticker}</h3>
-          <p className="text-sm text-zinc-400">{trades.length} trades found</p>
+          <h3 className="text-lg font-semibold text-foreground">Politicians Trading {ticker}</h3>
+          <p className="text-sm text-muted-foreground">{trades.length} trades found</p>
         </div>
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-zinc-800 overflow-hidden">
+      <div className="rounded-xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-zinc-900">
-              <tr className="text-xs text-zinc-500">
+            <thead className="bg-card">
+              <tr className="text-xs text-dim">
                 <th className="text-left px-4 py-3 font-medium">Politician</th>
                 <th className="text-left px-4 py-3 font-medium">Type</th>
                 <th className="text-left px-4 py-3 font-medium">Amount</th>
@@ -151,13 +151,13 @@ export function PoliticianTrades({ ticker }: PoliticianTradesProps) {
                 return (
                   <tr
                     key={`${trade.symbol}-${trade.disclosureDate}-${trade.firstName}-${idx}`}
-                    className="border-b border-zinc-800 hover:bg-zinc-900/50 transition-colors"
+                    className="border-b border-border hover:bg-card/50 transition-colors"
                   >
                     <td className="px-4 py-3">
-                      <div className="font-medium text-white text-sm">
+                      <div className="font-medium text-foreground text-sm">
                         {trade.firstName} {trade.lastName}
                       </div>
-                      <div className="text-xs text-zinc-500">
+                      <div className="text-xs text-dim">
                         {trade.district || trade.office}
                         {trade.owner && trade.owner !== '' && ` (${trade.owner})`}
                       </div>
@@ -166,8 +166,8 @@ export function PoliticianTrades({ ticker }: PoliticianTradesProps) {
                       <Badge className={cn(
                         'text-xs font-medium',
                         isBuy 
-                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
-                          : 'bg-red-500/20 text-red-400 border-red-500/30'
+                          ? 'bg-positive/20 text-positive border-positive/30' 
+                          : 'bg-negative/20 text-negative border-negative/30'
                       )}>
                         {isBuy ? (
                           <TrendingUp className="w-3 h-3 mr-1" />
@@ -177,13 +177,13 @@ export function PoliticianTrades({ ticker }: PoliticianTradesProps) {
                         {trade.type}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-sm font-mono text-zinc-300">
+                    <td className="px-4 py-3 text-sm font-mono text-soft">
                       {trade.amount || 'Not disclosed'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-zinc-400">
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
                       {formatDate(trade.transactionDate)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-zinc-400">
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
                       {formatDate(trade.disclosureDate)}
                     </td>
                     <td className="px-4 py-3">
@@ -191,10 +191,10 @@ export function PoliticianTrades({ ticker }: PoliticianTradesProps) {
                         <span className={cn(
                           'text-xs px-2 py-1 rounded-full',
                           discrepancyDays > 30 
-                            ? 'bg-red-500/20 text-red-400' 
+                            ? 'bg-negative/20 text-negative' 
                             : discrepancyDays > 14 
                               ? 'bg-amber-500/20 text-amber-400'
-                              : 'bg-zinc-700 text-zinc-400'
+                              : 'bg-secondary text-muted-foreground'
                         )}>
                           +{discrepancyDays}d
                         </span>
@@ -224,25 +224,25 @@ export function PoliticianTrades({ ticker }: PoliticianTradesProps) {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
-          <div className="text-xs text-zinc-500 mb-1">Total Trades</div>
-          <div className="text-xl font-bold text-white">{trades.length}</div>
+        <div className="bg-card border border-border rounded-lg p-4">
+          <div className="text-xs text-dim mb-1">Total Trades</div>
+          <div className="text-xl font-bold text-foreground">{trades.length}</div>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
-          <div className="text-xs text-zinc-500 mb-1">Purchases</div>
-          <div className="text-xl font-bold text-emerald-400">
+        <div className="bg-card border border-border rounded-lg p-4">
+          <div className="text-xs text-dim mb-1">Purchases</div>
+          <div className="text-xl font-bold text-positive">
             {trades.filter(t => t.type?.toLowerCase().includes('purchase') || t.type?.toLowerCase().includes('buy')).length}
           </div>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
-          <div className="text-xs text-zinc-500 mb-1">Sales</div>
-          <div className="text-xl font-bold text-red-400">
+        <div className="bg-card border border-border rounded-lg p-4">
+          <div className="text-xs text-dim mb-1">Sales</div>
+          <div className="text-xl font-bold text-negative">
             {trades.filter(t => t.type?.toLowerCase().includes('sale') || t.type?.toLowerCase().includes('sell')).length}
           </div>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
-          <div className="text-xs text-zinc-500 mb-1">Unique Politicians</div>
-          <div className="text-xl font-bold text-white">
+        <div className="bg-card border border-border rounded-lg p-4">
+          <div className="text-xs text-dim mb-1">Unique Politicians</div>
+          <div className="text-xl font-bold text-foreground">
             {new Set(trades.map(t => `${t.firstName} ${t.lastName}`)).size}
           </div>
         </div>

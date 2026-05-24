@@ -14,7 +14,7 @@ import {
   Tooltip,
 } from "recharts";
 
-const API_BASE_URL = "http://localhost:8000";
+import { API_BASE_URL } from "@/config/api";
 
 type Timeframe = "1D" | "5D" | "1M" | "6M" | "YTD" | "1Y" | "5Y";
 
@@ -198,14 +198,14 @@ function MetricCard({
   };
 
   const colorClass = isPositive === undefined 
-    ? "text-white"
+    ? "text-foreground"
     : isPositive 
-      ? "text-emerald-400" 
-      : "text-red-400";
+      ? "text-positive" 
+      : "text-negative";
 
   return (
-    <div className="bg-zinc-800/50 rounded-lg p-3 border border-zinc-700/50">
-      <div className="text-xs text-zinc-500 uppercase tracking-wide mb-1">{label}</div>
+    <div className="bg-muted/50 rounded-lg p-3 border border-secondary/50">
+      <div className="text-xs text-dim uppercase tracking-wide mb-1">{label}</div>
       <div className={cn("text-lg font-mono font-semibold", colorClass)}>
         {formatMetric(value)}
       </div>
@@ -376,14 +376,14 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-zinc-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-dim" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-64 text-zinc-500">
+      <div className="flex items-center justify-center h-64 text-dim">
         <p>{error}</p>
       </div>
     );
@@ -392,11 +392,11 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
   return (
     <div className="space-y-6">
       {/* Statistics Panel */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+      <div className="bg-card border border-border rounded-xl p-4">
         <div className="flex items-center gap-2 mb-4">
-          <BarChart3 className="w-5 h-5 text-emerald-400" />
-          <h3 className="text-sm font-semibold text-white">Performance Metrics</h3>
-          <span className="text-xs text-zinc-500 ml-2">({timeframe})</span>
+          <BarChart3 className="w-5 h-5 text-positive" />
+          <h3 className="text-sm font-semibold text-foreground">Performance Metrics</h3>
+          <span className="text-xs text-dim ml-2">({timeframe})</span>
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -465,14 +465,14 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Cumulative Returns Chart */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+        <div className="bg-card border border-border rounded-xl p-4">
           <div className="flex items-center gap-2 mb-4">
             {stats.totalReturn >= 0 ? (
-              <TrendingUp className="w-5 h-5 text-emerald-400" />
+              <TrendingUp className="w-5 h-5 text-positive" />
             ) : (
-              <TrendingDown className="w-5 h-5 text-red-400" />
+              <TrendingDown className="w-5 h-5 text-negative" />
             )}
-            <h3 className="text-sm font-semibold text-white">Cumulative Returns</h3>
+            <h3 className="text-sm font-semibold text-foreground">Cumulative Returns</h3>
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={cumulativeReturns} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
@@ -498,7 +498,7 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
                 width={45}
               />
               <Tooltip
-                contentStyle={{ background: "#18181b", border: "1px solid #3f3f46", borderRadius: "8px" }}
+                contentStyle={{ background: "hsl(var(--tooltip-bg))", border: "1px solid hsl(var(--tooltip-border-light))", borderRadius: "8px" }}
                 labelFormatter={(ts) => new Date(ts).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
                 formatter={(value: number) => [`${value.toFixed(2)}%`, "Return"]}
               />
@@ -514,10 +514,10 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
         </div>
         
         {/* Returns Distribution Chart */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+        <div className="bg-card border border-border rounded-xl p-4">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="w-5 h-5 text-cyan-400" />
-            <h3 className="text-sm font-semibold text-white">Returns Distribution</h3>
+            <h3 className="text-sm font-semibold text-foreground">Returns Distribution</h3>
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={returnsDistribution} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
@@ -538,7 +538,7 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
                 width={35}
               />
               <Tooltip
-                contentStyle={{ background: "#18181b", border: "1px solid #3f3f46", borderRadius: "8px" }}
+                contentStyle={{ background: "hsl(var(--tooltip-bg))", border: "1px solid hsl(var(--tooltip-border-light))", borderRadius: "8px" }}
                 formatter={(value: number) => [value, "Days"]}
               />
               <Bar 
@@ -552,19 +552,19 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
       </div>
       
       {/* Data Table */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
         {/* Header Controls */}
-        <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+        <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-4">
             {/* Timeframe Tabs */}
-            <div className="flex items-center bg-zinc-800 rounded-lg p-1">
+            <div className="flex items-center bg-muted rounded-lg p-1">
               {(["1D", "5D", "1M", "6M", "YTD", "1Y", "5Y"] as Timeframe[]).map((tf) => (
                 <button
                   key={tf}
                   onClick={() => setTimeframe(tf)}
                   className={cn(
                     "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
-                    timeframe === tf ? "bg-zinc-600 text-white" : "text-zinc-400 hover:text-zinc-200"
+                    timeframe === tf ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {tf}
@@ -573,14 +573,14 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
             </div>
             
             {/* Interval Badge */}
-            <span className="text-xs text-zinc-500 bg-zinc-800/50 px-3 py-1.5 rounded-lg">
+            <span className="text-xs text-dim bg-muted/50 px-3 py-1.5 rounded-lg">
               {getIntervalDescription(timeframe)}
             </span>
           </div>
           
           <div className="flex items-center gap-3">
             {/* Record Count */}
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-dim">
               {data.length.toLocaleString()} records
             </span>
             
@@ -590,7 +590,7 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
               size="sm"
               onClick={downloadCSV}
               disabled={!data.length}
-              className="border-zinc-700 hover:bg-zinc-800"
+              className="border-secondary hover:bg-muted"
             >
               <Download className="w-4 h-4 mr-2" />
               Export CSV
@@ -602,26 +602,26 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <thead className="sticky top-0 z-10">
-            <tr className="bg-zinc-800 border-b border-zinc-700">
-              <th className="py-3 px-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+            <tr className="bg-muted border-b border-secondary">
+              <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Date
               </th>
-              <th className="py-3 px-4 text-right text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+              <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Open
               </th>
-              <th className="py-3 px-4 text-right text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+              <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 High
               </th>
-              <th className="py-3 px-4 text-right text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+              <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Low
               </th>
-              <th className="py-3 px-4 text-right text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+              <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Close
               </th>
-              <th className="py-3 px-4 text-right text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+              <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Volume
               </th>
-              <th className="py-3 px-4 text-right text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+              <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Change
               </th>
             </tr>
@@ -629,7 +629,7 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
           <tbody>
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-zinc-500">
+                <td colSpan={7} className="py-8 text-center text-dim">
                   No data available for this period
                 </td>
               </tr>
@@ -641,29 +641,29 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
                 return (
                   <tr 
                     key={bar.date + idx}
-                    className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors"
+                    className="border-b border-border/50 hover:bg-muted/30 transition-colors"
                   >
-                    <td className="py-3 px-4 text-sm text-zinc-300">
+                    <td className="py-3 px-4 text-sm text-soft">
                       {formatDate(bar.date, isIntraday)}
                     </td>
-                    <td className="py-3 px-4 text-sm text-right font-mono text-zinc-300">
+                    <td className="py-3 px-4 text-sm text-right font-mono text-soft">
                       {formatPrice(bar.open)}
                     </td>
-                    <td className="py-3 px-4 text-sm text-right font-mono text-green-400">
+                    <td className="py-3 px-4 text-sm text-right font-mono text-positive">
                       {formatPrice(bar.high)}
                     </td>
-                    <td className="py-3 px-4 text-sm text-right font-mono text-red-400">
+                    <td className="py-3 px-4 text-sm text-right font-mono text-negative">
                       {formatPrice(bar.low)}
                     </td>
-                    <td className="py-3 px-4 text-sm text-right font-mono font-medium text-white">
+                    <td className="py-3 px-4 text-sm text-right font-mono font-medium text-foreground">
                       {formatPrice(bar.close)}
                     </td>
-                    <td className="py-3 px-4 text-sm text-right font-mono text-zinc-400">
+                    <td className="py-3 px-4 text-sm text-right font-mono text-muted-foreground">
                       {formatVolume(bar.volume)}
                     </td>
                     <td className={cn(
                       "py-3 px-4 text-sm text-right font-mono font-medium",
-                      isPositive ? "text-green-400" : "text-red-400"
+                      isPositive ? "text-positive" : "text-negative"
                     )}>
                       {isPositive ? "+" : ""}{change.toFixed(2)}%
                     </td>
@@ -677,8 +677,8 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
       
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between p-4 border-t border-zinc-800">
-          <span className="text-xs text-zinc-500">
+        <div className="flex items-center justify-between p-4 border-t border-border">
+          <span className="text-xs text-dim">
             Showing {page * pageSize + 1}-{Math.min((page + 1) * pageSize, data.length)} of {data.length}
           </span>
           <div className="flex items-center gap-2">
@@ -687,11 +687,11 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
               size="sm"
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="border-zinc-700 hover:bg-zinc-800"
+              className="border-secondary hover:bg-muted"
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <span className="text-xs text-zinc-400 px-2">
+            <span className="text-xs text-muted-foreground px-2">
               Page {page + 1} of {totalPages}
             </span>
             <Button
@@ -699,7 +699,7 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
               size="sm"
               onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
-              className="border-zinc-700 hover:bg-zinc-800"
+              className="border-secondary hover:bg-muted"
             >
               <ChevronRight className="w-4 h-4" />
             </Button>

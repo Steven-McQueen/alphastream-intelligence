@@ -39,19 +39,19 @@ export function TradeSuggestions({ trades, onRefresh }: TradeSuggestionsProps) {
         <div className="grid grid-cols-3 gap-4 p-3 rounded-lg bg-secondary/50">
           <div className="text-center">
             <p className="text-xs text-muted-foreground">Total Buys</p>
-            <p className="text-sm font-semibold text-emerald-500">
+            <p className="text-sm font-semibold text-positive">
               ${totalBuyValue.toLocaleString()}
             </p>
           </div>
           <div className="text-center">
             <p className="text-xs text-muted-foreground">Total Sells</p>
-            <p className="text-sm font-semibold text-red-500">
+            <p className="text-sm font-semibold text-negative">
               ${totalSellValue.toLocaleString()}
             </p>
           </div>
           <div className="text-center">
             <p className="text-xs text-muted-foreground">Net Cash Flow</p>
-            <p className={`text-sm font-semibold ${netCashFlow >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+            <p className={`text-sm font-semibold ${netCashFlow >= 0 ? 'text-positive' : 'text-negative'}`}>
               {netCashFlow >= 0 ? '+' : ''}${netCashFlow.toLocaleString()}
             </p>
           </div>
@@ -74,11 +74,11 @@ export function TradeSuggestions({ trades, onRefresh }: TradeSuggestionsProps) {
               className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
             >
               <div className="flex items-center gap-3">
-                <div className={`p-1.5 rounded ${trade.action === 'BUY' ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
+                <div className={`p-1.5 rounded ${trade.action === 'BUY' ? 'bg-positive/20' : 'bg-negative/20'}`}>
                   {trade.action === 'BUY' ? (
-                    <ArrowUpRight className="w-4 h-4 text-emerald-500" />
+                    <ArrowUpRight className="w-4 h-4 text-positive" />
                   ) : (
-                    <ArrowDownRight className="w-4 h-4 text-red-500" />
+                    <ArrowDownRight className="w-4 h-4 text-negative" />
                   )}
                 </div>
                 <div>

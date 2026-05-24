@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, ExternalLink } from "lucide-react";
 
-const API_BASE_URL = "http://localhost:8000";
+import { API_BASE_URL } from "@/config/api";
 
 interface NewsArticle {
   symbol: string;
@@ -71,12 +71,12 @@ export function StockNews({ ticker }: StockNewsProps) {
 
   if (loading) {
     return (
-      <Card className="p-6 bg-zinc-900 border border-zinc-800 rounded-xl">
+      <Card className="p-6 bg-card border border-border rounded-xl">
         <div className="flex items-center gap-2 mb-4">
-          <h3 className="font-semibold text-lg text-white">📰 Related News</h3>
+          <h3 className="font-semibold text-lg text-foreground">📰 Related News</h3>
         </div>
         <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-zinc-500" />
+          <Loader2 className="w-6 h-6 animate-spin text-dim" />
         </div>
       </Card>
     );
@@ -84,11 +84,11 @@ export function StockNews({ ticker }: StockNewsProps) {
 
   if (error || news.length === 0) {
     return (
-      <Card className="p-6 bg-zinc-900 border border-zinc-800 rounded-xl">
+      <Card className="p-6 bg-card border border-border rounded-xl">
         <div className="flex items-center gap-2 mb-4">
-          <h3 className="font-semibold text-lg text-white">📰 Related News</h3>
+          <h3 className="font-semibold text-lg text-foreground">📰 Related News</h3>
         </div>
-        <p className="text-sm text-zinc-500 text-center py-4">
+        <p className="text-sm text-dim text-center py-4">
           {error || "No recent news available for this stock"}
         </p>
       </Card>
@@ -96,10 +96,10 @@ export function StockNews({ ticker }: StockNewsProps) {
   }
 
   return (
-    <Card className="p-6 bg-zinc-900 border border-zinc-800 rounded-xl">
+    <Card className="p-6 bg-card border border-border rounded-xl">
       <div className="flex items-center gap-2 mb-5">
-        <h3 className="font-semibold text-lg text-white">📰 Related News</h3>
-        <span className="text-xs text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded-full">
+        <h3 className="font-semibold text-lg text-foreground">📰 Related News</h3>
+        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
           {news.length}
         </span>
       </div>
@@ -113,10 +113,10 @@ export function StockNews({ ticker }: StockNewsProps) {
             href={article.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex gap-4 p-4 rounded-xl hover:bg-zinc-800/60 transition-all duration-200 group cursor-pointer"
+            className="flex gap-4 p-4 rounded-xl hover:bg-muted/60 transition-all duration-200 group cursor-pointer"
           >
             {/* Article Image - Left Side */}
-            <div className="flex-shrink-0 w-[100px] h-[80px] rounded-xl overflow-hidden bg-zinc-800">
+            <div className="flex-shrink-0 w-[100px] h-[80px] rounded-xl overflow-hidden bg-muted">
               {article.image ? (
                 <img
                   src={article.image}
@@ -124,11 +124,11 @@ export function StockNews({ ticker }: StockNewsProps) {
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   onError={(e) => {
                     (e.target as HTMLImageElement).parentElement!.innerHTML = 
-                      '<div class="w-full h-full flex items-center justify-center text-zinc-600 text-2xl">📰</div>';
+                      '<div class="w-full h-full flex items-center justify-center text-dim text-2xl">📰</div>';
                   }}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-zinc-600 text-2xl">
+                <div className="w-full h-full flex items-center justify-center text-dim text-2xl">
                   📰
                 </div>
               )}
@@ -137,30 +137,30 @@ export function StockNews({ ticker }: StockNewsProps) {
             {/* Article Content - Right Side */}
             <div className="flex-1 min-w-0 flex flex-col">
               {/* Title */}
-              <h4 className="font-semibold text-[15px] text-white mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors leading-snug">
+              <h4 className="font-semibold text-[15px] text-foreground mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors leading-snug">
                 {article.title}
               </h4>
 
               {/* Article Text Preview */}
-              <p className="text-sm text-zinc-400 line-clamp-2 leading-relaxed mb-3">
+              <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed mb-3">
                 {article.text}
               </p>
 
               {/* Footer: Publisher, Time, Ticker Badge */}
               <div className="flex items-center gap-2 mt-auto">
-                <span className="text-xs font-medium text-zinc-500">
+                <span className="text-xs font-medium text-dim">
                   {article.publisher}
                 </span>
-                <span className="text-xs text-zinc-600">•</span>
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-dim">•</span>
+                <span className="text-xs text-dim">
                   {formatRelativeTime(article.publishedDate)}
                 </span>
-                <span className="text-xs text-zinc-600">•</span>
+                <span className="text-xs text-dim">•</span>
                 {/* Ticker Badge */}
-                <Badge className="bg-emerald-500/20 text-emerald-400 border-0 text-xs px-2 py-0.5 font-medium hover:bg-emerald-500/30">
+                <Badge className="bg-positive/20 text-positive border-0 text-xs px-2 py-0.5 font-medium hover:bg-positive/30">
                   ${ticker}
                 </Badge>
-                <ExternalLink className="w-3.5 h-3.5 text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
+                <ExternalLink className="w-3.5 h-3.5 text-dim opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
               </div>
             </div>
           </a>

@@ -53,8 +53,8 @@ export function PortfolioNewsSummary() {
               variant="outline"
               className={`inline-flex items-center gap-0.5 px-1.5 py-0 text-xs font-medium ${
                 item.dailyPnLPercent >= 0
-                  ? 'text-green-400 border-green-400/30 bg-green-400/10'
-                  : 'text-red-400 border-red-400/30 bg-red-400/10'
+                  ? 'text-positive border-green-400/30 bg-green-400/10'
+                  : 'text-negative border-red-400/30 bg-red-400/10'
               }`}
             >
               {item.dailyPnLPercent >= 0 ? (

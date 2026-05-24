@@ -1,7 +1,8 @@
+import { Link } from 'react-router-dom';
 import { useMarket } from '@/context/MarketContext';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Command } from 'lucide-react';
+import { Command, Hexagon } from 'lucide-react';
 import { UserMenu } from './UserMenu';
 import { InlineTicker } from './InlineTicker';
 
@@ -16,7 +17,16 @@ export function TopBar({ title, onCommandPaletteOpen }: TopBarProps) {
   return (
     <header className="flex items-center justify-between h-12 px-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex items-center gap-4 flex-shrink-0">
-        <h1 className="text-sm font-semibold text-foreground">{title}</h1>
+        {/* Brand */}
+        <Link to="/" className="flex items-center gap-2 text-foreground mr-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-accent border border-border">
+            <Hexagon className="h-4 w-4 text-primary" strokeWidth={1.5} />
+          </div>
+          <span className="text-sm font-semibold" style={{ fontFamily: 'var(font-widget-heading)' }}>
+            AlphaStream Finance
+          </span>
+        </Link>
+
         <Badge
           variant="outline"
           className={cn(

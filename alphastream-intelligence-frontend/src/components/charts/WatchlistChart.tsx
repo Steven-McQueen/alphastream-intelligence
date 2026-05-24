@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { Loader2, Camera, Maximize2, Minimize2, RefreshCw } from "lucide-react";
 import html2canvas from "html2canvas";
 
-const API_BASE_URL = "http://localhost:8000";
+import { API_BASE_URL } from "@/config/api";
 
 type TimeRange = "1D" | "5D" | "1M" | "6M" | "YTD" | "1Y" | "5Y";
 
@@ -82,8 +82,8 @@ const CustomTooltip = ({ active, payload, label, timeRange }: any) => {
   if (!active || !payload || payload.length === 0) return null;
 
   return (
-    <div className="bg-zinc-900/95 border border-zinc-700 rounded-lg p-3 shadow-xl backdrop-blur-sm">
-      <p className="text-xs text-zinc-400 mb-2">{formatTooltipDate(label, timeRange)}</p>
+    <div className="bg-card/95 border border-secondary rounded-lg p-3 shadow-xl backdrop-blur-sm">
+      <p className="text-xs text-muted-foreground mb-2">{formatTooltipDate(label, timeRange)}</p>
       <div className="space-y-1">
         {payload.map((entry: any) => (
           <div key={entry.dataKey} className="flex items-center justify-between gap-4">
@@ -92,12 +92,12 @@ const CustomTooltip = ({ active, payload, label, timeRange }: any) => {
                 className="w-2 h-2 rounded-full"
                 style={{ backgroundColor: entry.color }}
               />
-              <span className="text-xs font-medium text-zinc-300">{entry.dataKey}</span>
+              <span className="text-xs font-medium text-soft">{entry.dataKey}</span>
             </div>
             <span
               className={cn(
                 "text-xs font-mono font-medium",
-                entry.value >= 0 ? "text-green-400" : "text-red-400"
+                entry.value >= 0 ? "text-positive" : "text-negative"
               )}
             >
               {entry.value >= 0 ? "+" : ""}{entry.value?.toFixed(2)}%
@@ -293,8 +293,8 @@ export function WatchlistChart({ tickers, maxStocks = 8 }: WatchlistChartProps) 
 
   if (activeTickers.length === 0) {
     return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-        <div className="flex items-center justify-center h-64 text-zinc-500">
+      <div className="bg-card border border-border rounded-xl p-6">
+        <div className="flex items-center justify-center h-64 text-dim">
           <p>Add stocks to your watchlist to see the comparison chart</p>
         </div>
       </div>
@@ -305,15 +305,15 @@ export function WatchlistChart({ tickers, maxStocks = 8 }: WatchlistChartProps) 
     <div
       ref={chartContainerRef}
       className={cn(
-        "bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden transition-all duration-300",
+        "bg-card border border-border rounded-xl overflow-hidden transition-all duration-300",
         isFullscreen && "fixed inset-4 z-50"
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+      <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-4">
-          <h3 className="text-lg font-semibold text-white">Performance Comparison</h3>
-          <span className="text-xs text-zinc-500">(Normalized to 0% at start)</span>
+          <h3 className="text-lg font-semibold text-foreground">Performance Comparison</h3>
+          <span className="text-xs text-dim">(Normalized to 0% at start)</span>
         </div>
         <div className="flex items-center gap-2">
           {/* Timeframe buttons */}
@@ -324,35 +324,35 @@ export function WatchlistChart({ tickers, maxStocks = 8 }: WatchlistChartProps) 
               className={cn(
                 "px-3 py-1.5 text-xs font-medium rounded-lg transition-colors",
                 timeRange === range
-                  ? "bg-emerald-500 text-white"
-                  : "bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700"
+                  ? "bg-positive text-foreground"
+                  : "bg-muted text-muted-foreground hover:text-foreground hover:bg-secondary"
               )}
             >
               {range}
             </button>
           ))}
           
-          <div className="h-4 w-px bg-zinc-700 mx-2" />
+          <div className="h-4 w-px bg-secondary mx-2" />
           
           {/* Action buttons */}
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors text-zinc-400 hover:text-white disabled:opacity-50"
+            className="p-2 rounded-lg bg-muted hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
             title="Refresh"
           >
             <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
           </button>
           <button
             onClick={handleScreenshot}
-            className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors text-zinc-400 hover:text-white"
+            className="p-2 rounded-lg bg-muted hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
             title="Screenshot"
           >
             <Camera className="w-4 h-4" />
           </button>
           <button
             onClick={toggleFullscreen}
-            className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors text-zinc-400 hover:text-white"
+            className="p-2 rounded-lg bg-muted hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
             title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -364,14 +364,14 @@ export function WatchlistChart({ tickers, maxStocks = 8 }: WatchlistChartProps) 
       <div className="p-4">
         {isLoading ? (
           <div className="h-80 flex items-center justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-zinc-500" />
+            <Loader2 className="w-8 h-8 animate-spin text-dim" />
           </div>
         ) : error ? (
-          <div className="h-80 flex items-center justify-center text-red-400">
+          <div className="h-80 flex items-center justify-center text-negative">
             {error}
           </div>
         ) : chartData.length === 0 ? (
-          <div className="h-80 flex items-center justify-center text-zinc-500">
+          <div className="h-80 flex items-center justify-center text-dim">
             No data available for the selected period
           </div>
         ) : (
@@ -412,7 +412,7 @@ export function WatchlistChart({ tickers, maxStocks = 8 }: WatchlistChartProps) 
                 iconType="circle"
                 iconSize={8}
                 formatter={(value) => (
-                  <span className="text-xs text-zinc-400">{value}</span>
+                  <span className="text-xs text-muted-foreground">{value}</span>
                 )}
               />
               {selectedTickers.map((ticker, idx) => (

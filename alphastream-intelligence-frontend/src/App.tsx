@@ -16,14 +16,18 @@ import Holdings from "./pages/Holdings";
 import Market from "./pages/Market";
 import IndexDetail from "./pages/IndexDetail";
 import Intelligence from "./pages/Intelligence";
+import Earnings from "./pages/Earnings";
 import Optimizer from "./pages/Optimizer";
 import Simulation from "./pages/Simulation";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import News from "./pages/News";
+import Politicians from "./pages/Politicians";
 import NotFound from "./pages/NotFound";
 import { WatchlistProvider } from "./contexts/WatchlistContext";
 import { StockDetailProvider, useStockDetail } from "./contexts/StockDetailContext";
+import { ChatHistoryProvider } from "./contexts/ChatHistoryContext";
 import { StockDetailSheet } from "./components/screener/StockDetailSheet";
 
 const queryClient = new QueryClient();
@@ -31,11 +35,12 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
           <PortfolioProvider>
             <MarketProvider>
               <WatchlistProvider>
+                <ChatHistoryProvider>
                 <StockDetailProvider>
               <Toaster />
               <Sonner />
@@ -65,6 +70,26 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
+                <Route
+                  path="/news"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <News />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/politicians"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Politicians />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
                     <Route
                       path="/screener"
                       element={
@@ -75,6 +100,16 @@ const App = () => (
                         </ProtectedRoute>
                       }
                     />
+                <Route
+                  path="/earnings"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Earnings />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/watchlist"
                   element={
@@ -171,6 +206,7 @@ const App = () => (
               </Routes>
                   <StockDetailPortal />
                 </StockDetailProvider>
+                </ChatHistoryProvider>
               </WatchlistProvider>
             </MarketProvider>
           </PortfolioProvider>

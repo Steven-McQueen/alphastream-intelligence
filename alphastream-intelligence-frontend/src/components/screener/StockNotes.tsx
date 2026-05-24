@@ -147,29 +147,29 @@ export function StockNotes({ ticker }: StockNotesProps) {
       {/* Notes Section */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h4 className="text-sm font-medium text-zinc-400">Notes</h4>
+          <h4 className="text-sm font-medium text-muted-foreground">Notes</h4>
           {isSaving && (
-            <span className="text-xs text-zinc-500">Saving...</span>
+            <span className="text-xs text-dim">Saving...</span>
           )}
         </div>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Add your notes about this stock..."
-          className="w-full h-32 bg-zinc-800/50 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-600 resize-none"
+          className="w-full h-32 bg-muted/50 border border-secondary rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-dim focus:outline-none focus:ring-2 focus:ring-secondary resize-none"
         />
       </div>
 
       {/* Tags Section */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h4 className="text-sm font-medium text-zinc-400 flex items-center gap-1.5">
+          <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
             <TagIcon className="w-3.5 h-3.5" />
             Tags
           </h4>
           <button
             onClick={() => setShowAddTag(!showAddTag)}
-            className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1"
+            className="text-xs text-dim hover:text-soft flex items-center gap-1"
           >
             <Plus className="w-3 h-3" />
             Add Custom
@@ -185,14 +185,14 @@ export function StockNotes({ ticker }: StockNotesProps) {
               onChange={(e) => setNewTagInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addCustomTag()}
               placeholder="New tag name..."
-              className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-600"
+              className="flex-1 bg-muted border border-secondary rounded-lg px-3 py-1.5 text-sm text-foreground placeholder:text-dim focus:outline-none focus:ring-2 focus:ring-secondary"
               autoFocus
             />
             <Button
               size="sm"
               onClick={addCustomTag}
               disabled={!newTagInput.trim()}
-              className="bg-zinc-700 hover:bg-zinc-600"
+              className="bg-secondary hover:bg-secondary"
             >
               Add
             </Button>
@@ -223,7 +223,7 @@ export function StockNotes({ ticker }: StockNotesProps) {
                   "px-2.5 py-1 text-xs rounded-full transition-all flex items-center gap-1.5",
                   isSelected
                     ? "bg-blue-500/20 text-blue-400 border border-blue-500/40"
-                    : "bg-zinc-800/50 text-zinc-500 border border-zinc-700/50 hover:border-zinc-600 hover:text-zinc-400"
+                    : "bg-muted/50 text-dim border border-secondary/50 hover:border-secondary hover:text-muted-foreground"
                 )}
               >
                 {tag}
@@ -233,7 +233,7 @@ export function StockNotes({ ticker }: StockNotesProps) {
                       e.stopPropagation();
                       removeCustomTag(tag);
                     }}
-                    className="hover:text-red-400"
+                    className="hover:text-negative"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -245,8 +245,8 @@ export function StockNotes({ ticker }: StockNotesProps) {
 
         {/* Selected Tags Display */}
         {selectedTags.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-zinc-800">
-            <span className="text-xs text-zinc-500">
+          <div className="mt-3 pt-3 border-t border-border">
+            <span className="text-xs text-dim">
               Selected: {selectedTags.join(", ")}
             </span>
           </div>

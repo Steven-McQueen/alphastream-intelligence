@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useMarket } from "@/context/MarketContext";
-
-const API_BASE_URL = "http://localhost:8000";
+import { API_BASE_URL } from "@/config/api";
 
 export type TimeRange = "1D" | "5D" | "1M" | "6M" | "1Y" | "YTD" | "5Y";
 
@@ -35,6 +34,7 @@ interface RawBar {
 interface UseStockChartReturn {
   data: StockDataPoint[];
   rawIntradayData: StockDataPoint[];
+  rawHourlyData: StockDataPoint[];
   rawEodData: StockDataPoint[];
   isLoading: boolean;
   error: string | null;
@@ -51,7 +51,7 @@ function getMAPeriod(timeRange: TimeRange): number {
     case "5D":
       return 20; // 20 periods for intraday (100 minutes with 5-min bars)
     case "1M":
-      return 10; // 10 days for 1 month
+      return 20; // 20 periods for hourly bars (~2.5 trading days)
     case "6M":
     case "YTD":
       return 20; // 20 days for 6 months/YTD
@@ -82,7 +82,7 @@ function calculateSMA(prices: number[], period: number): (number | undefined)[] 
 function calculateEMA(prices: number[], period: number): (number | undefined)[] {
   const ema: (number | undefined)[] = [];
   const multiplier = 2 / (period + 1);
-  
+
   for (let i = 0; i < prices.length; i++) {
     if (i < period - 1) {
       ema.push(undefined);
@@ -106,7 +106,7 @@ function calculateEMA(prices: number[], period: number): (number | undefined)[] 
 function calculateWMA(prices: number[], period: number): (number | undefined)[] {
   const wma: (number | undefined)[] = [];
   const denominator = (period * (period + 1)) / 2;
-  
+
   for (let i = 0; i < prices.length; i++) {
     if (i < period - 1) {
       wma.push(undefined);
@@ -126,7 +126,7 @@ function calculateDEMA(prices: number[], period: number): (number | undefined)[]
   const ema1 = calculateEMA(prices, period);
   const ema1Values = ema1.map(v => v ?? 0);
   const ema2 = calculateEMA(ema1Values, period);
-  
+
   return prices.map((_, i) => {
     if (ema1[i] === undefined || ema2[i] === undefined) return undefined;
     return 2 * ema1[i]! - ema2[i]!;
@@ -140,7 +140,7 @@ function calculateTEMA(prices: number[], period: number): (number | undefined)[]
   const ema2 = calculateEMA(ema1Values, period);
   const ema2Values = ema2.map(v => v ?? 0);
   const ema3 = calculateEMA(ema2Values, period);
-  
+
   return prices.map((_, i) => {
     if (ema1[i] === undefined || ema2[i] === undefined || ema3[i] === undefined) return undefined;
     return 3 * ema1[i]! - 3 * ema2[i]! + ema3[i]!;
@@ -150,14 +150,14 @@ function calculateTEMA(prices: number[], period: number): (number | undefined)[]
 // Add moving averages to data points
 function addMovingAverages(data: StockDataPoint[], period: number = 20): StockDataPoint[] {
   if (data.length === 0) return data;
-  
+
   const prices = data.map(d => d.close);
   const smaValues = calculateSMA(prices, period);
   const emaValues = calculateEMA(prices, period);
   const wmaValues = calculateWMA(prices, period);
   const demaValues = calculateDEMA(prices, period);
   const temaValues = calculateTEMA(prices, period);
-  
+
   return data.map((point, i) => ({
     ...point,
     sma: smaValues[i],
@@ -191,12 +191,12 @@ function rawBarToDataPoint(bar: RawBar): StockDataPoint {
 // Filter data by time range
 function filterByTimeRange(data: StockDataPoint[], timeRange: TimeRange): StockDataPoint[] {
   if (data.length === 0) return data;
-  
+
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
+
   let cutoffDate: Date;
-  
+
   switch (timeRange) {
     case "1D": {
       // For intraday, filter to today's data only
@@ -235,14 +235,31 @@ function filterByTimeRange(data: StockDataPoint[], timeRange: TimeRange): StockD
     default:
       return data;
   }
-  
+
   const cutoffTimestamp = cutoffDate.getTime();
   return data.filter(d => d.timestamp >= cutoffTimestamp);
 }
 
-// Determine if timeRange needs intraday or EOD data
+// Determine if timeRange needs intraday (5min) data
 function isIntradayTimeRange(timeRange: TimeRange): boolean {
   return timeRange === "1D" || timeRange === "5D";
+}
+
+// Determine if timeRange should use hourly (1hour) data
+function isHourlyTimeRange(timeRange: TimeRange): boolean {
+  return timeRange === "1M";
+}
+
+// Pick the right raw data source for a given timeRange
+function getDataSourceForTimeRange(
+  timeRange: TimeRange,
+  intradayData: StockDataPoint[],
+  hourlyData: StockDataPoint[],
+  eodData: StockDataPoint[]
+): StockDataPoint[] {
+  if (isIntradayTimeRange(timeRange)) return intradayData;
+  if (isHourlyTimeRange(timeRange)) return hourlyData;
+  return eodData;
 }
 
 export function useStockChart(
@@ -250,21 +267,22 @@ export function useStockChart(
   timeRange: TimeRange
 ): UseStockChartReturn {
   const { isMarketOpen } = useMarket();
-  
+
   // Cache for raw data to avoid redundant fetches
   const [intradayData, setIntradayData] = useState<StockDataPoint[]>([]);
+  const [hourlyData, setHourlyData] = useState<StockDataPoint[]>([]);
   const [eodData, setEodData] = useState<StockDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  
+
   // Track which symbol's data is cached
   const cachedSymbolRef = useRef<string>("");
-  
-  // Fetch intraday data (5min bars)
+
+  // Fetch intraday data (5min bars) - limit to ~5 days (78 bars/day * 5 = 390)
   const fetchIntraday = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/stock/${symbol}/chart?timeframe=5min&limit=2000`);
+      const res = await fetch(`${API_BASE_URL}/api/stock/${symbol}/chart?timeframe=5min&limit=400`);
       if (!res.ok) throw new Error(`Failed to fetch intraday data: ${res.status}`);
       const bars: RawBar[] = await res.json();
       const points = bars.map(rawBarToDataPoint);
@@ -276,11 +294,27 @@ export function useStockChart(
       throw err;
     }
   }, [symbol]);
-  
-  // Fetch EOD data (daily bars)
+
+  // Fetch hourly data (1hour bars) - limit to ~500 bars (~3 months of hourly data)
+  const fetchHourly = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/stock/${symbol}/chart?timeframe=1hour&limit=500`);
+      if (!res.ok) throw new Error(`Failed to fetch hourly data: ${res.status}`);
+      const bars: RawBar[] = await res.json();
+      const points = bars.map(rawBarToDataPoint);
+      setHourlyData(points);
+      setLastUpdated(new Date());
+      return points;
+    } catch (err) {
+      console.error("Error fetching hourly data:", err);
+      throw err;
+    }
+  }, [symbol]);
+
+  // Fetch EOD data (daily bars) - limit to ~5 years (252 * 5 = 1260)
   const fetchEod = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/stock/${symbol}/chart?timeframe=1day&limit=2000`);
+      const res = await fetch(`${API_BASE_URL}/api/stock/${symbol}/chart?timeframe=1day&limit=1300`);
       if (!res.ok) throw new Error(`Failed to fetch EOD data: ${res.status}`);
       const bars: RawBar[] = await res.json();
       const points = bars.map(rawBarToDataPoint);
@@ -292,26 +326,29 @@ export function useStockChart(
       throw err;
     }
   }, [symbol]);
-  
+
   // Initial data fetch when symbol changes
   useEffect(() => {
     if (!symbol) return;
-    
+
     const loadData = async () => {
       setIsLoading(true);
       setError(null);
-      
+
       try {
-        // If symbol changed, fetch both datasets
+        // If symbol changed, fetch all three datasets in parallel
         if (cachedSymbolRef.current !== symbol) {
-          await Promise.all([fetchIntraday(), fetchEod()]);
+          await Promise.all([fetchIntraday(), fetchHourly(), fetchEod()]);
           cachedSymbolRef.current = symbol;
         } else {
           // Symbol same, fetch based on current timeRange needs
           if (isIntradayTimeRange(timeRange) && intradayData.length === 0) {
             await fetchIntraday();
           }
-          if (!isIntradayTimeRange(timeRange) && eodData.length === 0) {
+          if (isHourlyTimeRange(timeRange) && hourlyData.length === 0) {
+            await fetchHourly();
+          }
+          if (!isIntradayTimeRange(timeRange) && !isHourlyTimeRange(timeRange) && eodData.length === 0) {
             await fetchEod();
           }
         }
@@ -321,29 +358,31 @@ export function useStockChart(
         setIsLoading(false);
       }
     };
-    
+
     loadData();
   }, [symbol]); // Only re-run when symbol changes
-  
+
   // Auto-refresh intraday data every 5 minutes during market hours
   useEffect(() => {
     if (!symbol || !isMarketOpen || !isIntradayTimeRange(timeRange)) return;
-    
+
     const interval = setInterval(() => {
       fetchIntraday().catch(console.error);
     }, 5 * 60 * 1000); // 5 minutes
-    
+
     return () => clearInterval(interval);
   }, [symbol, isMarketOpen, timeRange, fetchIntraday]);
-  
+
   // Manual refetch function
   const refetch = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       if (isIntradayTimeRange(timeRange)) {
         await fetchIntraday();
+      } else if (isHourlyTimeRange(timeRange)) {
+        await fetchHourly();
       } else {
         await fetchEod();
       }
@@ -352,17 +391,17 @@ export function useStockChart(
     } finally {
       setIsLoading(false);
     }
-  }, [timeRange, fetchIntraday, fetchEod]);
-  
+  }, [timeRange, fetchIntraday, fetchHourly, fetchEod]);
+
   // Get MA period based on timeframe
   const maPeriod = useMemo(() => getMAPeriod(timeRange), [timeRange]);
 
   // Compute filtered and processed data
   const data = useMemo(() => {
-    const rawData = isIntradayTimeRange(timeRange) ? intradayData : eodData;
+    const rawData = getDataSourceForTimeRange(timeRange, intradayData, hourlyData, eodData);
     const filtered = filterByTimeRange(rawData, timeRange);
     return addMovingAverages(filtered, maPeriod);
-  }, [timeRange, intradayData, eodData, maPeriod]);
+  }, [timeRange, intradayData, hourlyData, eodData, maPeriod]);
 
   // Calculate average volume from the filtered data
   const avgVolume = useMemo(() => {
@@ -370,10 +409,11 @@ export function useStockChart(
     const totalVolume = data.reduce((sum, d) => sum + (d.volume || 0), 0);
     return totalVolume / data.length;
   }, [data]);
-  
+
   return {
     data,
     rawIntradayData: intradayData,
+    rawHourlyData: hourlyData,
     rawEodData: eodData,
     isLoading,
     error,
@@ -383,4 +423,3 @@ export function useStockChart(
     maPeriod,
   };
 }
-

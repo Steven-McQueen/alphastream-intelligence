@@ -1,123 +1,122 @@
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getTodaySummary, getSectorTiles } from '@/data/mockFinanceHome';
-import { useMarket } from '@/context/MarketContext';
-import { LineChart, Line, ResponsiveContainer, XAxis, YAxis } from 'recharts';
+import { API_BASE_URL } from '@/config/api';
+
+interface SectorData {
+  sector: string;
+  change1D: number;
+  change1W: number;
+  change1M: number;
+  stockCount: number;
+}
+
+type TimeFrame = '1D' | '1W' | '1M';
 
 export function TodayInMarkets() {
-  const navigate = useNavigate();
-  const summary = getTodaySummary();
-  const sectors = getSectorTiles();
-  const { marketState } = useMarket();
+  const [sectors, setSectors] = useState<SectorData[]>([]);
+  const [timeFrame, setTimeFrame] = useState<TimeFrame>('1D');
+  const [loading, setLoading] = useState(true);
 
-  // Generate SPX 5-day data
-  const spxData = Array.from({ length: 5 }, (_, i) => ({
-    day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][i],
-    value: 5850 + Math.random() * 100,
-  }));
-  spxData[4].value = marketState.indices.find(i => i.symbol === 'SPX')?.value || 5892;
+  useEffect(() => {
+    const fetchSectors = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`${API_BASE_URL}/api/market/sectors`);
+        const data = await response.json();
+        setSectors(data);
+      } catch (error) {
+        console.error('Error fetching sectors:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleDigDeeper = () => {
-    navigate('/intelligence?q=' + encodeURIComponent("Give me a detailed recap of today's US market moves."));
+    fetchSectors();
+    const interval = setInterval(fetchSectors, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const getChangeForTimeFrame = (sector: SectorData) => {
+    switch (timeFrame) {
+      case '1W':
+        return sector.change1W;
+      case '1M':
+        return sector.change1M;
+      case '1D':
+      default:
+        return sector.change1D;
+    }
   };
 
+  if (loading) {
+    return (
+      <Card className="bg-sidebar-accent border-border h-full">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-widget-heading)' }}>Today in Markets</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-4 gap-2">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="p-3 rounded-lg bg-muted/40 animate-pulse">
+                <div className="h-3 bg-muted rounded mb-2 w-2/3" />
+                <div className="h-5 bg-muted rounded w-1/2" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card className="border-border">
+    <Card className="bg-sidebar-accent border-border h-full">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold">Today in Markets</CardTitle>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">{summary.date}</span>
-            <Select defaultValue="us" disabled>
-              <SelectTrigger className="w-24 h-7 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-popover">
-                <SelectItem value="us">US</SelectItem>
-                <SelectItem value="global" disabled>Global</SelectItem>
-              </SelectContent>
-            </Select>
+          <CardTitle className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-widget-heading)' }}>Today in Markets</CardTitle>
+          <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
+            {(['1D', '1W', '1M'] as TimeFrame[]).map((tf) => (
+              <button
+                key={tf}
+                onClick={() => setTimeFrame(tf)}
+                className={cn(
+                  'px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                  timeFrame === tf
+                    ? 'bg-primary/20 text-primary'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {tf}
+              </button>
+            ))}
           </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left: Narrative */}
-          <div className="space-y-4">
-            <ul className="space-y-2.5">
-              {summary.narrative.map((bullet, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <span className="text-primary mt-1">•</span>
-                  <span>{bullet}</span>
-                </li>
-              ))}
-            </ul>
-            <Button
-              variant="link"
-              className="p-0 h-auto text-primary text-sm"
-              onClick={handleDigDeeper}
-            >
-              Ask for full market recap
-              <ArrowRight className="h-3.5 w-3.5 ml-1" />
-            </Button>
-          </div>
-
-          {/* Right: Chart & Sector Strip */}
-          <div className="space-y-4">
-            {/* SPX Chart */}
-            <div className="h-24 bg-muted/30 rounded-lg p-3">
-              <div className="text-xs text-muted-foreground mb-1">S&P 500 (5D)</div>
-              <ResponsiveContainer width="100%" height={60}>
-                <LineChart data={spxData}>
-                  <XAxis dataKey="day" hide />
-                  <YAxis domain={['dataMin - 10', 'dataMax + 10']} hide />
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Sector Heat Strip */}
-            <div className="space-y-2">
-              <div className="text-xs text-muted-foreground">Sector Performance (1D)</div>
-              <div className="flex gap-0.5 h-6 rounded overflow-hidden">
-                {sectors.slice(0, 11).map((sector) => {
-                  const intensity = Math.min(Math.abs(sector.change1D) / 3, 1);
-                  const bgColor = sector.change1D >= 0
-                    ? `rgba(34, 197, 94, ${0.2 + intensity * 0.6})`
-                    : `rgba(239, 68, 68, ${0.2 + intensity * 0.6})`;
-                  
-                  return (
-                    <div
-                      key={sector.sector}
-                      className="flex-1 flex items-center justify-center text-[8px] font-medium cursor-pointer hover:opacity-80 transition-opacity"
-                      style={{ backgroundColor: bgColor }}
-                      title={`${sector.sector}: ${sector.change1D >= 0 ? '+' : ''}${sector.change1D.toFixed(2)}%`}
-                    >
-                      <span className="truncate px-0.5 text-foreground">
-                        {sector.sector.slice(0, 3)}
-                      </span>
-                    </div>
-                  );
-                })}
+        <div className="grid grid-cols-4 gap-2">
+          {sectors.map((sector) => {
+            const change = getChangeForTimeFrame(sector);
+            const isPositive = change >= 0;
+            return (
+              <div
+                key={sector.sector}
+                className="p-3 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors cursor-pointer"
+              >
+                <div className="text-xs font-medium text-muted-foreground mb-1 truncate">
+                  {sector.sector}
+                </div>
+                <div
+                  className={cn(
+                    'text-base font-semibold font-mono',
+                    isPositive ? 'text-positive' : 'text-negative'
+                  )}
+                >
+                  {isPositive ? '+' : ''}
+                  {change.toFixed(2)}%
+                </div>
               </div>
-            </div>
-          </div>
+            );
+          })}
         </div>
       </CardContent>
     </Card>

@@ -66,7 +66,7 @@ export function PortfolioComparison({ current, optimal }: PortfolioComparisonPro
                       {metric.format(metric.current)}
                     </span>
                     <span className="text-muted-foreground">→</span>
-                    <span className="font-mono text-emerald-500">
+                    <span className="font-mono text-positive">
                       {metric.format(metric.optimal)}
                     </span>
                   </div>
@@ -80,7 +80,7 @@ export function PortfolioComparison({ current, optimal }: PortfolioComparisonPro
                   </div>
                   <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-emerald-500 rounded-full"
+                      className="h-full bg-positive rounded-full"
                       style={{ width: `${(metric.optimal / (Math.max(metric.current, metric.optimal) * 1.2)) * 100}%` }}
                     />
                   </div>
@@ -105,7 +105,7 @@ export function PortfolioComparison({ current, optimal }: PortfolioComparisonPro
                 </div>
                 <span
                   className={`text-sm font-mono w-16 text-right ${
-                    change > 0 ? 'text-emerald-500' : 'text-red-500'
+                    change > 0 ? 'text-positive' : 'text-negative'
                   }`}
                 >
                   {change > 0 ? '+' : ''}{change.toFixed(1)}%

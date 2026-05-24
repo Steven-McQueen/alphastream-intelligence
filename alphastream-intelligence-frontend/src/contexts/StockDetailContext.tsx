@@ -1,27 +1,44 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useRef, ReactNode } from "react";
 import type { Stock } from "@/types";
+
+type StockUpdateListener = (stock: Stock) => void;
 
 type StockDetailContextType = {
   selectedStock: Stock | null;
   openStockDetail: (stock: Stock) => void;
-  closeStockDetail: () => void;
+  closeStockDetail: (updatedStock?: Stock) => void;
+  subscribeToStockUpdates: (listener: StockUpdateListener) => () => void;
 };
 
 const StockDetailContext = createContext<StockDetailContextType | undefined>(undefined);
 
 export function StockDetailProvider({ children }: { children: ReactNode }) {
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
+  const listenersRef = useRef<Set<StockUpdateListener>>(new Set());
 
-  const openStockDetail = (stock: Stock) => {
+  const openStockDetail = useCallback((stock: Stock) => {
     setSelectedStock(stock);
-  };
+  }, []);
 
-  const closeStockDetail = () => {
+  // When closing, optionally pass fresh stock data to broadcast to subscribers
+  const closeStockDetail = useCallback((updatedStock?: Stock) => {
+    if (updatedStock) {
+      // Notify all listeners (Screener, Watchlist, etc.) about the updated stock
+      listenersRef.current.forEach(listener => listener(updatedStock));
+    }
     setSelectedStock(null);
-  };
+  }, []);
+
+  // Subscribe to stock updates - returns unsubscribe function
+  const subscribeToStockUpdates = useCallback((listener: StockUpdateListener) => {
+    listenersRef.current.add(listener);
+    return () => {
+      listenersRef.current.delete(listener);
+    };
+  }, []);
 
   return (
-    <StockDetailContext.Provider value={{ selectedStock, openStockDetail, closeStockDetail }}>
+    <StockDetailContext.Provider value={{ selectedStock, openStockDetail, closeStockDetail, subscribeToStockUpdates }}>
       {children}
     </StockDetailContext.Provider>
   );

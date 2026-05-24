@@ -7,8 +7,7 @@ import { useStockDetail } from "@/contexts/StockDetailContext";
 import { WatchlistChart } from "@/components/charts/WatchlistChart";
 import { WatchlistNews } from "@/components/screener/WatchlistNews";
 import type { Stock } from "@/types";
-
-const API_BASE_URL = "http://localhost:8000";
+import { API_BASE_URL } from "@/config/api";
 // Format large numbers (Market Cap, etc.)
 function formatLargeNumber(value: number): string {
   if (value === null || value === undefined || isNaN(value)) return "-";
@@ -25,7 +24,7 @@ type SortDirection = "asc" | "desc";
 
 export default function WatchlistPage() {
   const { watchlist, toggleWatchlist } = useWatchlist();
-  const { openStockDetail } = useStockDetail();
+  const { openStockDetail, subscribeToStockUpdates } = useStockDetail();
   const [sortColumn, setSortColumn] = useState<SortColumn>("change1D");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [displayCount, setDisplayCount] = useState(25);
@@ -65,6 +64,17 @@ export default function WatchlistPage() {
     const interval = setInterval(fetchStocks, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Subscribe to stock updates from StockDetailSheet
+  // When user closes the detail sheet, update that stock's price in our list
+  useEffect(() => {
+    const unsubscribe = subscribeToStockUpdates((updatedStock) => {
+      setStocks(prev => prev.map(s =>
+        s.ticker === updatedStock.ticker ? { ...s, ...updatedStock } : s
+      ));
+    });
+    return unsubscribe;
+  }, [subscribeToStockUpdates]);
 
   useEffect(() => {
     setDisplayCount(25);
@@ -167,13 +177,13 @@ export default function WatchlistPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen text-white">Loading stocks...</div>
+      <div className="flex items-center justify-center h-screen text-foreground">Loading stocks...</div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen text-red-500">
+      <div className="flex items-center justify-center h-screen text-negative">
         {error}
       </div>
     );
@@ -183,20 +193,20 @@ export default function WatchlistPage() {
     <div className="flex flex-col gap-4 pb-16">
       {/* Summary Header */}
       <section className="px-6 pt-6 pb-4">
-        <div className="bg-gradient-to-r from-zinc-900 via-zinc-900 to-emerald-900/20 border border-zinc-800 rounded-xl p-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl" />
+        <div className="bg-gradient-to-r from-card via-card to-positive/20 border border-border rounded-xl p-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-positive/5 rounded-full blur-3xl" />
           <div className="relative">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-white mb-1">My Watchlist</h1>
-                <p className="text-sm text-zinc-400">
+                <h1 className="text-2xl font-bold text-foreground mb-1">My Watchlist</h1>
+                <p className="text-sm text-muted-foreground">
                   Track {watchlistStocks.length} stocks • Last updated {lastUpdated.toLocaleTimeString()}
                 </p>
               </div>
               <button
                 onClick={handleRefresh}
                 disabled={isRefreshing}
-                className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-sm text-zinc-300 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-secondary border border-secondary rounded-lg text-sm text-soft transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
                 {isRefreshing ? "Refreshing..." : "Refresh"}
@@ -211,28 +221,28 @@ export default function WatchlistPage() {
         <div className="flex items-center justify-end mb-4">
           <button
             onClick={() => setIsManageModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-sm text-zinc-300 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-secondary border border-secondary rounded-lg text-sm text-soft transition-colors"
           >
             <Settings className="w-4 h-4" />
             Manage Watchlist
           </button>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
           <table className="w-full">
-            <thead className="bg-zinc-800/50">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400">Ticker</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400">Price</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-zinc-400">Change 1D</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-zinc-400">Market Cap</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-zinc-400">P/E</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-zinc-400">ROE</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-zinc-400">Gross Margin</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-zinc-400">Net Margin</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-zinc-400">Beta</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-zinc-400">Volume</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Ticker</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Price</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">Change 1D</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">Market Cap</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">P/E</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">ROE</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">Gross Margin</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">Net Margin</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">Beta</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">Volume</th>
               </tr>
             </thead>
             <tbody>
@@ -240,9 +250,9 @@ export default function WatchlistPage() {
                 <tr
                   key={stock.ticker}
                   onClick={() => openStockDetail(stock)}
-                  className="border-b border-zinc-800 hover:bg-zinc-800/30 cursor-pointer transition-colors"
+                  className="border-b border-border hover:bg-muted/30 cursor-pointer transition-colors"
                 >
-                  <td className="px-4 py-3 text-sm font-medium text-white flex items-center gap-3">
+                  <td className="px-4 py-3 text-sm font-medium text-foreground flex items-center gap-3">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -252,37 +262,37 @@ export default function WatchlistPage() {
                     >
                       <Star className={cn(
                         "w-4 h-4",
-                        watchlist.includes(stock.ticker) ? "fill-yellow-500 text-yellow-500" : "text-zinc-500"
+                        watchlist.includes(stock.ticker) ? "fill-yellow-500 text-yellow-500" : "text-dim"
                       )} />
                     </button>
                     {stock.ticker}
                   </td>
-                  <td className="px-4 py-3 text-sm text-zinc-300">{stock.name}</td>
-                  <td className="px-4 py-3 text-sm text-white">${(stock.price ?? 0).toFixed(2)}</td>
-                  <td className={cn("px-4 py-3 text-sm text-right", (stock.change1D ?? 0) >= 0 ? "text-green-500" : "text-red-500")}>
+                  <td className="px-4 py-3 text-sm text-soft">{stock.name}</td>
+                  <td className="px-4 py-3 text-sm text-foreground">${(stock.price ?? 0).toFixed(2)}</td>
+                  <td className={cn("px-4 py-3 text-sm text-right", (stock.change1D ?? 0) >= 0 ? "text-positive" : "text-negative")}>
                     {(stock.change1D ?? 0) >= 0 ? "+" : ""}{(stock.change1D ?? 0).toFixed(2)}%
                   </td>
-                  <td className="px-4 py-3 text-sm text-right text-zinc-300">
+                  <td className="px-4 py-3 text-sm text-right text-soft">
                     {formatLargeNumber(stock.marketCap ?? 0)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-right text-zinc-300">
+                  <td className="px-4 py-3 text-sm text-right text-soft">
                     {stock.peRatio ? stock.peRatio.toFixed(2) : "N/A"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-right text-zinc-300">
+                  <td className="px-4 py-3 text-sm text-right text-soft">
                     {stock.roe ? `${stock.roe.toFixed(1)}%` : "N/A"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-right text-zinc-300">
+                  <td className="px-4 py-3 text-sm text-right text-soft">
                     {stock.grossMargin ? `${stock.grossMargin.toFixed(1)}%` : "N/A"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-right text-zinc-300">
+                  <td className="px-4 py-3 text-sm text-right text-soft">
                     {stock.netProfitMargin ? `${stock.netProfitMargin.toFixed(1)}%` : "N/A"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-right text-zinc-300">
+                  <td className="px-4 py-3 text-sm text-right text-soft">
                     {(stock.beta || stockMetrics[stock.ticker]?.beta) 
                       ? (stock.beta || stockMetrics[stock.ticker]?.beta)?.toFixed(2) 
                       : "N/A"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-right text-zinc-300">
+                  <td className="px-4 py-3 text-sm text-right text-soft">
                     {((stock.volume ?? 0) / 1_000_000).toFixed(2)}M
                   </td>
                 </tr>
@@ -290,10 +300,10 @@ export default function WatchlistPage() {
             </tbody>
           </table>
           {displayCount < watchlistStocks.length && (
-            <div className="p-4 border-top border-zinc-800 text-center">
+            <div className="p-4 border-top border-border text-center">
               <button
                 onClick={() => setDisplayCount((prev) => prev + 25)}
-                className="text-sm text-zinc-400 hover:text-white font-medium"
+                className="text-sm text-muted-foreground hover:text-foreground font-medium"
               >
                 Load More
               </button>
@@ -317,29 +327,29 @@ export default function WatchlistPage() {
         setIsManageModalOpen(open);
         if (!open) setSearchQuery("");
       }}>
-        <DialogContent className="bg-zinc-900 border border-zinc-800 max-w-md">
+        <DialogContent className="bg-card border border-border max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white text-lg font-semibold">Manage Watchlist</DialogTitle>
-            <DialogDescription className="text-zinc-400 text-sm">
+            <DialogTitle className="text-foreground text-lg font-semibold">Manage Watchlist</DialogTitle>
+            <DialogDescription className="text-muted-foreground text-sm">
               Add or remove tickers from your watchlist.
             </DialogDescription>
           </DialogHeader>
           
           {/* Search Input */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dim" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search stocks to add..."
-              className="w-full pl-10 pr-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500"
+              className="w-full pl-10 pr-4 py-2.5 bg-muted border border-secondary rounded-lg text-sm text-foreground placeholder:text-dim focus:outline-none focus:ring-2 focus:ring-positive/50 focus:border-positive"
             />
           </div>
           
           {/* Search Results */}
           {searchResults.length > 0 && (
-            <div className="border border-zinc-700 rounded-lg bg-zinc-800/50 max-h-40 overflow-y-auto">
+            <div className="border border-secondary rounded-lg bg-muted/50 max-h-40 overflow-y-auto">
               {searchResults.map((stock) => (
                 <button
                   key={stock.ticker}
@@ -347,10 +357,10 @@ export default function WatchlistPage() {
                     toggleWatchlist(stock.ticker);
                     setSearchQuery("");
                   }}
-                  className="w-full flex items-center justify-between p-3 hover:bg-zinc-700/50 transition-colors text-left"
+                  className="w-full flex items-center justify-between p-3 hover:bg-secondary/50 transition-colors text-left"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded bg-zinc-700 flex items-center justify-center overflow-hidden">
+                    <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center overflow-hidden">
                       {stockLogos[stock.ticker] ? (
                         <img 
                           src={stockLogos[stock.ticker]} 
@@ -358,15 +368,15 @@ export default function WatchlistPage() {
                           className="w-6 h-6 object-contain"
                         />
                       ) : (
-                        <span className="text-xs text-zinc-400">{stock.ticker.slice(0, 2)}</span>
+                        <span className="text-xs text-muted-foreground">{stock.ticker.slice(0, 2)}</span>
                       )}
                     </div>
                     <div>
-                      <div className="font-medium text-white text-sm">{stock.ticker}</div>
-                      <div className="text-xs text-zinc-500 truncate max-w-[200px]">{stock.name}</div>
+                      <div className="font-medium text-foreground text-sm">{stock.ticker}</div>
+                      <div className="text-xs text-dim truncate max-w-[200px]">{stock.name}</div>
                     </div>
                   </div>
-                  <Plus className="w-4 h-4 text-emerald-500" />
+                  <Plus className="w-4 h-4 text-positive" />
                 </button>
               ))}
             </div>
@@ -374,16 +384,16 @@ export default function WatchlistPage() {
           
           {/* Current Watchlist */}
           <div className="max-h-64 overflow-y-auto space-y-2">
-            <div className="text-xs text-zinc-500 uppercase tracking-wider mb-2">
+            <div className="text-xs text-dim uppercase tracking-wider mb-2">
               Current Watchlist ({watchlist.length})
             </div>
             {watchlist.map((ticker) => {
               const stock = watchlistStocks.find((s) => s.ticker === ticker);
               return (
-                <div key={ticker} className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg hover:bg-zinc-800 group">
+                <div key={ticker} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted group">
                   <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 text-zinc-600 group-hover:text-zinc-400 cursor-grab">⋮⋮</div>
-                    <div className="w-8 h-8 rounded bg-zinc-700 flex items-center justify-center overflow-hidden">
+                    <div className="w-4 h-4 text-dim group-hover:text-muted-foreground cursor-grab">⋮⋮</div>
+                    <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center overflow-hidden">
                       {stockLogos[ticker] ? (
                         <img 
                           src={stockLogos[ticker]} 
@@ -391,17 +401,17 @@ export default function WatchlistPage() {
                           className="w-6 h-6 object-contain"
                         />
                       ) : (
-                        <span className="text-xs text-zinc-400">{ticker.slice(0, 2)}</span>
+                        <span className="text-xs text-muted-foreground">{ticker.slice(0, 2)}</span>
                       )}
                     </div>
                     <div>
-                      <div className="font-semibold text-white text-sm">{ticker}</div>
-                      <div className="text-xs text-zinc-500">{stock?.name ?? "Not loaded"}</div>
+                      <div className="font-semibold text-foreground text-sm">{ticker}</div>
+                      <div className="text-xs text-dim">{stock?.name ?? "Not loaded"}</div>
                     </div>
                   </div>
                   <button
                     onClick={() => toggleWatchlist(ticker)}
-                    className="text-zinc-500 hover:text-red-500 transition-colors"
+                    className="text-dim hover:text-negative transition-colors"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -409,7 +419,7 @@ export default function WatchlistPage() {
               );
             })}
             {watchlist.length === 0 && (
-              <div className="text-center py-8 text-zinc-500 text-sm">
+              <div className="text-center py-8 text-dim text-sm">
                 Your watchlist is empty. Search for stocks above to add them.
               </div>
             )}
@@ -421,7 +431,7 @@ export default function WatchlistPage() {
                 setIsManageModalOpen(false);
                 setSearchQuery("");
               }}
-              className="w-full bg-zinc-700 hover:bg-zinc-600 text-white py-2 rounded-lg font-medium transition-colors"
+              className="w-full bg-secondary hover:bg-secondary text-foreground py-2 rounded-lg font-medium transition-colors"
             >
               Done
             </button>

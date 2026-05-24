@@ -208,11 +208,11 @@ export function StressTestScenarios() {
           <div className="grid grid-cols-4 gap-2 mt-3">
             <div className="text-center">
               <p className="text-[10px] text-muted-foreground">Equity</p>
-              <p className="text-sm font-mono text-red-500">{scenario.factors.equity}%</p>
+              <p className="text-sm font-mono text-negative">{scenario.factors.equity}%</p>
             </div>
             <div className="text-center">
               <p className="text-[10px] text-muted-foreground">Rates</p>
-              <p className={`text-sm font-mono ${scenario.factors.rates > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
+              <p className={`text-sm font-mono ${scenario.factors.rates > 0 ? 'text-amber-500' : 'text-positive'}`}>
                 {scenario.factors.rates > 0 ? '+' : ''}{scenario.factors.rates}%
               </p>
             </div>
@@ -222,28 +222,28 @@ export function StressTestScenarios() {
             </div>
             <div className="text-center">
               <p className="text-[10px] text-muted-foreground">VIX</p>
-              <p className="text-sm font-mono text-red-500">{scenario.factors.volatility}</p>
+              <p className="text-sm font-mono text-negative">{scenario.factors.volatility}</p>
             </div>
           </div>
         </div>
 
         {/* Portfolio impact summary */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="text-center p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+          <div className="text-center p-3 rounded-lg bg-negative/10 border border-red-500/20">
             <p className="text-xs text-muted-foreground mb-1">Portfolio Impact</p>
-            <p className="text-2xl font-bold text-red-500">
+            <p className="text-2xl font-bold text-negative">
               {portfolioImpact.toFixed(1)}%
             </p>
           </div>
-          <div className="text-center p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+          <div className="text-center p-3 rounded-lg bg-negative/10 border border-red-500/20">
             <p className="text-xs text-muted-foreground mb-1">Estimated Loss</p>
-            <p className="text-2xl font-bold text-red-500">
+            <p className="text-2xl font-bold text-negative">
               -${Math.abs(dollarLoss).toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </p>
           </div>
           <div className="text-center p-3 rounded-lg bg-secondary/30 border border-border">
             <p className="text-xs text-muted-foreground mb-1">vs Market</p>
-            <p className={`text-2xl font-bold ${portfolioImpact < scenario.marketImpact ? 'text-red-500' : 'text-emerald-500'}`}>
+            <p className={`text-2xl font-bold ${portfolioImpact < scenario.marketImpact ? 'text-negative' : 'text-positive'}`}>
               {(portfolioImpact - scenario.marketImpact) > 0 ? '+' : ''}{(portfolioImpact - scenario.marketImpact).toFixed(1)}%
             </p>
           </div>
@@ -319,10 +319,10 @@ export function StressTestScenarios() {
                 </span>
               </div>
               <div className="col-span-3 text-right">
-                <span className="text-sm font-mono text-red-500">{h.impact.toFixed(1)}%</span>
+                <span className="text-sm font-mono text-negative">{h.impact.toFixed(1)}%</span>
               </div>
               <div className="col-span-3 text-right">
-                <span className="text-sm font-mono text-red-500">{h.contribution.toFixed(2)}%</span>
+                <span className="text-sm font-mono text-negative">{h.contribution.toFixed(2)}%</span>
               </div>
             </div>
           ))}

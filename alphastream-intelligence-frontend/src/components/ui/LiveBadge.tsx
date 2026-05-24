@@ -26,7 +26,7 @@ export function LiveBadge({ lastUpdated, isLoading }: LiveBadgeProps) {
     <div className="flex items-center gap-2 text-xs text-muted-foreground">
       <span
         className={`h-2.5 w-2.5 rounded-full ${
-          connected ? 'bg-emerald-400' : 'bg-amber-400'
+          connected ? 'bg-positive' : 'bg-amber-400'
         } ${isLoading ? 'animate-pulse' : ''}`}
       />
       <span className="font-medium text-foreground">

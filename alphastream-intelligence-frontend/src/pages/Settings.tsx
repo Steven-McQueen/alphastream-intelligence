@@ -166,7 +166,7 @@ export default function Settings() {
     <div className="flex h-full">
       {/* Left Settings Navigation */}
       <aside className="w-64 border-r border-border bg-card/50 p-4 flex-shrink-0">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Settings & Help</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-4" style={{ fontFamily: 'var(--font-serif)' }}>Settings & Help</h2>
         <nav className="space-y-1">
           {SETTINGS_SECTIONS.map((section) => (
             <button
@@ -438,15 +438,15 @@ export default function Settings() {
             <CardContent>
               <ul className="space-y-2">
                 <li className="flex gap-2 text-sm">
-                  <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                  <Check className="h-4 w-4 text-positive flex-shrink-0 mt-0.5" />
                   <span className="text-foreground/80">Uses your portfolio (read-only) + screener + market data as context</span>
                 </li>
                 <li className="flex gap-2 text-sm">
-                  <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                  <Check className="h-4 w-4 text-positive flex-shrink-0 mt-0.5" />
                   <span className="text-foreground/80">Summarizes filings, earnings, and market moves into structured narratives</span>
                 </li>
                 <li className="flex gap-2 text-sm">
-                  <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                  <Check className="h-4 w-4 text-positive flex-shrink-0 mt-0.5" />
                   <span className="text-foreground/80">Highlights portfolio impact when you ask about trades, sectors or risk</span>
                 </li>
               </ul>
@@ -833,7 +833,7 @@ export default function Settings() {
                 </span>
               </div>
               <div className="flex gap-2 text-sm">
-                <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                <Check className="h-4 w-4 text-positive flex-shrink-0 mt-0.5" />
                 <span className="text-foreground/80">
                   In a production version, all credentials will be handled via a secure backend with proper encryption and never exposed in client code.
                 </span>

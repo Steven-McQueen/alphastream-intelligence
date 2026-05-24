@@ -87,7 +87,7 @@ export function DistributionChart({ result, initialValue, targetReturn }: Distri
         <div className="grid grid-cols-4 gap-3 mt-4 pt-3 border-t border-border">
           <div className="text-center">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">5th %ile</p>
-            <p className={`text-sm font-mono font-medium ${((result.percentiles.p5 - initialValue) / initialValue) < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+            <p className={`text-sm font-mono font-medium ${((result.percentiles.p5 - initialValue) / initialValue) < 0 ? 'text-negative' : 'text-positive'}`}>
               {(((result.percentiles.p5 - initialValue) / initialValue) * 100).toFixed(1)}%
             </p>
           </div>
@@ -99,7 +99,7 @@ export function DistributionChart({ result, initialValue, targetReturn }: Distri
           </div>
           <div className="text-center">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">95th %ile</p>
-            <p className="text-sm font-mono font-medium text-emerald-500">
+            <p className="text-sm font-mono font-medium text-positive">
               +{(((result.percentiles.p95 - initialValue) / initialValue) * 100).toFixed(1)}%
             </p>
           </div>

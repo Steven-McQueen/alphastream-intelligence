@@ -4,130 +4,172 @@
 @tailwind components;
 @tailwind utilities;
 
-/* AlphaStream Design System - Dark (tokenized) */
+/* AlphaStream Design System - Warm Dark (tokenized) */
 
 @layer base {
   :root {
-    /* Core tokens (dark default) */
-    --bg-primary: #0A0A0A;
-    --bg-secondary: #1A1A1A;
-    --bg-tertiary: #2A2A2A;
-    --bg-hover: #333333;
+    /* Core tokens (warm dark default - inspired by market terminal aesthetic) */
 
-    --text-primary: #FFFFFF;
-    --text-secondary: #A0A0A0;
-    --text-tertiary: #707070;
+    /* Backgrounds */
+    --bg-primary: oklch(0.15 0.006 70);       /* Warm zinc-900 equivalent */
+    --bg-secondary: oklch(0.18 0.005 70);     /* Card surfaces */
+    --bg-tertiary: oklch(0.22 0.005 70);      /* Elevated surfaces */
+    --bg-hover: oklch(0.26 0.006 70);         /* Hover states */
 
-    --accent-primary: #20B886;
-    --accent-hover: #1A9A6F;
+    /* Text */
+    --text-primary: oklch(0.97 0.004 90);     /* Warm off-white */
+    --text-secondary: oklch(0.72 0.006 90);   /* Muted warm gray */
+    --text-tertiary: oklch(0.52 0.005 90);    /* Faint warm gray */
+    --text-author: oklch(70.642% 0.12042 210.401);        /* Author names, turqouise */
 
-    --border-color: #2A2A2A;
+    --accent-primary: oklch(0.75 0.18 145);   /* Vibrant market green */
+    --accent-hover: oklch(0.68 0.16 145);     /* Darker green hover */
+    --accent-gold: oklch(0.78 0.16 75);       /* Gold/amber highlight */
 
-    --success: #20B886;
-    --error: #FF4444;
-    --warning: #FFA500;
+    --border-color: oklch(0.90 0.002 70 / 0.10);  /* Subtle warm border */
+    --border-color-h: oklch(0.90 0.002 70 / 0.20); /* Border hover */
 
-    --chart-bull: #20B886;
-    --chart-bear: #FF4444;
+    --success: oklch(0.75 0.18 145);          /* Green */
+    --error: oklch(0.65 0.22 25);             /* Red */
+    --warning: oklch(0.78 0.16 75);           /* Amber */
+
+    --chart-bull: oklch(0.75 0.18 145);       /* Green for gains */
+    --chart-bear: oklch(0.65 0.22 25);        /* Red for losses */
 
     /* Shadcn/Tailwind mapped vars (HSL where expected) */
-    --background: 0 0% 4%; /* hsl of #0A0A0A */
-    --foreground: 0 0% 100%;
+    --background: 40 6% 10%;                  /* Warm zinc-900 equivalent */
+    --foreground: 45 5% 95%;                  /* Warm white */
 
-    --card: 0 0% 10%; /* #1A1A1A */
-    --card-foreground: 0 0% 100%;
+    --card: 40 5% 13%;                        /* Card surface */
+    --card-foreground: 45 5% 95%;
 
-    --popover: 0 0% 10%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 40 5% 13%;
+    --popover-foreground: 45 5% 95%;
 
-    --primary: 158 74% 43%; /* #20B886 */
+    --primary: 145 70% 50%;                   /* Market green */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 10%; /* align to bg-secondary */
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 40 5% 15%;                   /* Warm secondary */
+    --secondary-foreground: 45 5% 95%;
 
-    --muted: 0 0% 16%; /* #2A2A2A */
-    --muted-foreground: 0 0% 62%; /* #A0A0A0 */
+    --muted: 40 5% 18%;                       /* Warm muted */
+    --muted-foreground: 40 4% 55%;            /* Warm gray text */
 
-    --accent: 0 0% 16%; /* reuse tertiary */
-    --accent-foreground: 0 0% 100%;
+    --accent: 40 5% 18%;                      /* Warm accent bg */
+    --accent-foreground: 45 5% 95%;
 
-    --destructive: 0 100% 57%; /* #FF4444 */
+    --destructive: 0 85% 55%;                 /* Red */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 16%; /* #2A2A2A */
-    --input: 0 0% 16%;
-    --ring: 158 74% 43%; /* accent-primary */
+    --border: 40 5% 20%;                      /* Warm border */
+    --input: 40 5% 16%;                       /* Input bg */
+    --ring: 145 70% 50%;                      /* Focus ring green */
 
     --radius: 12px;
 
+
+    /* ── Typography — Font Families ── */
+    --font-page-heading: "Source Serif 4", Georgia, serif;  /* Page-level & section headings (e.g. "Markets Overview") */
+    --font-widget-heading: 'Inter', sans-serif;             /* Widget / card header labels (e.g. "Recent Developments") */
+    --font-body: 'Inter', sans-serif;                       /* Body / UI text, default sans */
+
+    /* Legacy aliases (kept for backward-compat; prefer the names above) */
+    --widget-headers: var(--font-widget-heading);
+    --font-serif: var(--font-page-heading);
+
+    /* ── Tooltip / Popover ── */
+    --tooltip-bg: 240 6% 10%;              /* Tooltip background  (#18181b) */
+    --tooltip-border: 240 5% 16%;          /* Tooltip border      (#27272a) */
+    --tooltip-border-light: 240 5% 26%;    /* Lighter border      (#3f3f46) */
+    --tooltip-label: 0 0% 63%;             /* Tooltip label text   (#a0a0a0) */
+
+    /* ── Accent palette (tags, badges, data-viz highlights) ── */
+    --accent-cyan: 189 94% 43%;            /* Tailwind cyan-500 equivalent */
+    --accent-cyan-text: 188 86% 53%;       /* Tailwind cyan-400 equivalent */
+    --accent-blue: 217 91% 60%;            /* Tailwind blue-500 equivalent */
+    --accent-blue-text: 213 94% 68%;       /* Tailwind blue-400 equivalent */
+    --accent-purple: 271 91% 65%;          /* Tailwind purple-500 equivalent */
+    --accent-purple-text: 270 95% 75%;     /* Tailwind purple-400 equivalent */
+
+    /* ── Sector heatmap backgrounds (used with dynamic opacity) ── */
+    --heatmap-positive-h: 142;
+    --heatmap-positive-s: 71%;
+    --heatmap-positive-l: 45%;
+    --heatmap-negative-h: 0;
+    --heatmap-negative-s: 84%;
+    --heatmap-negative-l: 60%;
+
     /* Financial semantic colors */
-    --positive: 158 74% 43%;
+    --positive: 145 70% 50%;                  /* Green */
     --positive-foreground: 0 0% 0%;
-    --negative: 0 100% 57%;
+    --negative: 0 85% 55%;                    /* Red */
     --negative-foreground: 0 0% 100%;
-    --warning: 38 100% 50%;
+    --warning: 38 92% 55%;                    /* Amber */
     --warning-foreground: 0 0% 0%;
 
     /* Sidebar */
-    --sidebar-background: 0 0% 10%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 158 74% 43%;
+    --sidebar-background: 40 6% 10%;
+    --sidebar-foreground: 45 5% 95%;
+    --sidebar-primary: 145 70% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 16%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 16%;
-    --sidebar-ring: 158 74% 43%;
+    --sidebar-accent: 40 5% 16%;
+    --sidebar-accent-foreground: 45 5% 95%;
+    --sidebar-border: 40 5% 18%;
+    --sidebar-ring: 145 70% 50%;
 
     /* Charts */
-    --chart-1: 158 74% 43%;
-    --chart-2: 0 100% 57%;
-    --chart-3: 38 100% 50%;
-    --chart-4: 210 10% 50%;
-    --chart-5: 280 60% 60%;
+    --chart-1: 145 70% 50%;                   /* Primary green */
+    --chart-2: 0 85% 55%;                     /* Red */
+    --chart-3: 38 92% 55%;                    /* Amber */
+    --chart-4: 200 15% 50%;                   /* Cool gray */
+    --chart-5: 280 50% 60%;                   /* Purple */
   }
 
   /* Light mode (fallback; not primary) */
   .light {
-    --background: 0 0% 96%;
-    --foreground: 0 0% 7%;
-    --card: 0 0% 98%;
-    --card-foreground: 0 0% 7%;
-    --popover: 0 0% 98%;
-    --popover-foreground: 0 0% 7%;
-    --primary: 158 74% 43%;
+    --background: 45 10% 96%;                 /* Warm light bg */
+    --foreground: 40 8% 10%;                  /* Warm dark text */
+    --card: 45 8% 98%;
+    --card-foreground: 40 8% 10%;
+    --popover: 45 8% 98%;
+    --popover-foreground: 40 8% 10%;
+    --primary: 145 70% 42%;                   /* Market green */
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 92%;
-    --secondary-foreground: 0 0% 10%;
-    --muted: 0 0% 88%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 0 0% 88%;
-    --accent-foreground: 0 0% 10%;
-    --destructive: 0 84% 60%;
+    --secondary: 45 6% 92%;
+    --secondary-foreground: 40 8% 10%;
+    --muted: 45 5% 88%;
+    --muted-foreground: 40 5% 45%;
+    --accent: 45 5% 88%;
+    --accent-foreground: 40 8% 10%;
+    --destructive: 0 84% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 85%;
-    --input: 0 0% 85%;
-    --ring: 158 74% 43%;
+    --border: 45 5% 85%;
+    --input: 45 5% 85%;
+    --ring: 145 70% 42%;
     --radius: 12px;
-    --positive: 158 74% 43%;
+    --positive: 145 70% 42%;
     --positive-foreground: 0 0% 0%;
-    --negative: 0 84% 60%;
+    --negative: 0 84% 55%;
     --negative-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 0%;
-    --sidebar-background: 0 0% 92%;
-    --sidebar-foreground: 0 0% 10%;
-    --sidebar-primary: 158 74% 43%;
+    --sidebar-background: 45 6% 94%;
+    --sidebar-foreground: 40 8% 10%;
+    --sidebar-primary: 145 70% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 88%;
-    --sidebar-accent-foreground: 0 0% 10%;
-    --sidebar-border: 0 0% 85%;
-    --sidebar-ring: 158 74% 43%;
-    --chart-1: 158 74% 43%;
-    --chart-2: 0 84% 60%;
+    --sidebar-accent: 45 5% 88%;
+    --sidebar-accent-foreground: 40 8% 10%;
+    --sidebar-border: 45 5% 85%;
+    --sidebar-ring: 145 70% 42%;
+    --chart-1: 145 70% 42%;
+    --chart-2: 0 84% 55%;
     --chart-3: 38 92% 50%;
-    --chart-4: 210 10% 50%;
-    --chart-5: 280 60% 60%;
+    --chart-4: 200 15% 50%;
+    --chart-5: 280 50% 60%;
+    --tooltip-bg: 45 8% 98%;
+    --tooltip-border: 45 5% 85%;
+    --tooltip-border-light: 45 5% 80%;
+    --tooltip-label: 0 0% 40%;
   }
 }
 
@@ -147,6 +189,14 @@
   .font-mono-numbers {
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
+  }
+
+  /* ── Font utility classes ── */
+  .font-page-heading {
+    font-family: var(--font-page-heading);
+  }
+  .font-widget-heading {
+    font-family: var(--font-widget-heading);
   }
 }
 
@@ -192,10 +242,10 @@
 }
 
 @layer utilities {
-  /* Global sleek black scrollbar */
+  /* Global sleek warm scrollbar */
   * {
     scrollbar-width: thin;
-    scrollbar-color: rgba(60, 60, 60, 0.5) transparent;
+    scrollbar-color: oklch(0.35 0.01 70 / 0.5) transparent;
   }
 
   *::-webkit-scrollbar {
@@ -208,18 +258,18 @@
   }
 
   *::-webkit-scrollbar-thumb {
-    background: rgba(60, 60, 60, 0.5);
+    background: oklch(0.35 0.01 70 / 0.5);
     border-radius: 3px;
   }
 
   *::-webkit-scrollbar-thumb:hover {
-    background: rgba(80, 80, 80, 0.7);
+    background: oklch(0.42 0.01 70 / 0.7);
   }
   
   /* Ultra slim variant */
   .scrollbar-slim {
     scrollbar-width: thin;
-    scrollbar-color: rgba(40, 40, 40, 0.6) transparent;
+    scrollbar-color: oklch(0.28 0.008 70 / 0.6) transparent;
   }
   
   .scrollbar-slim::-webkit-scrollbar {
@@ -232,18 +282,18 @@
   }
   
   .scrollbar-slim::-webkit-scrollbar-thumb {
-    background: rgba(40, 40, 40, 0.6);
+    background: oklch(0.28 0.008 70 / 0.6);
     border-radius: 2px;
   }
   
   .scrollbar-slim::-webkit-scrollbar-thumb:hover {
-    background: rgba(60, 60, 60, 0.8);
+    background: oklch(0.35 0.01 70 / 0.8);
   }
 
   /* Terminal-style scrollbar (legacy) */
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: rgba(50, 50, 50, 0.5) transparent;
+    scrollbar-color: oklch(0.32 0.008 70 / 0.5) transparent;
   }
 
   .scrollbar-thin::-webkit-scrollbar {
@@ -256,12 +306,12 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: rgba(50, 50, 50, 0.5);
+    background: oklch(0.32 0.008 70 / 0.5);
     border-radius: 3px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: rgba(70, 70, 70, 0.7);
+    background: oklch(0.40 0.01 70 / 0.7);
   }
   
   /* Hide scrollbar but allow scrolling */
@@ -290,6 +340,20 @@
     background-color: hsl(var(--negative));
   }
 
+  .bg-positive-soft {
+    background-color: hsl(var(--positive) / 0.12);
+  }
+
+  .bg-negative-soft {
+    background-color: hsl(var(--negative) / 0.12);
+  }
+
+  /* Tap feedback for interactive elements */
+  .pf-tap:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+  }
+
   /* Dense table styling */
   .table-dense {
     @apply text-xs;
@@ -298,5 +362,174 @@
   .table-dense th,
   .table-dense td {
     @apply px-2 py-1.5;
+  }
+}
+
+/* Perplexity shimmer skeleton */
+@keyframes pf-shimmer {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.pf-skeleton {
+  animation: pf-shimmer 2s ease-in-out infinite;
+}
+
+/* ── Chat component design tokens (warm palette) ── */
+:root {
+  --chat-bg: oklch(0.15 0.006 70);
+  --chat-surface: oklch(0.18 0.005 70);
+  --chat-surface-up: oklch(0.22 0.005 70);
+  --chat-border: oklch(0.90 0.002 70 / 0.10);
+  --chat-border-h: oklch(0.90 0.002 70 / 0.24);
+  --chat-text: oklch(0.97 0.004 90);
+  --chat-muted: oklch(0.72 0.006 90);
+  --chat-faint: oklch(0.52 0.005 90);
+  --chat-send: oklch(0.75 0.18 145);
+  --chat-send-fg: oklch(0.15 0.006 70);
+  --chat-accent: oklch(0.78 0.16 75);
+  --chat-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes chat-bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40%            { transform: translateY(-5px); opacity: 1; }
+}
+
+/* ── Chat markdown ─────────────────────────────────────────────────── */
+
+.chat-md > :first-child { margin-top: 0; }
+.chat-md > :last-child  { margin-bottom: 0; }
+
+.chat-md-p {
+  margin: 0.45em 0;
+}
+
+.chat-md-ul {
+  margin: 0.4em 0;
+  padding-left: 1.25em;
+  list-style-type: disc;
+}
+.chat-md-ol {
+  margin: 0.4em 0;
+  padding-left: 1.35em;
+  list-style-type: decimal;
+}
+.chat-md-li {
+  margin: 0.15em 0;
+}
+.chat-md-li > .chat-md-p {
+  margin: 0;
+}
+
+.chat-md-strong {
+  font-weight: 600;
+  color: var(--chat-text);
+}
+.chat-md-em {
+  font-style: italic;
+  color: var(--chat-muted);
+}
+
+.chat-md-a {
+  color: var(--chat-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  transition: opacity 0.12s;
+}
+.chat-md-a:hover { opacity: 0.8; }
+
+.chat-md-code {
+  font-family: var(--font-mono, 'SF Mono', 'Fira Code', monospace);
+  font-size: 0.84em;
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  background: var(--chat-surface-up);
+  border: 1px solid var(--chat-border);
+  color: var(--chat-accent);
+}
+.chat-md-pre {
+  margin: 0.55em 0;
+  padding: 0.7em 0.9em;
+  border-radius: 8px;
+  background: var(--chat-surface-up);
+  border: 1px solid var(--chat-border);
+  overflow-x: auto;
+}
+.chat-md-pre .chat-md-code-block {
+  font-family: var(--font-mono, 'SF Mono', 'Fira Code', monospace);
+  font-size: 0.82em;
+  line-height: 1.55;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--chat-muted);
+}
+
+.chat-md-heading {
+  font-family: var(--font-sans, Inter, system-ui, sans-serif);
+  font-size: 0.92em;
+  font-weight: 600;
+  margin: 0.75em 0 0.3em;
+  color: var(--chat-text);
+}
+.chat-md-heading-sm {
+  font-size: 0.88em;
+  font-weight: 600;
+}
+
+.chat-md-table-wrap {
+  margin: 0.55em 0;
+  overflow-x: auto;
+  border-radius: 6px;
+  border: 1px solid var(--chat-border);
+}
+.chat-md-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84em;
+  font-family: var(--font-sans, Inter, system-ui, sans-serif);
+}
+.chat-md-thead {
+  background: var(--chat-surface-up);
+}
+.chat-md-th {
+  padding: 0.4em 0.65em;
+  text-align: left;
+  font-weight: 600;
+  color: var(--chat-text);
+  border-bottom: 1px solid var(--chat-border);
+}
+.chat-md-td {
+  padding: 0.35em 0.65em;
+  color: var(--chat-muted);
+  border-bottom: 1px solid var(--chat-border);
+}
+.chat-md-tr:last-child .chat-md-td {
+  border-bottom: none;
+}
+
+.chat-md-hr {
+  margin: 0.65em 0;
+  border: none;
+  border-top: 1px solid var(--chat-border);
+}
+
+.chat-md-blockquote {
+  margin: 0.45em 0;
+  padding: 0.15em 0 0.15em 0.85em;
+  border-left: 2px solid var(--chat-border-h);
+  color: var(--chat-muted);
+}
+
+/* ── End chat markdown ─────────────────────────────────────────────── */
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

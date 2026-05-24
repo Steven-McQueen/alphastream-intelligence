@@ -138,19 +138,19 @@ export function FactorAttribution({ totalReturn = 14.2 }: FactorAttributionProps
         <div className="grid grid-cols-3 gap-4">
           <div className="text-center p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
             <p className="text-xs text-muted-foreground mb-1">Factor Returns</p>
-            <p className={`text-xl font-semibold ${totalFactorContrib >= 0 ? 'text-blue-500' : 'text-red-500'}`}>
+            <p className={`text-xl font-semibold ${totalFactorContrib >= 0 ? 'text-blue-500' : 'text-negative'}`}>
               {totalFactorContrib > 0 ? '+' : ''}{totalFactorContrib.toFixed(1)}%
             </p>
             <p className="text-[10px] text-muted-foreground">
               {((totalFactorContrib / totalReturn) * 100).toFixed(0)}% of total
             </p>
           </div>
-          <div className="text-center p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+          <div className="text-center p-3 rounded-lg bg-positive/10 border border-positive/20">
             <div className="flex items-center justify-center gap-1 mb-1">
-              <Sparkles className="w-3 h-3 text-emerald-500" />
+              <Sparkles className="w-3 h-3 text-positive" />
               <p className="text-xs text-muted-foreground">Stock Selection (α)</p>
             </div>
-            <p className={`text-xl font-semibold ${totalSelectionContrib >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+            <p className={`text-xl font-semibold ${totalSelectionContrib >= 0 ? 'text-positive' : 'text-negative'}`}>
               {totalSelectionContrib > 0 ? '+' : ''}{totalSelectionContrib.toFixed(1)}%
             </p>
             <p className="text-[10px] text-muted-foreground">
@@ -159,7 +159,7 @@ export function FactorAttribution({ totalReturn = 14.2 }: FactorAttributionProps
           </div>
           <div className="text-center p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
             <p className="text-xs text-muted-foreground mb-1">Interaction</p>
-            <p className={`text-xl font-semibold ${totalInteractionContrib >= 0 ? 'text-purple-500' : 'text-red-500'}`}>
+            <p className={`text-xl font-semibold ${totalInteractionContrib >= 0 ? 'text-purple-500' : 'text-negative'}`}>
               {totalInteractionContrib > 0 ? '+' : ''}{totalInteractionContrib.toFixed(1)}%
             </p>
             <p className="text-[10px] text-muted-foreground">
@@ -229,7 +229,7 @@ export function FactorAttribution({ totalReturn = 14.2 }: FactorAttributionProps
                 </div>
                 <span 
                   className="text-xs font-mono"
-                  style={{ color: factor.contribution >= 0 ? '#22c55e' : '#ef4444' }}
+                  style={{ color: factor.contribution >= 0 ? 'hsl(var(--positive))' : 'hsl(var(--negative))' }}
                 >
                   {factor.contribution > 0 ? '+' : ''}{factor.contribution.toFixed(2)}%
                 </span>
@@ -244,7 +244,7 @@ export function FactorAttribution({ totalReturn = 14.2 }: FactorAttributionProps
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Target className="w-4 h-4 text-emerald-500" />
+              <Target className="w-4 h-4 text-positive" />
               <span className="text-sm font-medium">Alpha Analysis</span>
             </div>
             <Badge 
@@ -258,7 +258,7 @@ export function FactorAttribution({ totalReturn = 14.2 }: FactorAttributionProps
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 rounded-lg bg-secondary/30">
               <p className="text-xs text-muted-foreground mb-1">Annualized Alpha</p>
-              <p className={`text-lg font-semibold ${totalSelectionContrib >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+              <p className={`text-lg font-semibold ${totalSelectionContrib >= 0 ? 'text-positive' : 'text-negative'}`}>
                 {totalSelectionContrib > 0 ? '+' : ''}{totalSelectionContrib.toFixed(2)}%
               </p>
             </div>
@@ -272,7 +272,7 @@ export function FactorAttribution({ totalReturn = 14.2 }: FactorAttributionProps
 
           <p className="text-xs text-muted-foreground">
             <strong className="text-foreground">Interpretation:</strong> Your stock selection added{' '}
-            <span className="text-emerald-500">{totalSelectionContrib.toFixed(1)}%</span> of return 
+            <span className="text-positive">{totalSelectionContrib.toFixed(1)}%</span> of return 
             beyond what factor exposures would predict. This alpha comes from security-specific 
             insights rather than systematic factor tilts.
           </p>
@@ -289,7 +289,7 @@ export function FactorAttribution({ totalReturn = 14.2 }: FactorAttributionProps
               style={{ width: `${Math.abs(totalFactorContrib / totalReturn) * 100}%` }}
             />
             <div 
-              className="h-full bg-emerald-500 transition-all"
+              className="h-full bg-positive transition-all"
               style={{ width: `${Math.abs(totalSelectionContrib / totalReturn) * 100}%` }}
             />
             <div 
@@ -303,7 +303,7 @@ export function FactorAttribution({ totalReturn = 14.2 }: FactorAttributionProps
               <span>Factors ({((totalFactorContrib / totalReturn) * 100).toFixed(0)}%)</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <div className="w-2 h-2 rounded-full bg-positive" />
               <span>Selection ({((totalSelectionContrib / totalReturn) * 100).toFixed(0)}%)</span>
             </div>
             <div className="flex items-center gap-1">

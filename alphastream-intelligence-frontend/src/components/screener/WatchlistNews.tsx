@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { ExternalLink, Loader2, Newspaper, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const API_BASE_URL = "http://localhost:8000";
+import { API_BASE_URL } from "@/config/api";
 
 interface NewsArticle {
   symbol: string;
@@ -114,8 +114,8 @@ export function WatchlistNews({ tickers, maxArticles = 12 }: WatchlistNewsProps)
 
   if (tickers.length === 0) {
     return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-        <div className="flex items-center justify-center h-32 text-zinc-500">
+      <div className="bg-card border border-border rounded-xl p-6">
+        <div className="flex items-center justify-center h-32 text-dim">
           <p>Add stocks to your watchlist to see related news</p>
         </div>
       </div>
@@ -124,9 +124,9 @@ export function WatchlistNews({ tickers, maxArticles = 12 }: WatchlistNewsProps)
 
   if (loading && !isRefreshing) {
     return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+      <div className="bg-card border border-border rounded-xl p-6">
         <div className="flex items-center justify-center h-32">
-          <Loader2 className="w-6 h-6 animate-spin text-zinc-500" />
+          <Loader2 className="w-6 h-6 animate-spin text-dim" />
         </div>
       </div>
     );
@@ -134,8 +134,8 @@ export function WatchlistNews({ tickers, maxArticles = 12 }: WatchlistNewsProps)
 
   if (error) {
     return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-        <div className="flex items-center justify-center h-32 text-red-400">
+      <div className="bg-card border border-border rounded-xl p-6">
+        <div className="flex items-center justify-center h-32 text-negative">
           {error}
         </div>
       </div>
@@ -146,14 +146,14 @@ export function WatchlistNews({ tickers, maxArticles = 12 }: WatchlistNewsProps)
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
           <Newspaper className="w-5 h-5" />
           Watchlist News
         </h3>
         <button
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="flex items-center gap-2 text-xs text-zinc-400 hover:text-white transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
         >
           <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
           Refresh
@@ -162,8 +162,8 @@ export function WatchlistNews({ tickers, maxArticles = 12 }: WatchlistNewsProps)
 
       {/* Articles Grid */}
       {articles.length === 0 ? (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-          <div className="flex items-center justify-center h-32 text-zinc-500">
+        <div className="bg-card border border-border rounded-xl p-6">
+          <div className="flex items-center justify-center h-32 text-dim">
             <p>No news available for your watchlist stocks</p>
           </div>
         </div>
@@ -175,7 +175,7 @@ export function WatchlistNews({ tickers, maxArticles = 12 }: WatchlistNewsProps)
               href={article.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-700 transition-all"
+              className="group bg-card border border-border rounded-xl overflow-hidden hover:border-secondary transition-all"
             >
               <div className="flex gap-4 p-4">
                 {/* Image */}
@@ -184,7 +184,7 @@ export function WatchlistNews({ tickers, maxArticles = 12 }: WatchlistNewsProps)
                     <img
                       src={article.image}
                       alt=""
-                      className="w-24 h-20 object-cover rounded-lg bg-zinc-800"
+                      className="w-24 h-20 object-cover rounded-lg bg-muted"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';
                       }}
@@ -195,25 +195,25 @@ export function WatchlistNews({ tickers, maxArticles = 12 }: WatchlistNewsProps)
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   {/* Title */}
-                  <h4 className="text-sm font-medium text-white leading-snug mb-2 group-hover:text-emerald-400 transition-colors line-clamp-2">
+                  <h4 className="text-sm font-medium text-foreground leading-snug mb-2 group-hover:text-positive transition-colors line-clamp-2">
                     {article.title}
                   </h4>
                   
                   {/* Description */}
-                  <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2 mb-2">
+                  <p className="text-xs text-dim leading-relaxed line-clamp-2 mb-2">
                     {article.text}
                   </p>
                   
                   {/* Footer */}
-                  <div className="flex items-center gap-2 text-xs text-zinc-600">
-                    <span className="text-zinc-400">{article.publisher || article.site}</span>
+                  <div className="flex items-center gap-2 text-xs text-dim">
+                    <span className="text-muted-foreground">{article.publisher || article.site}</span>
                     <span>·</span>
                     <span>{formatRelativeTime(article.publishedDate)}</span>
                     <span>·</span>
-                    <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 rounded font-medium">
+                    <span className="px-1.5 py-0.5 bg-positive/20 text-positive rounded font-medium">
                       ${article.symbol}
                     </span>
-                    <ExternalLink className="w-3 h-3 ml-auto text-zinc-600 group-hover:text-zinc-400" />
+                    <ExternalLink className="w-3 h-3 ml-auto text-dim group-hover:text-muted-foreground" />
                   </div>
                 </div>
               </div>

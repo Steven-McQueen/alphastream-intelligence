@@ -49,7 +49,7 @@ export function EfficientFrontierChart({
               Current
             </Badge>
             <Badge variant="outline" className="text-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5" />
+              <span className="w-2 h-2 rounded-full bg-positive mr-1.5" />
               Optimal
             </Badge>
           </div>
@@ -133,13 +133,13 @@ export function EfficientFrontierChart({
         <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-border">
           <div className="text-center">
             <p className="text-xs text-muted-foreground">Return Improvement</p>
-            <p className="text-lg font-semibold text-emerald-500">
+            <p className="text-lg font-semibold text-positive">
               +{improvement.toFixed(2)}%
             </p>
           </div>
           <div className="text-center">
             <p className="text-xs text-muted-foreground">Sharpe Improvement</p>
-            <p className="text-lg font-semibold text-emerald-500">
+            <p className="text-lg font-semibold text-positive">
               +{sharpeImprovement.toFixed(1)}%
             </p>
           </div>

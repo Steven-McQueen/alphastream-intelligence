@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '@/config/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -40,7 +41,7 @@ export function EarningsHub() {
           limit: String(pageSize),
           offset: '0',
         });
-        const res = await fetch(`http://localhost:8000/api/earnings?${params.toString()}`);
+        const res = await fetch(`${API_BASE_URL}/api/earnings?${params.toString()}`);
         const data = await res.json();
         setEarnings(data?.items ?? []);
         setTotal(data?.total ?? 0);
@@ -78,10 +79,10 @@ export function EarningsHub() {
   };
 
   return (
-    <Card className="border-border">
+    <Card className="bg-sidebar-accent border-border">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold">Earnings Hub</CardTitle>
+          <CardTitle className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-widget-heading)' }}>Earnings Hub</CardTitle>
           <div className="flex items-center gap-3">
             <ToggleGroup
               type="single"

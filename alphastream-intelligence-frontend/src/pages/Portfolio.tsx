@@ -49,7 +49,7 @@ export default function Portfolio() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold">{portfolio.name}</h2>
+            <h2 className="text-lg font-semibold" style={{ fontFamily: 'var(--font-serif)' }}>{portfolio.name}</h2>
             <Badge variant="outline" className="text-xs gap-1">
               <Link2 className="h-3 w-3" />
               Nordnet Connected

@@ -35,7 +35,7 @@ function formatReturn(value: number) {
   const formatted = `${value >= 0 ? '' : ''}${value.toFixed(2)}%`;
   return {
     text: formatted,
-    className: value >= 0 ? 'text-green-400' : 'text-red-400',
+    className: value >= 0 ? 'text-positive' : 'text-negative',
   };
 }
 

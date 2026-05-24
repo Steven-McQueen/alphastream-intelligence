@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Area, AreaChart, ResponsiveContainer, YAxis } from 'recharts';
+import { API_BASE_URL } from '@/config/api';
 
 // Index name mappings
 const indexNames: Record<string, string> = {
@@ -22,17 +23,10 @@ interface IndexData {
   chartData: { close: number }[];
 }
 
-interface MacroData {
-  name: string;
-  value: number;
-  unit: string;
-  change: number;
-}
 
 export function IndicesMacroCard() {
   const navigate = useNavigate();
   const [indices, setIndices] = useState<IndexData[]>([]);
-  const [macros, setMacros] = useState<MacroData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -42,7 +36,7 @@ export function IndicesMacroCard() {
         const indexSymbols = ['^GSPC', '^IXIC', '^DJI', '^RUT'];
 
         // Fetch current values for all indices
-        const indicesResponse = await fetch('http://localhost:8000/api/macro/latest');
+        const indicesResponse = await fetch('${API_BASE_URL}/api/macro/latest');
         let indicesData: Record<string, any> = {};
         try {
           const data = await indicesResponse.json();
@@ -55,7 +49,7 @@ export function IndicesMacroCard() {
 
         // Fetch intraday chart data using the working batch endpoint
         const chartResponse = await fetch(
-          `http://localhost:8000/api/market/indices/intraday?symbols=${indexSymbols.map(s => encodeURIComponent(s)).join(',')}&interval=5min`
+          `${API_BASE_URL}/api/market/indices/intraday?symbols=${indexSymbols.map(s => encodeURIComponent(s)).join(',')}&interval=5min`
         );
         let chartDataBySymbol: Record<string, any[]> = {};
         try {
@@ -113,15 +107,6 @@ export function IndicesMacroCard() {
         });
 
         setIndices(indicesWithCharts.filter((idx): idx is IndexData => idx !== null && idx.value > 0));
-
-        // Fetch macro indicators
-        setMacros([
-          { name: 'US 10Y', value: indicesData.US10Y?.value || 0, unit: '%', change: indicesData.US10Y?.change || 0 },
-          { name: 'VIX', value: indicesData.VIX?.value || 0, unit: '', change: indicesData.VIX?.change_percent || 0 },
-          { name: 'DXY', value: indicesData.DXY?.value || 0, unit: '', change: indicesData.DXY?.change_percent || 0 },
-          { name: 'Gold', value: indicesData.GOLD?.value || 0, unit: '', change: indicesData.GOLD?.change_percent || 0 },
-        ]);
-
         setIsLoading(false);
       } catch (error) {
         console.error('Error fetching indices/macro data:', error);
@@ -138,14 +123,14 @@ export function IndicesMacroCard() {
 
   if (isLoading) {
     return (
-      <Card className="border-border h-full">
+      <Card className="bg-sidebar-accent border-border h-full">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Indices & Macro</CardTitle>
+          <CardTitle className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-widget-heading)' }}>Indices</CardTitle>
         </CardHeader>
         <CardContent className="pt-0 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-muted/30 rounded-lg p-4 border border-border/50 animate-pulse">
+              <div key={i} className="bg-muted/30 rounded-lg p-4 border border-border/50 animate-[pf-shimmer_2s_ease-in-out_infinite]">
                 <div className="h-4 bg-muted rounded mb-2" />
                 <div className="h-3 bg-muted rounded mb-3" />
                 <div className="h-16 bg-muted rounded mb-2" />
@@ -159,19 +144,18 @@ export function IndicesMacroCard() {
   }
 
   return (
-    <Card className="border-border h-full">
+    <Card className="bg-sidebar-accent border-border h-full">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold">Indices & Macro</CardTitle>
+        <CardTitle className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-widget-heading)' }}>Indices</CardTitle>
       </CardHeader>
-      <CardContent className="pt-0 space-y-4">
-        {/* Index Tiles - Identical to Market Page */}
+      <CardContent className="pt-0">
         <div className="grid grid-cols-2 gap-3">
           {indices.map((index) => {
             const isPositive = index.changePercent >= 0;
             return (
               <Card
                 key={index.symbol}
-                className="p-4 bg-card border-border overflow-hidden cursor-pointer hover:bg-muted/50 transition-all"
+                className="p-4 bg-card border-border overflow-hidden cursor-pointer hover:bg-muted transition-all duration-200"
                 onClick={() => navigate(`/market/${encodeURIComponent('^' + index.symbol)}`)}
               >
                 <div className="flex items-start justify-between mb-2">
@@ -218,7 +202,7 @@ export function IndicesMacroCard() {
                               <stop
                                 offset="0%"
                                 stopColor={isPositive ? 'hsl(var(--positive))' : 'hsl(var(--negative))'}
-                                stopOpacity={0.3}
+                                stopOpacity={0.18}
                               />
                               <stop
                                 offset="100%"
@@ -232,7 +216,8 @@ export function IndicesMacroCard() {
                             type="monotone"
                             dataKey="close"
                             stroke={isPositive ? 'hsl(var(--positive))' : 'hsl(var(--negative))'}
-                            strokeWidth={2}
+                            strokeWidth={1.5}
+                            strokeLinecap="round"
                             fill={`url(#gradient-${index.symbol})`}
                             dot={false}
                             isAnimationActive={false}
@@ -254,31 +239,6 @@ export function IndicesMacroCard() {
               </Card>
             );
           })}
-        </div>
-
-        {/* Macro Tiles */}
-        <div className="space-y-2">
-          <div className="text-xs text-muted-foreground font-medium">Macro Indicators</div>
-          <div className="grid grid-cols-2 gap-2">
-            {macros.slice(0, 4).map((macro) => (
-              <div
-                key={macro.name}
-                className="flex items-center justify-between py-1.5 px-2 bg-muted/20 rounded text-xs"
-              >
-                <span className="text-muted-foreground truncate">{macro.name}</span>
-                <div className="flex items-center gap-1.5 font-mono">
-                  <span>{macro.value.toFixed(2)}{macro.unit}</span>
-                  {macro.change !== 0 && (
-                    <span className={cn(
-                      macro.change >= 0 ? 'text-positive' : 'text-negative'
-                    )}>
-                      {macro.change >= 0 ? '+' : ''}{macro.change.toFixed(2)}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </CardContent>
     </Card>

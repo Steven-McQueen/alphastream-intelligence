@@ -62,13 +62,13 @@ function getCorrelationColor(value: number): string {
   if (value >= 0.6) return 'bg-orange-500';
   if (value >= 0.4) return 'bg-yellow-500';
   if (value >= 0.2) return 'bg-green-500';
-  if (value >= 0) return 'bg-emerald-500';
+  if (value >= 0) return 'bg-positive';
   if (value >= -0.2) return 'bg-cyan-500';
   return 'bg-blue-500';
 }
 
 function getCorrelationTextColor(value: number): string {
-  if (value >= 0.6 || value < 0) return 'text-white';
+  if (value >= 0.6 || value < 0) return 'text-foreground';
   return 'text-black';
 }
 
@@ -184,7 +184,7 @@ export function CorrelationMatrix({ stressMode: initialStress = false }: Correla
         <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border">
           <div>
             <p className="text-xs text-muted-foreground mb-1">Average Correlation</p>
-            <p className={`text-lg font-semibold ${avgCorrelation > 0.6 ? 'text-red-500' : avgCorrelation > 0.4 ? 'text-amber-500' : 'text-emerald-500'}`}>
+            <p className={`text-lg font-semibold ${avgCorrelation > 0.6 ? 'text-negative' : avgCorrelation > 0.4 ? 'text-amber-500' : 'text-positive'}`}>
               {avgCorrelation.toFixed(3)}
             </p>
           </div>
@@ -203,10 +203,10 @@ export function CorrelationMatrix({ stressMode: initialStress = false }: Correla
 
         {/* Stress warning */}
         {showStress && avgCorrelation > 0.6 && (
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-            <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-negative/10 border border-red-500/20">
+            <AlertTriangle className="w-4 h-4 text-negative mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-xs font-medium text-red-500">Correlation Spike During Stress</p>
+              <p className="text-xs font-medium text-negative">Correlation Spike During Stress</p>
               <p className="text-xs text-red-200/80">
                 During market stress, correlations increase significantly (avg: {avgCorrelation.toFixed(2)}), 
                 reducing diversification benefits when you need them most.
@@ -223,7 +223,7 @@ export function CorrelationMatrix({ stressMode: initialStress = false }: Correla
             <div className="flex-1 h-3 rounded flex overflow-hidden">
               <div className="flex-1 bg-blue-500" />
               <div className="flex-1 bg-cyan-500" />
-              <div className="flex-1 bg-emerald-500" />
+              <div className="flex-1 bg-positive" />
               <div className="flex-1 bg-green-500" />
               <div className="flex-1 bg-yellow-500" />
               <div className="flex-1 bg-orange-500" />

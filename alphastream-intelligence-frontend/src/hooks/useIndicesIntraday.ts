@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { API_BASE_URL } from '@/config/api';
 
 interface SeriesPoint {
   date: string;
@@ -45,7 +46,7 @@ export function useIndicesIntraday(symbols: string[], interval: string = '5min')
           symbols: fmpSymbols.join(','),
           interval,
         });
-        const res = await fetch(`http://localhost:8000/api/market/indices/intraday?${params.toString()}`);
+        const res = await fetch(`${API_BASE_URL}/api/market/indices/intraday?${params.toString()}`);
         if (!res.ok) throw new Error('Failed to fetch intraday indices');
         const json = await res.json();
         if (cancelled) return;

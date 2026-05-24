@@ -73,7 +73,7 @@ function getCorrelationColor(value: number): string {
   if (value >= 0.65) return 'bg-orange-500';
   if (value >= 0.5) return 'bg-yellow-500';
   if (value >= 0.35) return 'bg-green-500';
-  return 'bg-emerald-500';
+  return 'bg-positive';
 }
 
 function getCorrelationBgClass(value: number): string {
@@ -81,7 +81,7 @@ function getCorrelationBgClass(value: number): string {
   if (value >= 0.65) return 'bg-orange-500/80';
   if (value >= 0.5) return 'bg-yellow-500/80';
   if (value >= 0.35) return 'bg-green-500/80';
-  return 'bg-emerald-500/80';
+  return 'bg-positive/80';
 }
 
 export function SectorCorrelation() {
@@ -170,7 +170,7 @@ export function SectorCorrelation() {
                         <div
                           className={`w-11 h-11 flex items-center justify-center text-[10px] font-mono cursor-pointer transition-all hover:scale-105 hover:z-10 rounded-sm m-0.5 ${
                             isIntra ? 'ring-1 ring-primary/50' : ''
-                          } ${getCorrelationBgClass(value)} ${value >= 0.5 ? 'text-white' : 'text-black'}`}
+                          } ${getCorrelationBgClass(value)} ${value >= 0.5 ? 'text-foreground' : 'text-black'}`}
                         >
                           {value.toFixed(2)}
                         </div>
@@ -208,7 +208,7 @@ export function SectorCorrelation() {
               <span className="text-xs text-muted-foreground">Avg Inter-Sector</span>
               <Badge variant="outline" className="text-[10px]">Across sectors</Badge>
             </div>
-            <p className={`text-xl font-semibold ${avgInter > 0.6 ? 'text-red-500' : avgInter < 0.4 ? 'text-emerald-500' : 'text-foreground'}`}>
+            <p className={`text-xl font-semibold ${avgInter > 0.6 ? 'text-negative' : avgInter < 0.4 ? 'text-positive' : 'text-foreground'}`}>
               {avgInter.toFixed(3)}
             </p>
             <p className="text-[10px] text-muted-foreground">
@@ -221,7 +221,7 @@ export function SectorCorrelation() {
         <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border">
           <div>
             <div className="flex items-center gap-1.5 mb-2">
-              <TrendingUp className="w-3 h-3 text-red-500" />
+              <TrendingUp className="w-3 h-3 text-negative" />
               <span className="text-xs font-medium">Highest Correlations</span>
             </div>
             <div className="space-y-1">
@@ -230,7 +230,7 @@ export function SectorCorrelation() {
                   <span className="text-muted-foreground">
                     {getSectorName(c.sector1)}/{getSectorName(c.sector2)}
                   </span>
-                  <span className="font-mono text-red-500">
+                  <span className="font-mono text-negative">
                     {(showStress ? c.stressCorr : c.normalCorr).toFixed(2)}
                   </span>
                 </div>
@@ -239,7 +239,7 @@ export function SectorCorrelation() {
           </div>
           <div>
             <div className="flex items-center gap-1.5 mb-2">
-              <TrendingDown className="w-3 h-3 text-emerald-500" />
+              <TrendingDown className="w-3 h-3 text-positive" />
               <span className="text-xs font-medium">Lowest Correlations</span>
             </div>
             <div className="space-y-1">
@@ -248,7 +248,7 @@ export function SectorCorrelation() {
                   <span className="text-muted-foreground">
                     {getSectorName(c.sector1)}/{getSectorName(c.sector2)}
                   </span>
-                  <span className="font-mono text-emerald-500">
+                  <span className="font-mono text-positive">
                     {(showStress ? c.stressCorr : c.normalCorr).toFixed(2)}
                   </span>
                 </div>
@@ -271,7 +271,7 @@ export function SectorCorrelation() {
           <div className="flex items-center gap-2">
             <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-emerald-500 to-primary transition-all"
+                className="h-full bg-gradient-to-r from-positive to-primary transition-all"
                 style={{ width: `${Math.min(100, (avgIntra - avgInter) * 200)}%` }}
               />
             </div>

@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { MarketState, MarketIndex, MacroIndicator, SectorPerformance, MarketNewsItem, CryptoPrice } from '@/types';
 import { getMockMarketState, getKeyIndicators, getMockMarketNews, generateNewNewsItem } from '@/data/mockMarket';
+import { API_BASE_URL } from '@/config/api';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = API_BASE_URL;
 
 interface MarketStatusResponse {
   status: string;
@@ -139,10 +140,11 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     loadMarketData();
-    // keep base polling for core data; now gated by isMarketOpen for UI decisions elsewhere
-    const interval = setInterval(loadMarketData, 10 * 1000); // 10s polling
+    // Polling: 15s during market hours for fast updates, 60s off-market
+    const pollInterval = marketOpen ? 15_000 : 60_000;
+    const interval = setInterval(loadMarketData, pollInterval);
     return () => clearInterval(interval);
-  }, [loadMarketData]);
+  }, [loadMarketData, marketOpen]);
 
   // Poll for real news from FMP API
   useEffect(() => {

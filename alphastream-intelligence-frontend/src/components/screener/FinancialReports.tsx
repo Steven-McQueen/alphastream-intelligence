@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Download, ChevronDown, ChevronUp, Loader2, TrendingUp, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const API_BASE_URL = "http://localhost:8000";
+import { API_BASE_URL } from "@/config/api";
 
 type Period = "annual" | "quarterly";
 type ScaleUnit = "B" | "M" | "K";
@@ -18,6 +18,7 @@ interface FinancialData {
   balance: any[];
   cashflow: any[];
   metrics: any[];
+  ratios: any[];
 }
 
 interface AnalystEstimate {
@@ -97,15 +98,15 @@ function StatementRow({
   
   return (
     <tr className={cn(
-      "border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors",
-      isHeader && "bg-zinc-800/50",
+      "border-b border-border/50 hover:bg-muted/30 transition-colors",
+      isHeader && "bg-muted/50",
       isBold && "font-semibold"
     )}>
       <td 
         className={cn(
-          "py-2.5 px-4 text-sm text-zinc-300 sticky left-0 bg-zinc-900",
-          isHeader && "bg-zinc-800/50 font-semibold text-white",
-          isBold && "font-semibold text-white"
+          "py-2.5 px-4 text-sm text-soft sticky left-0 bg-card",
+          isHeader && "bg-muted/50 font-semibold text-foreground",
+          isBold && "font-semibold text-foreground"
         )}
         style={{ paddingLeft: `${16 + indent * 16}px` }}
       >
@@ -118,9 +119,9 @@ function StatementRow({
             key={i} 
             className={cn(
               "py-2.5 px-4 text-sm text-right font-mono",
-              v && v < 0 ? "text-red-400" : "text-zinc-300",
-              isHeader && "font-semibold text-white",
-              isBold && "font-semibold text-white",
+              v && v < 0 ? "text-negative" : "text-soft",
+              isHeader && "font-semibold text-foreground",
+              isBold && "font-semibold text-foreground",
               isEstimate && "italic text-cyan-400/80" // Estimates in italics and different color
             )}
           >
@@ -135,10 +136,10 @@ function StatementRow({
 // Section header row
 function SectionHeader({ label, colCount }: { label: string; colCount: number }) {
   return (
-    <tr className="bg-zinc-800">
+    <tr className="bg-muted">
       <td 
         colSpan={colCount + 1} 
-        className="py-3 px-4 text-xs font-bold text-zinc-400 uppercase tracking-wider"
+        className="py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wider"
       >
         {label}
       </td>
@@ -247,14 +248,14 @@ export function FinancialReports({ ticker }: FinancialReportsProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-zinc-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-dim" />
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="flex items-center justify-center h-64 text-zinc-500">
+      <div className="flex items-center justify-center h-64 text-dim">
         <p>{error || "No financial data available"}</p>
       </div>
     );
@@ -294,13 +295,13 @@ export function FinancialReports({ ticker }: FinancialReportsProps) {
   // Render Income Statement
   const renderIncomeStatement = () => {
     const items = data.income;
-    if (!items || items.length === 0) return <p className="text-zinc-500 p-4">No data available</p>;
+    if (!items || items.length === 0) return <p className="text-dim p-4">No data available</p>;
 
     return (
       <table className="w-full border-collapse">
         <thead className="sticky top-0 z-10">
-          <tr className="bg-zinc-900 border-b border-zinc-700">
-            <th className="py-3 px-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider sticky left-0 bg-zinc-900">
+          <tr className="bg-card border-b border-secondary">
+            <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider sticky left-0 bg-card">
               Metric
             </th>
             {allPeriods.map((p, i) => (
@@ -310,7 +311,7 @@ export function FinancialReports({ ticker }: FinancialReportsProps) {
                   "py-3 px-4 text-right text-xs font-semibold uppercase tracking-wider min-w-[100px]",
                   estimateIndices.includes(i) 
                     ? "text-cyan-400 bg-cyan-900/20" 
-                    : "text-zinc-400"
+                    : "text-muted-foreground"
                 )}
               >
                 {p}
@@ -392,18 +393,18 @@ export function FinancialReports({ ticker }: FinancialReportsProps) {
   // Render Balance Sheet
   const renderBalanceSheet = () => {
     const items = data.balance;
-    if (!items || items.length === 0) return <p className="text-zinc-500 p-4">No data available</p>;
+    if (!items || items.length === 0) return <p className="text-dim p-4">No data available</p>;
     const periods = items.map(getPeriodLabel);
 
     return (
       <table className="w-full border-collapse">
         <thead className="sticky top-0 z-10">
-          <tr className="bg-zinc-900 border-b border-zinc-700">
-            <th className="py-3 px-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider sticky left-0 bg-zinc-900">
+          <tr className="bg-card border-b border-secondary">
+            <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider sticky left-0 bg-card">
               Metric
             </th>
             {periods.map((p, i) => (
-              <th key={i} className="py-3 px-4 text-right text-xs font-semibold text-zinc-400 uppercase tracking-wider min-w-[100px]">
+              <th key={i} className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[100px]">
                 {p}
               </th>
             ))}
@@ -455,18 +456,18 @@ export function FinancialReports({ ticker }: FinancialReportsProps) {
   // Render Cash Flow Statement
   const renderCashFlow = () => {
     const items = data.cashflow;
-    if (!items || items.length === 0) return <p className="text-zinc-500 p-4">No data available</p>;
+    if (!items || items.length === 0) return <p className="text-dim p-4">No data available</p>;
     const periods = items.map(getPeriodLabel);
 
     return (
       <table className="w-full border-collapse">
         <thead className="sticky top-0 z-10">
-          <tr className="bg-zinc-900 border-b border-zinc-700">
-            <th className="py-3 px-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider sticky left-0 bg-zinc-900">
+          <tr className="bg-card border-b border-secondary">
+            <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider sticky left-0 bg-card">
               Metric
             </th>
             {periods.map((p, i) => (
-              <th key={i} className="py-3 px-4 text-right text-xs font-semibold text-zinc-400 uppercase tracking-wider min-w-[100px]">
+              <th key={i} className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[100px]">
                 {p}
               </th>
             ))}
@@ -517,9 +518,11 @@ export function FinancialReports({ ticker }: FinancialReportsProps) {
     const income = data.income;
     const balance = data.balance;
     const cashflow = data.cashflow;
-    
+    const metrics = data.metrics;
+    const ratios = data.ratios;
+
     if (!income?.length || !balance?.length) {
-      return <p className="text-zinc-500 p-4">No data available</p>;
+      return <p className="text-dim p-4">No data available</p>;
     }
 
     const periods = income.map(getPeriodLabel);
@@ -552,12 +555,12 @@ export function FinancialReports({ ticker }: FinancialReportsProps) {
     return (
       <table className="w-full border-collapse">
         <thead className="sticky top-0 z-10">
-          <tr className="bg-zinc-900 border-b border-zinc-700">
-            <th className="py-3 px-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider sticky left-0 bg-zinc-900">
+          <tr className="bg-card border-b border-secondary">
+            <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider sticky left-0 bg-card">
               Metric
             </th>
             {periods.map((p, i) => (
-              <th key={i} className="py-3 px-4 text-right text-xs font-semibold text-zinc-400 uppercase tracking-wider min-w-[100px]">
+              <th key={i} className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[100px]">
                 {p}
               </th>
             ))}
@@ -651,11 +654,65 @@ export function FinancialReports({ ticker }: FinancialReportsProps) {
           <SectionHeader label="Cash Flow" colCount={colCount} />
           <StatementRow label="Operating Cash Flow" values={cashflow?.map(c => c.operatingCashFlow) || []} scale={scale} />
           <StatementRow label="Free Cash Flow" values={cashflow?.map(c => c.freeCashFlow) || []} scale={scale} />
-          <StatementRow 
-            label="FCF Margin" 
-            values={cashflow?.map((c, idx) => income[idx]?.revenue ? c.freeCashFlow / income[idx].revenue : null) || []} 
-            scale={scale} 
+          <StatementRow
+            label="FCF Margin"
+            values={cashflow?.map((c, idx) => income[idx]?.revenue ? c.freeCashFlow / income[idx].revenue : null) || []}
+            scale={scale}
             formatFn={formatPercent}
+          />
+
+          <SectionHeader label="Valuation KPIs" colCount={colCount} />
+          <StatementRow
+            label="EV / Sales"
+            values={metrics?.length
+              ? metrics.map(m => m.evToSales)
+              : income.map((inc, idx) => {
+                  const ev = (balance[idx]?.totalDebt || 0) + (balance[idx]?.totalStockholdersEquity || 0) - (balance[idx]?.cashAndCashEquivalents || 0);
+                  return inc.revenue ? ev / inc.revenue : null;
+                })
+            }
+            scale={scale}
+            formatFn={(v) => v !== null && v !== undefined && !isNaN(v) ? v.toFixed(2) + "x" : "-"}
+          />
+          <StatementRow
+            label="EV / EBITDA"
+            values={metrics?.length
+              ? metrics.map(m => m.evToEBITDA)
+              : income.map((inc, idx) => {
+                  const ev = (balance[idx]?.totalDebt || 0) + (balance[idx]?.totalStockholdersEquity || 0) - (balance[idx]?.cashAndCashEquivalents || 0);
+                  return inc.ebitda ? ev / inc.ebitda : null;
+                })
+            }
+            scale={scale}
+            formatFn={(v) => v !== null && v !== undefined && !isNaN(v) ? v.toFixed(2) + "x" : "-"}
+          />
+          <StatementRow
+            label="EV / EBIT"
+            values={metrics?.length
+              ? metrics.map((m, idx) => {
+                  const ev = m.enterpriseValue;
+                  const ebit = income[idx]?.operatingIncome;
+                  return ev && ebit ? ev / ebit : null;
+                })
+              : income.map((inc, idx) => {
+                  const ev = (balance[idx]?.totalDebt || 0) + (balance[idx]?.totalStockholdersEquity || 0) - (balance[idx]?.cashAndCashEquivalents || 0);
+                  return inc.operatingIncome ? ev / inc.operatingIncome : null;
+                })
+            }
+            scale={scale}
+            formatFn={(v) => v !== null && v !== undefined && !isNaN(v) ? v.toFixed(2) + "x" : "-"}
+          />
+          <StatementRow
+            label="Book Value Per Share"
+            values={ratios?.length
+              ? ratios.map(r => r.bookValuePerShare)
+              : balance.map((b, idx) => {
+                  const shares = income[idx]?.weightedAverageShsOut;
+                  return shares ? b.totalStockholdersEquity / shares : null;
+                })
+            }
+            scale={scale}
+            formatFn={formatEps}
           />
         </tbody>
       </table>
@@ -663,9 +720,9 @@ export function FinancialReports({ ticker }: FinancialReportsProps) {
   };
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+    <div className="bg-card border border-border rounded-xl overflow-hidden">
       {/* Header Controls */}
-      <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+      <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-2">
           {/* Statement Type Tabs */}
           {(["keyStats", "income", "balance", "cashflow"] as StatementType[]).map((type) => (
@@ -675,8 +732,8 @@ export function FinancialReports({ ticker }: FinancialReportsProps) {
               className={cn(
                 "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
                 activeStatement === type
-                  ? "bg-zinc-700 text-white"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
               {type === "keyStats" ? "Key Stats" : 
@@ -696,7 +753,7 @@ export function FinancialReports({ ticker }: FinancialReportsProps) {
                 "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border",
                 showEstimates
                   ? "bg-cyan-600/20 text-cyan-400 border-cyan-500/30"
-                  : "bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-zinc-200"
+                  : "bg-muted text-muted-foreground border-secondary hover:text-foreground"
               )}
             >
               <TrendingUp className="w-3.5 h-3.5" />
@@ -705,12 +762,12 @@ export function FinancialReports({ ticker }: FinancialReportsProps) {
           )}
 
           {/* Period Toggle */}
-          <div className="flex items-center bg-zinc-800 rounded-lg p-1">
+          <div className="flex items-center bg-muted rounded-lg p-1">
             <button
               onClick={() => setPeriod("annual")}
               className={cn(
                 "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
-                period === "annual" ? "bg-zinc-600 text-white" : "text-zinc-400 hover:text-zinc-200"
+                period === "annual" ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
               )}
             >
               Annual
@@ -719,7 +776,7 @@ export function FinancialReports({ ticker }: FinancialReportsProps) {
               onClick={() => setPeriod("quarterly")}
               className={cn(
                 "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
-                period === "quarterly" ? "bg-zinc-600 text-white" : "text-zinc-400 hover:text-zinc-200"
+                period === "quarterly" ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
               )}
             >
               Quarterly
@@ -727,14 +784,14 @@ export function FinancialReports({ ticker }: FinancialReportsProps) {
           </div>
           
           {/* Scale Toggle */}
-          <div className="flex items-center bg-zinc-800 rounded-lg p-1">
+          <div className="flex items-center bg-muted rounded-lg p-1">
             {(["B", "M", "K"] as ScaleUnit[]).map((s) => (
               <button
                 key={s}
                 onClick={() => setScale(s)}
                 className={cn(
                   "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
-                  scale === s ? "bg-zinc-600 text-white" : "text-zinc-400 hover:text-zinc-200"
+                  scale === s ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {s}
@@ -747,7 +804,7 @@ export function FinancialReports({ ticker }: FinancialReportsProps) {
             variant="outline"
             size="sm"
             onClick={downloadExcel}
-            className="border-zinc-700 hover:bg-zinc-800"
+            className="border-secondary hover:bg-muted"
           >
             <Download className="w-4 h-4 mr-2" />
             Export

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PerplexityChatInput } from '@/components/ui/PerplexityChatInput';
+import { ChatBar } from '@/components/chat/ChatBar';
 import { cn } from '@/lib/utils';
 import { getSuggestedPrompts } from '@/data/mockFinanceHome';
 import { useMarket } from '@/context/MarketContext';
@@ -83,7 +83,7 @@ export function HeroSection() {
   };
 
   return (
-    <div className="rounded-2xl bg-gradient-to-br from-zinc-900/80 via-zinc-900/60 to-zinc-950/80 border border-zinc-800/50 overflow-hidden">
+    <div className="rounded-2xl bg-gradient-to-br from-card/80 via-card/60 to-background/80 border border-border/50 overflow-hidden">
       <div className="p-8">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
           {/* Left: Brand & Query */}
@@ -98,7 +98,7 @@ export function HeroSection() {
             </div>
 
             <div className="space-y-3">
-              <PerplexityChatInput
+              <ChatBar
                 onSubmit={(text) => handleSubmit(text)}
                 placeholder="Ask about markets, sectors, or any stock..."
               />
@@ -107,7 +107,7 @@ export function HeroSection() {
                   <Badge
                     key={i}
                     variant="outline"
-                    className="text-xs cursor-pointer hover:bg-zinc-800 transition-colors border-zinc-700"
+                    className="text-xs cursor-pointer hover:bg-muted transition-colors border-secondary"
                     onClick={() => handleSubmit(prompt.prompt)}
                   >
                     {prompt.text}
@@ -119,14 +119,14 @@ export function HeroSection() {
 
           {/* Right: Market Snapshot */}
           <div className="lg:col-span-2">
-            <div className="bg-zinc-900/50 rounded-xl p-5 border border-zinc-800/50 space-y-4">
+            <div className="bg-card/50 rounded-xl p-5 border border-border/50 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <div className="h-2 w-2 rounded-full bg-positive animate-pulse" />
                   <span className="text-sm font-medium text-foreground">Live Markets</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className={cn('text-[10px] border-zinc-700', getSentimentColor())}>
+                  <Badge variant="outline" className={cn('text-[10px] border-secondary', getSentimentColor())}>
                     {marketState.regime}
                   </Badge>
                   <Button
@@ -152,16 +152,16 @@ export function HeroSection() {
                   return (
                     <div
                       key={symbol}
-                      className="bg-zinc-800/40 rounded-lg p-3 hover:bg-zinc-800/60 transition-colors cursor-pointer"
+                      className="bg-muted/40 rounded-lg p-3 hover:bg-muted/60 transition-colors cursor-pointer"
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium text-zinc-400">{symbol}</span>
+                        <span className="text-xs font-medium text-muted-foreground">{symbol}</span>
                         <span
                           className={cn(
                             'text-[10px] font-mono px-1.5 py-0.5 rounded',
                             changePercent >= 0
-                              ? 'bg-emerald-500/20 text-emerald-400'
-                              : 'bg-red-500/20 text-red-400'
+                              ? 'bg-positive/20 text-positive'
+                              : 'bg-negative/20 text-negative'
                           )}
                         >
                           {changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%
@@ -181,7 +181,7 @@ export function HeroSection() {
                 })}
               </div>
 
-              <div className="pt-2 border-t border-zinc-800/50">
+              <div className="pt-2 border-t border-border/50">
                 <div className="grid grid-cols-2 gap-3">
                   {macroEntries.map((entry) => (
                     <div key={entry.label} className="flex items-center justify-between text-xs">

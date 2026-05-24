@@ -33,7 +33,7 @@ import {
   Area
 } from "recharts";
 
-const API_BASE_URL = "http://localhost:8000";
+import { API_BASE_URL } from "@/config/api";
 
 interface DCFValuationProps {
   ticker: string;
@@ -312,19 +312,19 @@ export function DCFValuation({ ticker }: DCFValuationProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-zinc-500" />
-        <span className="ml-3 text-zinc-400">Loading financial data...</span>
+        <Loader2 className="w-8 h-8 animate-spin text-dim" />
+        <span className="ml-3 text-muted-foreground">Loading financial data...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-96 text-zinc-500">
+      <div className="flex items-center justify-center h-96 text-dim">
         <div className="text-center">
-          <Calculator className="w-12 h-12 mx-auto mb-4 text-zinc-600" />
+          <Calculator className="w-12 h-12 mx-auto mb-4 text-dim" />
           <p className="text-lg font-medium mb-2">DCF Analysis Unavailable</p>
-          <p className="text-sm text-zinc-600">{error}</p>
+          <p className="text-sm text-dim">{error}</p>
         </div>
       </div>
     );
@@ -335,11 +335,11 @@ export function DCFValuation({ ticker }: DCFValuationProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Calculator className="w-5 h-5 text-emerald-400" />
+          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <Calculator className="w-5 h-5 text-positive" />
             DCF Valuation Model
           </h2>
-          <p className="text-sm text-zinc-500 mt-1">
+          <p className="text-sm text-dim mt-1">
             Discounted Cash Flow analysis for {data?.companyName || ticker}
           </p>
         </div>
@@ -349,7 +349,7 @@ export function DCFValuation({ ticker }: DCFValuationProps) {
             size="sm"
             onClick={calculateDCF}
             disabled={calculating}
-            className="border-zinc-700 bg-zinc-800 hover:bg-zinc-700"
+            className="border-secondary bg-muted hover:bg-secondary"
           >
             <RefreshCw className={cn("w-4 h-4 mr-2", calculating && "animate-spin")} />
             Recalculate
@@ -359,7 +359,7 @@ export function DCFValuation({ ticker }: DCFValuationProps) {
             size="sm"
             onClick={exportToCSV}
             disabled={!result}
-            className="border-zinc-700 bg-zinc-800 hover:bg-zinc-700"
+            className="border-secondary bg-muted hover:bg-secondary"
           >
             <Download className="w-4 h-4 mr-2" />
             Export
@@ -371,20 +371,20 @@ export function DCFValuation({ ticker }: DCFValuationProps) {
       <div className="grid grid-cols-12 gap-6">
         {/* Left: Assumptions Panel */}
         <div className="col-span-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
             {/* Assumptions Header */}
             <button
               onClick={() => setShowAssumptions(!showAssumptions)}
-              className="w-full flex items-center justify-between p-4 border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors"
+              className="w-full flex items-center justify-between p-4 border-b border-border hover:bg-muted/50 transition-colors"
             >
               <div className="flex items-center gap-2">
-                <Settings2 className="w-4 h-4 text-zinc-400" />
-                <span className="font-semibold text-white">Assumptions</span>
+                <Settings2 className="w-4 h-4 text-muted-foreground" />
+                <span className="font-semibold text-foreground">Assumptions</span>
               </div>
               {showAssumptions ? (
-                <ChevronUp className="w-4 h-4 text-zinc-400" />
+                <ChevronUp className="w-4 h-4 text-muted-foreground" />
               ) : (
-                <ChevronDown className="w-4 h-4 text-zinc-400" />
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
               )}
             </button>
 
@@ -392,62 +392,62 @@ export function DCFValuation({ ticker }: DCFValuationProps) {
               <div className="p-4 space-y-4">
                 {/* Projection Period */}
                 <div>
-                  <label className="block text-xs text-zinc-500 mb-1">Projection Years</label>
+                  <label className="block text-xs text-dim mb-1">Projection Years</label>
                   <Input
                     type="number"
                     value={inputs.projectionYears}
                     onChange={(e) => handleInputChange("projectionYears", e.target.value)}
-                    className="h-9 bg-zinc-800 border-zinc-700 text-white"
+                    className="h-9 bg-muted border-secondary text-foreground"
                   />
                 </div>
 
                 {/* Growth & Margins */}
-                <div className="border-t border-zinc-800 pt-4">
-                  <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+                <div className="border-t border-border pt-4">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                     Growth & Margins
                   </h4>
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <div className="flex-1">
-                        <label className="block text-xs text-zinc-500 mb-1">Revenue Growth (%)</label>
+                        <label className="block text-xs text-dim mb-1">Revenue Growth (%)</label>
                         <Input
                           type="number"
                           step="0.1"
                           value={inputs.revenueGrowthRate}
                           onChange={(e) => handleInputChange("revenueGrowthRate", e.target.value)}
-                          className="h-9 bg-zinc-800 border-zinc-700 text-white"
+                          className="h-9 bg-muted border-secondary text-foreground"
                         />
                       </div>
                       <div className="flex-1">
-                        <label className="block text-xs text-zinc-500 mb-1">EBIT Margin (%)</label>
+                        <label className="block text-xs text-dim mb-1">EBIT Margin (%)</label>
                         <Input
                           type="number"
                           step="0.1"
                           value={inputs.ebitMargin}
                           onChange={(e) => handleInputChange("ebitMargin", e.target.value)}
-                          className="h-9 bg-zinc-800 border-zinc-700 text-white"
+                          className="h-9 bg-muted border-secondary text-foreground"
                         />
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex-1">
-                        <label className="block text-xs text-zinc-500 mb-1">Tax Rate (%)</label>
+                        <label className="block text-xs text-dim mb-1">Tax Rate (%)</label>
                         <Input
                           type="number"
                           step="0.1"
                           value={inputs.taxRate}
                           onChange={(e) => handleInputChange("taxRate", e.target.value)}
-                          className="h-9 bg-zinc-800 border-zinc-700 text-white"
+                          className="h-9 bg-muted border-secondary text-foreground"
                         />
                       </div>
                       <div className="flex-1">
-                        <label className="block text-xs text-zinc-500 mb-1">Discount Rate (%)</label>
+                        <label className="block text-xs text-dim mb-1">Discount Rate (%)</label>
                         <Input
                           type="number"
                           step="0.1"
                           value={inputs.discountRate}
                           onChange={(e) => handleInputChange("discountRate", e.target.value)}
-                          className="h-9 bg-zinc-800 border-zinc-700 text-white"
+                          className="h-9 bg-muted border-secondary text-foreground"
                         />
                       </div>
                     </div>
@@ -455,49 +455,49 @@ export function DCFValuation({ ticker }: DCFValuationProps) {
                 </div>
 
                 {/* CapEx & D&A */}
-                <div className="border-t border-zinc-800 pt-4">
-                  <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+                <div className="border-t border-border pt-4">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                     Capital Requirements
                   </h4>
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <div className="flex-1">
-                        <label className="block text-xs text-zinc-500 mb-1">D&A Rate (%)</label>
+                        <label className="block text-xs text-dim mb-1">D&A Rate (%)</label>
                         <Input
                           type="number"
                           step="0.1"
                           value={inputs.depreciationRate}
                           onChange={(e) => handleInputChange("depreciationRate", e.target.value)}
-                          className="h-9 bg-zinc-800 border-zinc-700 text-white"
+                          className="h-9 bg-muted border-secondary text-foreground"
                         />
                       </div>
                       <div className="flex-1">
-                        <label className="block text-xs text-zinc-500 mb-1">CapEx Rate (%)</label>
+                        <label className="block text-xs text-dim mb-1">CapEx Rate (%)</label>
                         <Input
                           type="number"
                           step="0.1"
                           value={inputs.capexRate}
                           onChange={(e) => handleInputChange("capexRate", e.target.value)}
-                          className="h-9 bg-zinc-800 border-zinc-700 text-white"
+                          className="h-9 bg-muted border-secondary text-foreground"
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs text-zinc-500 mb-1">NWC Rate (%)</label>
+                      <label className="block text-xs text-dim mb-1">NWC Rate (%)</label>
                       <Input
                         type="number"
                         step="0.1"
                         value={inputs.nwcRate}
                         onChange={(e) => handleInputChange("nwcRate", e.target.value)}
-                        className="h-9 bg-zinc-800 border-zinc-700 text-white"
+                        className="h-9 bg-muted border-secondary text-foreground"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Terminal Value */}
-                <div className="border-t border-zinc-800 pt-4">
-                  <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+                <div className="border-t border-border pt-4">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                     Terminal Value
                   </h4>
                   <div className="flex items-center gap-2 mb-3">
@@ -506,8 +506,8 @@ export function DCFValuation({ ticker }: DCFValuationProps) {
                       className={cn(
                         "flex-1 py-2 text-xs font-medium rounded-md transition-colors",
                         inputs.terminalMethod === "perpetual"
-                          ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30"
-                          : "bg-zinc-800 text-zinc-400 border border-zinc-700"
+                          ? "bg-positive/20 text-positive border border-positive/30"
+                          : "bg-muted text-muted-foreground border border-secondary"
                       )}
                     >
                       Perpetual Growth
@@ -517,8 +517,8 @@ export function DCFValuation({ ticker }: DCFValuationProps) {
                       className={cn(
                         "flex-1 py-2 text-xs font-medium rounded-md transition-colors",
                         inputs.terminalMethod === "multiple"
-                          ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30"
-                          : "bg-zinc-800 text-zinc-400 border border-zinc-700"
+                          ? "bg-positive/20 text-positive border border-positive/30"
+                          : "bg-muted text-muted-foreground border border-secondary"
                       )}
                     >
                       Exit Multiple
@@ -526,24 +526,24 @@ export function DCFValuation({ ticker }: DCFValuationProps) {
                   </div>
                   {inputs.terminalMethod === "perpetual" ? (
                     <div>
-                      <label className="block text-xs text-zinc-500 mb-1">Perpetual Growth Rate (%)</label>
+                      <label className="block text-xs text-dim mb-1">Perpetual Growth Rate (%)</label>
                       <Input
                         type="number"
                         step="0.1"
                         value={inputs.perpetualGrowthRate}
                         onChange={(e) => handleInputChange("perpetualGrowthRate", e.target.value)}
-                        className="h-9 bg-zinc-800 border-zinc-700 text-white"
+                        className="h-9 bg-muted border-secondary text-foreground"
                       />
                     </div>
                   ) : (
                     <div>
-                      <label className="block text-xs text-zinc-500 mb-1">Exit EV/EBITDA Multiple</label>
+                      <label className="block text-xs text-dim mb-1">Exit EV/EBITDA Multiple</label>
                       <Input
                         type="number"
                         step="0.5"
                         value={inputs.exitMultiple}
                         onChange={(e) => handleInputChange("exitMultiple", e.target.value)}
-                        className="h-9 bg-zinc-800 border-zinc-700 text-white"
+                        className="h-9 bg-muted border-secondary text-foreground"
                       />
                     </div>
                   )}
@@ -553,36 +553,36 @@ export function DCFValuation({ ticker }: DCFValuationProps) {
 
             {/* Current Data Summary */}
             {data && (
-              <div className="p-4 border-t border-zinc-800 bg-zinc-950/50">
-                <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+              <div className="p-4 border-t border-border bg-background/50">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                   Current Data
                 </h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-zinc-500">Current Price</span>
-                    <span className="text-white font-mono">${data.currentPrice?.toFixed(2) || "-"}</span>
+                    <span className="text-dim">Current Price</span>
+                    <span className="text-foreground font-mono">${data.currentPrice?.toFixed(2) || "-"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-zinc-500">Shares Outstanding</span>
-                    <span className="text-white font-mono">{formatNumber(data.sharesOutstanding / 1e6)}M</span>
+                    <span className="text-dim">Shares Outstanding</span>
+                    <span className="text-foreground font-mono">{formatNumber(data.sharesOutstanding / 1e6)}M</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-zinc-500">Market Cap</span>
-                    <span className="text-white font-mono">{formatCurrency(data.marketCap)}</span>
+                    <span className="text-dim">Market Cap</span>
+                    <span className="text-foreground font-mono">{formatCurrency(data.marketCap)}</span>
                   </div>
                   {data.historical[0] && (
                     <>
                       <div className="flex justify-between">
-                        <span className="text-zinc-500">LTM Revenue</span>
-                        <span className="text-white font-mono">{formatCurrency(data.historical[0].revenue)}</span>
+                        <span className="text-dim">LTM Revenue</span>
+                        <span className="text-foreground font-mono">{formatCurrency(data.historical[0].revenue)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-zinc-500">Cash</span>
-                        <span className="text-white font-mono">{formatCurrency(data.historical[0].totalCash)}</span>
+                        <span className="text-dim">Cash</span>
+                        <span className="text-foreground font-mono">{formatCurrency(data.historical[0].totalCash)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-zinc-500">Debt</span>
-                        <span className="text-white font-mono">{formatCurrency(data.historical[0].totalDebt)}</span>
+                        <span className="text-dim">Debt</span>
+                        <span className="text-foreground font-mono">{formatCurrency(data.historical[0].totalDebt)}</span>
                       </div>
                     </>
                   )}
@@ -597,49 +597,49 @@ export function DCFValuation({ ticker }: DCFValuationProps) {
           {/* Valuation Summary Cards */}
           {result && (
             <div className="grid grid-cols-4 gap-4">
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <div className="flex items-center gap-2 text-zinc-500 text-xs mb-2">
+              <div className="bg-card border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 text-dim text-xs mb-2">
                   <DollarSign className="w-4 h-4" />
                   <span>Current Price</span>
                 </div>
-                <div className="text-2xl font-bold text-white font-mono">
+                <div className="text-2xl font-bold text-foreground font-mono">
                   ${result.currentPrice?.toFixed(2)}
                 </div>
               </div>
 
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <div className="flex items-center gap-2 text-zinc-500 text-xs mb-2">
+              <div className="bg-card border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 text-dim text-xs mb-2">
                   <Calculator className="w-4 h-4" />
                   <span>Intrinsic Value</span>
                 </div>
-                <div className="text-2xl font-bold text-emerald-400 font-mono">
+                <div className="text-2xl font-bold text-positive font-mono">
                   ${result.intrinsicValuePerShare?.toFixed(2)}
                 </div>
               </div>
 
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <div className="flex items-center gap-2 text-zinc-500 text-xs mb-2">
+              <div className="bg-card border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 text-dim text-xs mb-2">
                   {result.upside && result.upside > 0 ? (
-                    <TrendingUp className="w-4 h-4 text-emerald-400" />
+                    <TrendingUp className="w-4 h-4 text-positive" />
                   ) : (
-                    <TrendingDown className="w-4 h-4 text-red-400" />
+                    <TrendingDown className="w-4 h-4 text-negative" />
                   )}
                   <span>Upside/Downside</span>
                 </div>
                 <div className={cn(
                   "text-2xl font-bold font-mono",
-                  result.upside && result.upside > 0 ? "text-emerald-400" : "text-red-400"
+                  result.upside && result.upside > 0 ? "text-positive" : "text-negative"
                 )}>
                   {formatPercent(result.upside)}
                 </div>
               </div>
 
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <div className="flex items-center gap-2 text-zinc-500 text-xs mb-2">
+              <div className="bg-card border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 text-dim text-xs mb-2">
                   <BarChart3 className="w-4 h-4" />
                   <span>Enterprise Value</span>
                 </div>
-                <div className="text-2xl font-bold text-white font-mono">
+                <div className="text-2xl font-bold text-foreground font-mono">
                   {formatCurrency(result.enterpriseValue)}
                 </div>
               </div>
@@ -650,8 +650,8 @@ export function DCFValuation({ ticker }: DCFValuationProps) {
           {result && (
             <div className="grid grid-cols-2 gap-4">
               {/* Cash Flow Chart */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <h4 className="text-sm font-semibold text-white mb-4">Projected Cash Flows ($M)</h4>
+              <div className="bg-card border border-border rounded-xl p-4">
+                <h4 className="text-sm font-semibold text-foreground mb-4">Projected Cash Flows ($M)</h4>
                 <ResponsiveContainer width="100%" height={200}>
                   <ComposedChart data={cashFlowChartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
@@ -668,8 +668,8 @@ export function DCFValuation({ ticker }: DCFValuationProps) {
                       tickFormatter={(v) => `$${v.toFixed(0)}`}
                     />
                     <Tooltip
-                      contentStyle={{ backgroundColor: "#18181b", border: "1px solid #27272a", borderRadius: "8px" }}
-                      labelStyle={{ color: "#a0a0a0" }}
+                      contentStyle={{ backgroundColor: "hsl(var(--tooltip-bg))", border: "1px solid hsl(var(--tooltip-border))", borderRadius: "8px" }}
+                      labelStyle={{ color: "hsl(var(--tooltip-label))" }}
                       formatter={(value: number) => [`$${value.toFixed(1)}M`]}
                     />
                     <Legend />
@@ -680,8 +680,8 @@ export function DCFValuation({ ticker }: DCFValuationProps) {
               </div>
 
               {/* Valuation Comparison */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <h4 className="text-sm font-semibold text-white mb-4">Market vs Intrinsic Value</h4>
+              <div className="bg-card border border-border rounded-xl p-4">
+                <h4 className="text-sm font-semibold text-foreground mb-4">Market vs Intrinsic Value</h4>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={valuationChartData} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
@@ -699,7 +699,7 @@ export function DCFValuation({ ticker }: DCFValuationProps) {
                       width={100}
                     />
                     <Tooltip
-                      contentStyle={{ backgroundColor: "#18181b", border: "1px solid #27272a", borderRadius: "8px" }}
+                      contentStyle={{ backgroundColor: "hsl(var(--tooltip-bg))", border: "1px solid hsl(var(--tooltip-border))", borderRadius: "8px" }}
                       formatter={(value: number) => [`$${value.toFixed(2)}`]}
                     />
                     <Bar dataKey="value" radius={[0, 4, 4, 0]}>
@@ -715,49 +715,49 @@ export function DCFValuation({ ticker }: DCFValuationProps) {
 
           {/* Projections Table */}
           {result && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-              <div className="p-4 border-b border-zinc-800">
-                <h4 className="text-sm font-semibold text-white">Discounted Cash Flow Projections</h4>
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="p-4 border-b border-border">
+                <h4 className="text-sm font-semibold text-foreground">Discounted Cash Flow Projections</h4>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-zinc-800/50 border-b border-zinc-700">
-                      <th className="py-3 px-4 text-left text-xs font-semibold text-zinc-400 uppercase">Year</th>
-                      <th className="py-3 px-4 text-right text-xs font-semibold text-zinc-400 uppercase">Revenue</th>
-                      <th className="py-3 px-4 text-right text-xs font-semibold text-zinc-400 uppercase">EBIT</th>
-                      <th className="py-3 px-4 text-right text-xs font-semibold text-zinc-400 uppercase">- Taxes</th>
-                      <th className="py-3 px-4 text-right text-xs font-semibold text-zinc-400 uppercase">+ D&A</th>
-                      <th className="py-3 px-4 text-right text-xs font-semibold text-zinc-400 uppercase">- CapEx</th>
-                      <th className="py-3 px-4 text-right text-xs font-semibold text-zinc-400 uppercase">- ΔNWC</th>
-                      <th className="py-3 px-4 text-right text-xs font-semibold text-zinc-400 uppercase">UFCF</th>
-                      <th className="py-3 px-4 text-right text-xs font-semibold text-zinc-400 uppercase">PV Factor</th>
-                      <th className="py-3 px-4 text-right text-xs font-semibold text-emerald-400 uppercase">PV UFCF</th>
+                    <tr className="bg-muted/50 border-b border-secondary">
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground uppercase">Year</th>
+                      <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground uppercase">Revenue</th>
+                      <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground uppercase">EBIT</th>
+                      <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground uppercase">- Taxes</th>
+                      <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground uppercase">+ D&A</th>
+                      <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground uppercase">- CapEx</th>
+                      <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground uppercase">- ΔNWC</th>
+                      <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground uppercase">UFCF</th>
+                      <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground uppercase">PV Factor</th>
+                      <th className="py-3 px-4 text-right text-xs font-semibold text-positive uppercase">PV UFCF</th>
                     </tr>
                   </thead>
                   <tbody>
                     {result.projections.map((p) => (
-                      <tr key={p.year} className="border-b border-zinc-800/50 hover:bg-zinc-800/30">
-                        <td className="py-3 px-4 text-zinc-300 font-medium">Year {p.year}</td>
-                        <td className="py-3 px-4 text-right font-mono text-zinc-300">{formatCurrency(p.revenue)}</td>
-                        <td className="py-3 px-4 text-right font-mono text-zinc-300">{formatCurrency(p.ebit)}</td>
-                        <td className="py-3 px-4 text-right font-mono text-red-400">({formatCurrency(p.taxes)})</td>
-                        <td className="py-3 px-4 text-right font-mono text-emerald-400">{formatCurrency(p.depreciation)}</td>
-                        <td className="py-3 px-4 text-right font-mono text-red-400">({formatCurrency(p.capex)})</td>
-                        <td className="py-3 px-4 text-right font-mono text-red-400">({formatCurrency(p.deltaNWC)})</td>
-                        <td className="py-3 px-4 text-right font-mono text-white font-medium">{formatCurrency(p.ufcf)}</td>
-                        <td className="py-3 px-4 text-right font-mono text-zinc-400">{p.discountFactor.toFixed(4)}</td>
-                        <td className="py-3 px-4 text-right font-mono text-emerald-400 font-medium">{formatCurrency(p.pvUFCF)}</td>
+                      <tr key={p.year} className="border-b border-border/50 hover:bg-muted/30">
+                        <td className="py-3 px-4 text-soft font-medium">Year {p.year}</td>
+                        <td className="py-3 px-4 text-right font-mono text-soft">{formatCurrency(p.revenue)}</td>
+                        <td className="py-3 px-4 text-right font-mono text-soft">{formatCurrency(p.ebit)}</td>
+                        <td className="py-3 px-4 text-right font-mono text-negative">({formatCurrency(p.taxes)})</td>
+                        <td className="py-3 px-4 text-right font-mono text-positive">{formatCurrency(p.depreciation)}</td>
+                        <td className="py-3 px-4 text-right font-mono text-negative">({formatCurrency(p.capex)})</td>
+                        <td className="py-3 px-4 text-right font-mono text-negative">({formatCurrency(p.deltaNWC)})</td>
+                        <td className="py-3 px-4 text-right font-mono text-foreground font-medium">{formatCurrency(p.ufcf)}</td>
+                        <td className="py-3 px-4 text-right font-mono text-muted-foreground">{p.discountFactor.toFixed(4)}</td>
+                        <td className="py-3 px-4 text-right font-mono text-positive font-medium">{formatCurrency(p.pvUFCF)}</td>
                       </tr>
                     ))}
                     {/* Terminal Value Row */}
-                    <tr className="bg-zinc-800/50 border-t border-zinc-700">
-                      <td colSpan={7} className="py-3 px-4 text-zinc-300 font-medium">
+                    <tr className="bg-muted/50 border-t border-secondary">
+                      <td colSpan={7} className="py-3 px-4 text-soft font-medium">
                         Terminal Value ({result.terminalMethod === "perpetual" ? "Perpetual Growth" : "Exit Multiple"})
                       </td>
-                      <td className="py-3 px-4 text-right font-mono text-white font-medium">{formatCurrency(result.terminalValue)}</td>
-                      <td className="py-3 px-4 text-right font-mono text-zinc-400">-</td>
-                      <td className="py-3 px-4 text-right font-mono text-emerald-400 font-medium">{formatCurrency(result.pvTerminalValue)}</td>
+                      <td className="py-3 px-4 text-right font-mono text-foreground font-medium">{formatCurrency(result.terminalValue)}</td>
+                      <td className="py-3 px-4 text-right font-mono text-muted-foreground">-</td>
+                      <td className="py-3 px-4 text-right font-mono text-positive font-medium">{formatCurrency(result.pvTerminalValue)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -767,67 +767,67 @@ export function DCFValuation({ ticker }: DCFValuationProps) {
 
           {/* Valuation Bridge */}
           {result && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-              <h4 className="text-sm font-semibold text-white mb-4">Valuation Bridge</h4>
+            <div className="bg-card border border-border rounded-xl p-4">
+              <h4 className="text-sm font-semibold text-foreground mb-4">Valuation Bridge</h4>
               <div className="grid grid-cols-6 gap-4 text-center">
-                <div className="bg-zinc-800/50 rounded-lg p-3">
-                  <div className="text-xs text-zinc-500 mb-1">Sum of PV FCF</div>
-                  <div className="text-lg font-bold text-white font-mono">{formatCurrency(result.sumPVCashFlows)}</div>
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <div className="text-xs text-dim mb-1">Sum of PV FCF</div>
+                  <div className="text-lg font-bold text-foreground font-mono">{formatCurrency(result.sumPVCashFlows)}</div>
                 </div>
-                <div className="flex items-center justify-center text-zinc-500">+</div>
-                <div className="bg-zinc-800/50 rounded-lg p-3">
-                  <div className="text-xs text-zinc-500 mb-1">PV Terminal</div>
-                  <div className="text-lg font-bold text-white font-mono">{formatCurrency(result.pvTerminalValue)}</div>
+                <div className="flex items-center justify-center text-dim">+</div>
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <div className="text-xs text-dim mb-1">PV Terminal</div>
+                  <div className="text-lg font-bold text-foreground font-mono">{formatCurrency(result.pvTerminalValue)}</div>
                 </div>
-                <div className="flex items-center justify-center text-zinc-500">=</div>
-                <div className="bg-emerald-600/20 border border-emerald-500/30 rounded-lg p-3 col-span-2">
-                  <div className="text-xs text-emerald-400 mb-1">Enterprise Value</div>
-                  <div className="text-lg font-bold text-emerald-400 font-mono">{formatCurrency(result.enterpriseValue)}</div>
+                <div className="flex items-center justify-center text-dim">=</div>
+                <div className="bg-positive/20 border border-positive/30 rounded-lg p-3 col-span-2">
+                  <div className="text-xs text-positive mb-1">Enterprise Value</div>
+                  <div className="text-lg font-bold text-positive font-mono">{formatCurrency(result.enterpriseValue)}</div>
                 </div>
               </div>
 
               <div className="grid grid-cols-6 gap-4 text-center mt-4">
-                <div className="bg-zinc-800/50 rounded-lg p-3">
-                  <div className="text-xs text-zinc-500 mb-1">Enterprise Value</div>
-                  <div className="text-lg font-bold text-white font-mono">{formatCurrency(result.enterpriseValue)}</div>
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <div className="text-xs text-dim mb-1">Enterprise Value</div>
+                  <div className="text-lg font-bold text-foreground font-mono">{formatCurrency(result.enterpriseValue)}</div>
                 </div>
-                <div className="flex items-center justify-center text-emerald-400">+</div>
-                <div className="bg-zinc-800/50 rounded-lg p-3">
-                  <div className="text-xs text-zinc-500 mb-1">Cash</div>
-                  <div className="text-lg font-bold text-emerald-400 font-mono">{formatCurrency(result.cash)}</div>
+                <div className="flex items-center justify-center text-positive">+</div>
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <div className="text-xs text-dim mb-1">Cash</div>
+                  <div className="text-lg font-bold text-positive font-mono">{formatCurrency(result.cash)}</div>
                 </div>
-                <div className="flex items-center justify-center text-red-400">−</div>
-                <div className="bg-zinc-800/50 rounded-lg p-3">
-                  <div className="text-xs text-zinc-500 mb-1">Debt</div>
-                  <div className="text-lg font-bold text-red-400 font-mono">{formatCurrency(result.debt)}</div>
+                <div className="flex items-center justify-center text-negative">−</div>
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <div className="text-xs text-dim mb-1">Debt</div>
+                  <div className="text-lg font-bold text-negative font-mono">{formatCurrency(result.debt)}</div>
                 </div>
-                <div className="bg-emerald-600/20 border border-emerald-500/30 rounded-lg p-3">
-                  <div className="text-xs text-emerald-400 mb-1">Equity Value</div>
-                  <div className="text-lg font-bold text-emerald-400 font-mono">{formatCurrency(result.equityValue)}</div>
+                <div className="bg-positive/20 border border-positive/30 rounded-lg p-3">
+                  <div className="text-xs text-positive mb-1">Equity Value</div>
+                  <div className="text-lg font-bold text-positive font-mono">{formatCurrency(result.equityValue)}</div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-center gap-4 mt-6 pt-4 border-t border-zinc-800">
+              <div className="flex items-center justify-center gap-4 mt-6 pt-4 border-t border-border">
                 <div className="text-center">
-                  <div className="text-xs text-zinc-500 mb-1">Equity Value</div>
-                  <div className="text-xl font-bold text-white font-mono">{formatCurrency(result.equityValue)}</div>
+                  <div className="text-xs text-dim mb-1">Equity Value</div>
+                  <div className="text-xl font-bold text-foreground font-mono">{formatCurrency(result.equityValue)}</div>
                 </div>
-                <div className="text-2xl text-zinc-500">÷</div>
+                <div className="text-2xl text-dim">÷</div>
                 <div className="text-center">
-                  <div className="text-xs text-zinc-500 mb-1">Shares Outstanding</div>
-                  <div className="text-xl font-bold text-white font-mono">{formatNumber(result.sharesOutstanding / 1e6)}M</div>
+                  <div className="text-xs text-dim mb-1">Shares Outstanding</div>
+                  <div className="text-xl font-bold text-foreground font-mono">{formatNumber(result.sharesOutstanding / 1e6)}M</div>
                 </div>
-                <div className="text-2xl text-zinc-500">=</div>
-                <div className="text-center bg-emerald-600/20 border border-emerald-500/30 rounded-lg px-6 py-3">
-                  <div className="text-xs text-emerald-400 mb-1">Intrinsic Value / Share</div>
-                  <div className="text-2xl font-bold text-emerald-400 font-mono">${result.intrinsicValuePerShare.toFixed(2)}</div>
+                <div className="text-2xl text-dim">=</div>
+                <div className="text-center bg-positive/20 border border-positive/30 rounded-lg px-6 py-3">
+                  <div className="text-xs text-positive mb-1">Intrinsic Value / Share</div>
+                  <div className="text-2xl font-bold text-positive font-mono">${result.intrinsicValuePerShare.toFixed(2)}</div>
                 </div>
               </div>
             </div>
           )}
 
           {/* Disclaimer */}
-          <div className="flex items-start gap-2 p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl text-xs text-zinc-500">
+          <div className="flex items-start gap-2 p-4 bg-card/50 border border-border rounded-xl text-xs text-dim">
             <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <p>
               This DCF model is for educational and informational purposes only. The intrinsic value calculation 

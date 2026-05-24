@@ -51,18 +51,18 @@ export function DivergenceTracking() {
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <div className={`p-1.5 rounded-md ${
-                stats.cumulative >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'
+                stats.cumulative >= 0 ? 'bg-green-500/10' : 'bg-negative/10'
               }`}>
                 {stats.cumulative >= 0 ? (
-                  <TrendingUp className="w-4 h-4 text-green-500" />
+                  <TrendingUp className="w-4 h-4 text-positive" />
                 ) : (
-                  <TrendingDown className="w-4 h-4 text-red-500" />
+                  <TrendingDown className="w-4 h-4 text-negative" />
                 )}
               </div>
               <span className="text-xs text-muted-foreground">Cumulative</span>
             </div>
             <p className={`text-xl font-mono font-semibold ${
-              stats.cumulative >= 0 ? 'text-green-500' : 'text-red-500'
+              stats.cumulative >= 0 ? 'text-positive' : 'text-negative'
             }`}>
               {stats.cumulative >= 0 ? '+' : ''}{stats.cumulative.toFixed(1)}%
             </p>
@@ -81,7 +81,7 @@ export function DivergenceTracking() {
               <span className="text-xs text-muted-foreground">Avg Monthly</span>
             </div>
             <p className={`text-xl font-mono font-semibold ${
-              stats.avgDivergence >= 0 ? 'text-green-500' : 'text-red-500'
+              stats.avgDivergence >= 0 ? 'text-positive' : 'text-negative'
             }`}>
               {stats.avgDivergence >= 0 ? '+' : ''}{stats.avgDivergence.toFixed(2)}%
             </p>
@@ -95,11 +95,11 @@ export function DivergenceTracking() {
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <div className="p-1.5 rounded-md bg-green-500/10">
-                <TrendingUp className="w-4 h-4 text-green-500" />
+                <TrendingUp className="w-4 h-4 text-positive" />
               </div>
               <span className="text-xs text-muted-foreground">Best Month</span>
             </div>
-            <p className="text-xl font-mono font-semibold text-green-500">
+            <p className="text-xl font-mono font-semibold text-positive">
               +{stats.maxPositive.toFixed(1)}%
             </p>
             <p className="text-xs text-muted-foreground mt-1">
@@ -111,12 +111,12 @@ export function DivergenceTracking() {
         <Card className="bg-card border-border">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 rounded-md bg-red-500/10">
-                <TrendingDown className="w-4 h-4 text-red-500" />
+              <div className="p-1.5 rounded-md bg-negative/10">
+                <TrendingDown className="w-4 h-4 text-negative" />
               </div>
               <span className="text-xs text-muted-foreground">Worst Month</span>
             </div>
-            <p className="text-xl font-mono font-semibold text-red-500">
+            <p className="text-xl font-mono font-semibold text-negative">
               {stats.maxNegative.toFixed(1)}%
             </p>
             <p className="text-xs text-muted-foreground mt-1">
@@ -254,22 +254,22 @@ export function DivergenceTracking() {
                       {new Date(row.date).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
                     </td>
                     <td className={`text-right py-2 px-3 font-mono ${
-                      row.portfolioReturn >= 0 ? 'text-green-500' : 'text-red-500'
+                      row.portfolioReturn >= 0 ? 'text-positive' : 'text-negative'
                     }`}>
                       {row.portfolioReturn >= 0 ? '+' : ''}{row.portfolioReturn.toFixed(2)}%
                     </td>
                     <td className={`text-right py-2 px-3 font-mono ${
-                      row.shadowReturn >= 0 ? 'text-green-500' : 'text-red-500'
+                      row.shadowReturn >= 0 ? 'text-positive' : 'text-negative'
                     }`}>
                       {row.shadowReturn >= 0 ? '+' : ''}{row.shadowReturn.toFixed(2)}%
                     </td>
                     <td className={`text-right py-2 px-3 font-mono font-medium ${
-                      row.divergence >= 0 ? 'text-green-500' : 'text-red-500'
+                      row.divergence >= 0 ? 'text-positive' : 'text-negative'
                     }`}>
                       {row.divergence >= 0 ? '+' : ''}{row.divergence.toFixed(2)}%
                     </td>
                     <td className={`text-right py-2 px-3 font-mono ${
-                      row.cumulativeDivergence >= 0 ? 'text-green-500' : 'text-red-500'
+                      row.cumulativeDivergence >= 0 ? 'text-positive' : 'text-negative'
                     }`}>
                       {row.cumulativeDivergence >= 0 ? '+' : ''}{row.cumulativeDivergence.toFixed(2)}%
                     </td>

@@ -251,7 +251,7 @@ export function ShadowPortfolioComparison() {
                 <p className="text-xs text-muted-foreground mb-1">Your Portfolio</p>
                 <p
                   className={`text-lg font-mono font-semibold ${
-                    summaryStats.portfolioReturn >= 0 ? 'text-green-500' : 'text-red-500'
+                    summaryStats.portfolioReturn >= 0 ? 'text-positive' : 'text-negative'
                   }`}
                 >
                   {summaryStats.portfolioReturn >= 0 ? '+' : ''}
@@ -262,7 +262,7 @@ export function ShadowPortfolioComparison() {
                 <p className="text-xs text-muted-foreground mb-1">Shadow Portfolio</p>
                 <p
                   className={`text-lg font-mono font-semibold ${
-                    summaryStats.shadowReturn >= 0 ? 'text-green-500' : 'text-red-500'
+                    summaryStats.shadowReturn >= 0 ? 'text-positive' : 'text-negative'
                   }`}
                 >
                   {summaryStats.shadowReturn >= 0 ? '+' : ''}
@@ -273,7 +273,7 @@ export function ShadowPortfolioComparison() {
                 <p className="text-xs text-muted-foreground mb-1">S&P 500</p>
                 <p
                   className={`text-lg font-mono font-semibold ${
-                    summaryStats.benchmarkReturn >= 0 ? 'text-green-500' : 'text-red-500'
+                    summaryStats.benchmarkReturn >= 0 ? 'text-positive' : 'text-negative'
                   }`}
                 >
                   {summaryStats.benchmarkReturn >= 0 ? '+' : ''}
@@ -348,7 +348,7 @@ export function ShadowPortfolioComparison() {
                       </TableCell>
                       <TableCell
                         className={`text-right font-mono ${
-                          returnPct >= 0 ? 'text-green-500' : 'text-red-500'
+                          returnPct >= 0 ? 'text-positive' : 'text-negative'
                         }`}
                       >
                         {returnPct >= 0 ? '+' : ''}

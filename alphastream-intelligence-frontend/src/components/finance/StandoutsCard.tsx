@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { API_BASE_URL } from '@/config/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight } from 'lucide-react';
@@ -13,7 +13,7 @@ export function StandoutsCard() {
   useEffect(() => {
     const fetchStandouts = async () => {
       try {
-        const res = await fetch('http://localhost:8000/api/market/standouts?limit=10');
+        const res = await fetch(`${API_BASE_URL}/api/market/standouts?limit=10`);
         const data = await res.json();
         const combined = [
           ...(data.gainers || []),
@@ -26,7 +26,7 @@ export function StandoutsCard() {
           combined.map(async (s: any) => {
             try {
               const chartRes = await fetch(
-                `http://localhost:8000/api/stock/${encodeURIComponent(s.ticker)}/chart?timeframe=5min&limit=78`
+                `${API_BASE_URL}/api/stock/${encodeURIComponent(s.ticker)}/chart?timeframe=5min&limit=78`
               );
               const chartData = await chartRes.json();
 
@@ -78,20 +78,18 @@ export function StandoutsCard() {
     if (tag.includes('Insider')) return 'bg-warning/20 text-warning border-warning/30';
     if (tag.includes('Upgrade') || tag.includes('Growth')) return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
     if (tag.includes('Momentum') || tag.includes('Breakout')) return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
-    if (tag.includes('Dividend')) return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+    if (tag.includes('Dividend')) return 'bg-positive/20 text-positive border-positive/30';
     return 'bg-muted text-muted-foreground';
   };
 
   return (
-    <Card className="border-border h-full">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold">Notable Standouts</CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0 space-y-3">
+    <div className="bg-sidebar-accent rounded-xl p-6 border border-border h-full">
+      <h2 className="text-lg font-semibold text-foreground mb-4" style={{ fontFamily: 'var(--font-widget-heading)' }}>Notable Standouts</h2>
+      <div className="space-y-3">
         {standouts.slice(0, 5).map((stock) => (
           <div
             key={stock.ticker}
-            className="flex items-start justify-between gap-3 py-2 border-b border-border/30 last:border-0"
+            className="flex items-start justify-between gap-3 py-2 px-2 -mx-2 rounded-lg border-b border-border/30 last:border-0 hover:bg-muted transition-colors duration-200 cursor-pointer"
           >
             <div className="flex-1 min-w-0 space-y-1.5">
               <div className="flex items-center gap-2">
@@ -99,7 +97,7 @@ export function StandoutsCard() {
                 <span className="text-xs text-muted-foreground truncate">{stock.name}</span>
               </div>
               <div className="flex flex-wrap gap-1">
-                {stock.tags.map((tag) => (
+                {stock.tags.map((tag: string) => (
                   <Badge
                     key={tag}
                     variant="outline"
@@ -126,6 +124,7 @@ export function StandoutsCard() {
                           : 'hsl(var(--negative))'
                       }
                       strokeWidth={1.5}
+                      strokeLinecap="round"
                       dot={false}
                     />
                   </LineChart>
@@ -142,7 +141,7 @@ export function StandoutsCard() {
           Ask why these names matter
           <ArrowRight className="h-3 w-3 ml-1" />
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

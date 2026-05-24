@@ -68,7 +68,7 @@ export function StockDataTable({ data, onRowClick, selectedTicker }: StockDataTa
                 'w-4 h-4 transition-colors',
                 isInWatchlist(row.original.ticker)
                   ? 'fill-yellow-500 text-yellow-500'
-                  : 'text-zinc-600 group-hover:text-zinc-400'
+                  : 'text-dim group-hover:text-muted-foreground'
               )}
             />
           </button>

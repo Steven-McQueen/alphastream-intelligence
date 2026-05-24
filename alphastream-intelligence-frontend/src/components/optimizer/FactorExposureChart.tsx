@@ -194,7 +194,7 @@ export function FactorExposureChart({ exposures }: FactorExposureChartProps) {
                   </span>
                 </div>
                 <div className="col-span-3 text-right">
-                  <span className={`font-mono text-sm ${factor.contribution >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                  <span className={`font-mono text-sm ${factor.contribution >= 0 ? 'text-positive' : 'text-negative'}`}>
                     {factor.contribution > 0 ? '+' : ''}{factor.contribution.toFixed(1)}%
                   </span>
                 </div>
@@ -227,7 +227,7 @@ export function FactorExposureChart({ exposures }: FactorExposureChartProps) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">Total Factor Return</p>
-            <p className={`text-sm font-semibold ${totalContribution >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+            <p className={`text-sm font-semibold ${totalContribution >= 0 ? 'text-positive' : 'text-negative'}`}>
               {totalContribution > 0 ? '+' : ''}{totalContribution.toFixed(1)}%
             </p>
             <p className="text-[10px] text-muted-foreground">

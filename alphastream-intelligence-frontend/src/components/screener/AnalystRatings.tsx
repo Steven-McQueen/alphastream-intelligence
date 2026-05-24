@@ -30,7 +30,7 @@ import {
   Line
 } from "recharts";
 
-const API_BASE_URL = "http://localhost:8000";
+import { API_BASE_URL } from "@/config/api";
 
 interface AnalystRatingsProps {
   ticker: string;
@@ -89,22 +89,22 @@ interface RatingsData {
 // Rating color mapping
 const getRatingColor = (rating: string): string => {
   const r = rating?.toLowerCase() || "";
-  if (r.includes("strong buy")) return "text-emerald-400";
-  if (r.includes("buy") || r.includes("outperform") || r.includes("overweight")) return "text-green-400";
+  if (r.includes("strong buy")) return "text-positive";
+  if (r.includes("buy") || r.includes("outperform") || r.includes("overweight")) return "text-positive";
   if (r.includes("hold") || r.includes("neutral") || r.includes("equal")) return "text-yellow-400";
   if (r.includes("sell") || r.includes("underperform") || r.includes("underweight")) return "text-orange-400";
-  if (r.includes("strong sell")) return "text-red-400";
-  return "text-zinc-400";
+  if (r.includes("strong sell")) return "text-negative";
+  return "text-muted-foreground";
 };
 
 const getRatingBgColor = (rating: string): string => {
   const r = rating?.toLowerCase() || "";
-  if (r.includes("strong buy")) return "bg-emerald-500/20 border-emerald-500/30";
+  if (r.includes("strong buy")) return "bg-positive/20 border-positive/30";
   if (r.includes("buy") || r.includes("outperform") || r.includes("overweight")) return "bg-green-500/20 border-green-500/30";
   if (r.includes("hold") || r.includes("neutral") || r.includes("equal")) return "bg-yellow-500/20 border-yellow-500/30";
   if (r.includes("sell") || r.includes("underperform") || r.includes("underweight")) return "bg-orange-500/20 border-orange-500/30";
-  if (r.includes("strong sell")) return "bg-red-500/20 border-red-500/30";
-  return "bg-zinc-500/20 border-zinc-500/30";
+  if (r.includes("strong sell")) return "bg-negative/20 border-negative/30";
+  return "bg-dim/20 border-dim/30";
 };
 
 // Format relative date
@@ -126,12 +126,12 @@ const formatRelativeDate = (dateStr: string): string => {
 const ActionIcon = ({ action }: { action: string }) => {
   const a = action?.toLowerCase() || "";
   if (a.includes("upgrade") || a.includes("up")) {
-    return <ArrowUpRight className="w-4 h-4 text-emerald-400" />;
+    return <ArrowUpRight className="w-4 h-4 text-positive" />;
   }
   if (a.includes("downgrade") || a.includes("down")) {
-    return <ArrowDownRight className="w-4 h-4 text-red-400" />;
+    return <ArrowDownRight className="w-4 h-4 text-negative" />;
   }
-  return <Minus className="w-4 h-4 text-zinc-400" />;
+  return <Minus className="w-4 h-4 text-muted-foreground" />;
 };
 
 export function AnalystRatings({ ticker, currentPrice }: AnalystRatingsProps) {
@@ -200,15 +200,15 @@ export function AnalystRatings({ ticker, currentPrice }: AnalystRatingsProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48">
-        <Loader2 className="w-6 h-6 animate-spin text-zinc-500" />
-        <span className="ml-2 text-zinc-400 text-sm">Loading analyst ratings...</span>
+        <Loader2 className="w-6 h-6 animate-spin text-dim" />
+        <span className="ml-2 text-muted-foreground text-sm">Loading analyst ratings...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-48 text-zinc-500">
+      <div className="flex items-center justify-center h-48 text-dim">
         <p>{error}</p>
       </div>
     );
@@ -216,7 +216,7 @@ export function AnalystRatings({ ticker, currentPrice }: AnalystRatingsProps) {
 
   if (!data) {
     return (
-      <div className="flex items-center justify-center h-48 text-zinc-500">
+      <div className="flex items-center justify-center h-48 text-dim">
         <p>No analyst data available for {ticker}</p>
       </div>
     );
@@ -227,14 +227,14 @@ export function AnalystRatings({ ticker, currentPrice }: AnalystRatingsProps) {
   return (
     <div className="space-y-6">
       {/* Header: Consensus Rating */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+      <div className="bg-card border border-border rounded-xl p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-emerald-400" />
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-positive" />
               Analyst Consensus
             </h3>
-            <p className="text-sm text-zinc-500 mt-1">
+            <p className="text-sm text-dim mt-1">
               Based on {totalAnalysts} analyst{totalAnalysts !== 1 ? "s" : ""} covering {ticker}
             </p>
           </div>
@@ -250,27 +250,27 @@ export function AnalystRatings({ ticker, currentPrice }: AnalystRatingsProps) {
         <div className="grid grid-cols-2 gap-6">
           {/* Rating Distribution */}
           <div>
-            <h4 className="text-sm font-medium text-zinc-400 mb-4">Rating Distribution</h4>
+            <h4 className="text-sm font-medium text-muted-foreground mb-4">Rating Distribution</h4>
             <div className="space-y-3">
               {[
-                { name: "Strong Buy", key: "strongBuy", color: "bg-emerald-500" },
-                { name: "Buy", key: "buy", color: "bg-green-500" },
+                { name: "Strong Buy", key: "strongBuy", color: "bg-positive" },
+                { name: "Buy", key: "buy", color: "bg-positive" },
                 { name: "Hold", key: "hold", color: "bg-yellow-500" },
                 { name: "Sell", key: "sell", color: "bg-orange-500" },
-                { name: "Strong Sell", key: "strongSell", color: "bg-red-500" },
+                { name: "Strong Sell", key: "strongSell", color: "bg-negative" },
               ].map(({ name, key, color }) => {
                 const value = (data.gradesConsensus as Record<string, number>)[key] || 0;
                 const percentage = totalAnalysts > 0 ? (value / totalAnalysts) * 100 : 0;
                 return (
                   <div key={key} className="flex items-center gap-3">
-                    <div className="w-20 text-xs text-zinc-400">{name}</div>
-                    <div className="flex-1 h-2 bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="w-20 text-xs text-muted-foreground">{name}</div>
+                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                       <div
                         className={cn("h-full rounded-full transition-all", color)}
                         style={{ width: `${percentage}%` }}
                       />
                     </div>
-                    <div className="w-8 text-xs text-zinc-300 text-right font-mono">
+                    <div className="w-8 text-xs text-soft text-right font-mono">
                       {value}
                     </div>
                   </div>
@@ -305,11 +305,11 @@ export function AnalystRatings({ ticker, currentPrice }: AnalystRatingsProps) {
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold text-white">{data.consensusScore.toFixed(1)}</span>
-                <span className="text-xs text-zinc-500">out of 5</span>
+                <span className="text-3xl font-bold text-foreground">{data.consensusScore.toFixed(1)}</span>
+                <span className="text-xs text-dim">out of 5</span>
               </div>
             </div>
-            <p className="text-sm text-zinc-400 mt-4 text-center">
+            <p className="text-sm text-muted-foreground mt-4 text-center">
               Consensus Score
             </p>
           </div>
@@ -318,39 +318,39 @@ export function AnalystRatings({ ticker, currentPrice }: AnalystRatingsProps) {
 
       {/* Price Target */}
       {priceTargetData && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-6">
-            <Target className="w-5 h-5 text-emerald-400" />
+        <div className="bg-card border border-border rounded-xl p-6">
+          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-6">
+            <Target className="w-5 h-5 text-positive" />
             Price Target
           </h3>
 
           <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
-              <div className="text-[10px] text-zinc-500 mb-1">Current Price</div>
-              <div className="text-lg font-bold text-white font-mono">
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
+              <div className="text-[10px] text-dim mb-1">Current Price</div>
+              <div className="text-lg font-bold text-foreground font-mono">
                 ${priceTargetData.current.toFixed(2)}
               </div>
             </div>
-            <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
-              <div className="text-[10px] text-zinc-500 mb-1">Target Price</div>
-              <div className="text-lg font-bold text-emerald-400 font-mono">
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
+              <div className="text-[10px] text-dim mb-1">Target Price</div>
+              <div className="text-lg font-bold text-positive font-mono">
                 ${priceTargetData.target.toFixed(2)}
               </div>
             </div>
-            <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
-              <div className="text-[10px] text-zinc-500 mb-1">Upside/Downside</div>
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
+              <div className="text-[10px] text-dim mb-1">Upside/Downside</div>
               <div className={cn(
                 "text-lg font-bold font-mono flex items-center justify-center gap-1",
-                priceTargetData.upside >= 0 ? "text-emerald-400" : "text-red-400"
+                priceTargetData.upside >= 0 ? "text-positive" : "text-negative"
               )}>
                 {priceTargetData.upside >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                 {priceTargetData.upside >= 0 ? "+" : ""}{priceTargetData.upside.toFixed(1)}%
               </div>
             </div>
-            <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
-              <div className="text-[10px] text-zinc-500 mb-1">Analysts</div>
-              <div className="text-lg font-bold text-white font-mono flex items-center justify-center gap-1">
-                <Users className="w-3.5 h-3.5 text-zinc-400" />
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
+              <div className="text-[10px] text-dim mb-1">Analysts</div>
+              <div className="text-lg font-bold text-foreground font-mono flex items-center justify-center gap-1">
+                <Users className="w-3.5 h-3.5 text-muted-foreground" />
                 {priceTargetData.analysts || "-"}
               </div>
             </div>
@@ -359,10 +359,10 @@ export function AnalystRatings({ ticker, currentPrice }: AnalystRatingsProps) {
           {/* Price Range Bar */}
           {priceTargetData.low && priceTargetData.high && (
             <div className="relative pt-6 pb-2">
-              <div className="h-3 bg-zinc-800 rounded-full relative">
+              <div className="h-3 bg-muted rounded-full relative">
                 {/* Range gradient */}
                 <div
-                  className="absolute h-full rounded-full bg-gradient-to-r from-red-500 via-yellow-500 to-emerald-500"
+                  className="absolute h-full rounded-full bg-gradient-to-r from-negative via-yellow-500 to-positive"
                   style={{
                     left: "0%",
                     right: "0%",
@@ -377,16 +377,16 @@ export function AnalystRatings({ ticker, currentPrice }: AnalystRatingsProps) {
                 />
                 {/* Target marker */}
                 <div
-                  className="absolute w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-emerald-400 bottom-full transform -translate-x-1/2 mb-1"
+                  className="absolute w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-positive bottom-full transform -translate-x-1/2 mb-1"
                   style={{
                     left: `${Math.max(0, Math.min(100, ((priceTargetData.target - priceTargetData.low) / (priceTargetData.high - priceTargetData.low)) * 100))}%`,
                   }}
                 />
               </div>
               <div className="flex justify-between mt-2 text-xs">
-                <span className="text-red-400 font-mono">${priceTargetData.low.toFixed(2)}</span>
-                <span className="text-zinc-500">Low / Target / High</span>
-                <span className="text-emerald-400 font-mono">${priceTargetData.high.toFixed(2)}</span>
+                <span className="text-negative font-mono">${priceTargetData.low.toFixed(2)}</span>
+                <span className="text-dim">Low / Target / High</span>
+                <span className="text-positive font-mono">${priceTargetData.high.toFixed(2)}</span>
               </div>
             </div>
           )}
@@ -395,30 +395,30 @@ export function AnalystRatings({ ticker, currentPrice }: AnalystRatingsProps) {
 
       {/* Recent Analyst Actions */}
       {displayedGrades.length > 0 && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-          <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-emerald-400" />
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-border flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-positive" />
               Recent Analyst Actions
             </h3>
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-dim">
               {data.recentGrades.length} total
             </span>
           </div>
           
-          <div className="divide-y divide-zinc-800/50">
+          <div className="divide-y divide-border/50">
             {displayedGrades.map((grade, idx) => (
               <div
                 key={idx}
-                className="flex items-center gap-4 p-4 hover:bg-zinc-800/30 transition-colors"
+                className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors"
               >
                 <div className="flex-shrink-0">
                   <ActionIcon action={grade.action} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <Building2 className="w-3 h-3 text-zinc-500" />
-                    <span className="text-sm font-medium text-white truncate">
+                    <Building2 className="w-3 h-3 text-dim" />
+                    <span className="text-sm font-medium text-foreground truncate">
                       {grade.gradingCompany}
                     </span>
                   </div>
@@ -428,7 +428,7 @@ export function AnalystRatings({ ticker, currentPrice }: AnalystRatingsProps) {
                         <span className={cn("text-xs", getRatingColor(grade.previousGrade))}>
                           {grade.previousGrade}
                         </span>
-                        <span className="text-zinc-600">→</span>
+                        <span className="text-dim">→</span>
                       </>
                     )}
                     <span className={cn("text-xs font-medium", getRatingColor(grade.newGrade))}>
@@ -437,7 +437,7 @@ export function AnalystRatings({ ticker, currentPrice }: AnalystRatingsProps) {
                   </div>
                 </div>
                 <div className="flex-shrink-0 text-right">
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-xs text-dim">
                     {formatRelativeDate(grade.date)}
                   </span>
                 </div>
@@ -448,7 +448,7 @@ export function AnalystRatings({ ticker, currentPrice }: AnalystRatingsProps) {
           {data.recentGrades.length > 5 && (
             <button
               onClick={() => setShowAllGrades(!showAllGrades)}
-              className="w-full p-3 text-sm text-zinc-400 hover:text-white hover:bg-zinc-800/50 transition-colors flex items-center justify-center gap-1"
+              className="w-full p-3 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex items-center justify-center gap-1"
             >
               {showAllGrades ? (
                 <>
@@ -468,8 +468,8 @@ export function AnalystRatings({ ticker, currentPrice }: AnalystRatingsProps) {
 
       {/* Rating History Chart */}
       {data.ratingsHistorical && data.ratingsHistorical.length > 0 && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Rating Score History</h3>
+        <div className="bg-card border border-border rounded-xl p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">Rating Score History</h3>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={[...data.ratingsHistorical].reverse()}>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
@@ -486,7 +486,7 @@ export function AnalystRatings({ ticker, currentPrice }: AnalystRatingsProps) {
                 ticks={[1, 2, 3, 4, 5]}
               />
               <Tooltip
-                contentStyle={{ backgroundColor: "#18181b", border: "1px solid #27272a", borderRadius: "8px" }}
+                contentStyle={{ backgroundColor: "hsl(var(--tooltip-bg))", border: "1px solid hsl(var(--tooltip-border))", borderRadius: "8px" }}
                 labelFormatter={(v) => new Date(v).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                 formatter={(value: number, name: string) => {
                   const displayName = name === "overallScore" ? "Overall Score" : name;

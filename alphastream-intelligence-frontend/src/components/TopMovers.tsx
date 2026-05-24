@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useStockDetail } from "@/contexts/StockDetailContext";
 import type { Stock } from "@/types";
+import { API_BASE_URL } from "@/config/api";
 
 type TabType = "gainers" | "losers" | "volume";
 
@@ -20,13 +21,13 @@ export function TopMovers() {
     const fetchTopMovers = async () => {
       try {
         setLoading(true);
-        const response = await fetch("http://localhost:8000/api/market/top-movers?limit=10");
+        const response = await fetch(`${API_BASE_URL}/api/market/top-movers?limit=10`);
         const data = await response.json();
 
         setGainers(data.gainers || []);
         setLosers(data.losers || []);
 
-        const allStocksResponse = await fetch("http://localhost:8000/api/universe/core");
+        const allStocksResponse = await fetch(`${API_BASE_URL}/api/universe/core`);
         const allStocks = await allStocksResponse.json();
         const sortedByVolume = [...allStocks]
           .sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0))
@@ -49,30 +50,30 @@ export function TopMovers() {
 
   if (loading) {
     return (
-      <div className="bg-zinc-900/50 rounded-xl p-6 border border-zinc-800/50 h-full">
-        <h2 className="text-lg font-semibold text-white mb-4">Top Movers</h2>
-        <div className="text-zinc-400 animate-pulse">Loading movers...</div>
+      <div className="bg-sidebar-accent rounded-xl p-6 border border-border h-full">
+        <h2 className="text-lg font-semibold text-foreground mb-4" style={{ fontFamily: 'var(--font-widget-heading)' }}>Top Movers</h2>
+        <div className="text-muted-foreground animate-[pf-shimmer_2s_ease-in-out_infinite]">Loading movers...</div>
       </div>
     );
   }
 
   return (
-    <div className="bg-zinc-900/50 rounded-xl p-6 border border-zinc-800/50 h-full">
-      <h2 className="text-lg font-semibold text-white mb-4">Top Movers</h2>
+    <div className="bg-sidebar-accent rounded-xl p-6 border border-border h-full">
+      <h2 className="text-lg font-semibold text-foreground mb-4" style={{ fontFamily: 'var(--font-widget-heading)' }}>Top Movers</h2>
 
-      <div className="flex gap-1.5 mb-4 p-1 bg-zinc-800/50 rounded-lg w-fit">
+      <div className="flex gap-1.5 mb-4 p-1 bg-sidebar rounded-lg w-fit border border-border">
         {(["gainers", "losers", "volume"] as TabType[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ease-pf-spring active:scale-95 ${
               activeTab === tab
                 ? tab === "gainers"
-                  ? "bg-emerald-500/20 text-emerald-400"
+                  ? "bg-positive/20 text-positive border border-positive/30"
                   : tab === "losers"
-                  ? "bg-red-500/20 text-red-400"
-                  : "bg-cyan-500/20 text-cyan-400"
-                : "text-zinc-400 hover:text-zinc-200"
+                  ? "bg-negative/20 text-negative border border-negative/30"
+                  : "bg-primary/20 text-primary border border-primary/30"
+                : "text-dim hover:text-muted-foreground"
             }`}
           >
             {tab === "gainers" ? "Gainers" : tab === "losers" ? "Losers" : "Volume"}
@@ -85,14 +86,14 @@ export function TopMovers() {
           <div
             key={stock.ticker}
             onClick={() => openStockDetail(stock)}
-            className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg hover:bg-zinc-800 cursor-pointer transition-colors"
+            className="flex items-center justify-between p-3 rounded-lg hover:bg-muted cursor-pointer transition-colors duration-200"
           >
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-white">{stock.ticker}</span>
-                <span className="text-xs text-zinc-400">{stock.name}</span>
+                <span className="text-sm font-semibold text-sidebar-foreground">{stock.ticker}</span>
+                <span className="text-xs text-muted-foreground">{stock.name}</span>
               </div>
-              <span className="text-xs text-zinc-500">{stock.sector}</span>
+              <span className="text-xs text-dim">{stock.sector}</span>
             </div>
             <div className="text-right">
               {activeTab === "volume" ? (
@@ -102,7 +103,7 @@ export function TopMovers() {
               ) : (
                 <span
                   className={`text-sm font-medium ${
-                    (stock.change1D ?? 0) >= 0 ? "text-green-500" : "text-red-500"
+                    (stock.change1D ?? 0) >= 0 ? "text-positive" : "text-negative"
                   }`}
                 >
                   {(stock.change1D ?? 0) >= 0 ? "+" : ""}

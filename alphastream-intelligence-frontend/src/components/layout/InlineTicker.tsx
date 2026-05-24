@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMarket } from '@/context/MarketContext';
 import { useStockDetail } from '@/contexts/StockDetailContext';
+import { API_BASE_URL } from '@/config/api';
 
 interface TickerItem {
   symbol: string;
@@ -21,7 +22,7 @@ export function InlineTicker() {
   useEffect(() => {
     const fetchTicker = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/macro/ticker-all');
+        const response = await fetch(`${API_BASE_URL}/api/macro/ticker-all`);
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
@@ -71,36 +72,49 @@ export function InlineTicker() {
     return () => clearInterval(interval);
   }, []);
 
-  // Live rotation: update one symbol every 2s when market is open
+  // Live staggered update: cycle through symbols rapidly for fresh visual updates
+  // Updates 2-3 symbols every 2 seconds for smooth, frequent price changes
   useEffect(() => {
     if (!isMarketOpen || !symbols.length) return;
     let cancelled = false;
+
     const tick = async () => {
-      const sym = symbols[idxRef.current % symbols.length];
-      idxRef.current = (idxRef.current + 1) % symbols.length;
-      try {
-        const res = await fetch(`http://localhost:8000/api/live/quote?symbol=${encodeURIComponent(sym)}`);
-        if (!res.ok) throw new Error('live quote failed');
-        const data = await res.json();
+      // Update 2-3 symbols per tick for smoothness
+      const batchSize = 3;
+      const startIdx = idxRef.current;
+      const batch = symbols.slice(startIdx, startIdx + batchSize);
+      idxRef.current = (startIdx + batchSize) % symbols.length;
+
+      for (const sym of batch) {
         if (cancelled) return;
-        setTickerData((prev) => {
-          const next = [...prev];
-          const i = next.findIndex((x) => x.symbol === sym);
-          if (i >= 0) {
-            next[i] = {
-              symbol: sym,
-              value: data.price ?? data.value ?? next[i].value,
-              changePercent: data.changePercent ?? next[i].changePercent ?? 0,
-            };
-          }
-          return next;
-        });
-      } catch (err) {
-        // ignore single fetch errors
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/live/quote?symbol=${encodeURIComponent(sym)}`);
+          if (!res.ok) continue;
+          const quote = await res.json();
+          if (cancelled || quote.error || quote.value === null) continue;
+
+          setTickerData((prev) => {
+            const next = [...prev];
+            const i = next.findIndex((x) => x.symbol === sym);
+            if (i >= 0) {
+              next[i] = {
+                symbol: quote.symbol,
+                value: quote.value ?? quote.price ?? next[i].value,
+                changePercent: quote.changePercent ?? next[i].changePercent ?? 0,
+              };
+            }
+            return next;
+          });
+        } catch (err) {
+          // Single fetch error, continue to next
+        }
       }
     };
 
-    const id = setInterval(tick, 2000); // 2s stagger
+    // Fast updates - every 2 seconds
+    tick();
+    const id = setInterval(tick, 2000);
+
     return () => {
       cancelled = true;
       clearInterval(id);
@@ -132,7 +146,7 @@ export function InlineTicker() {
   if (!tickerData.length) {
     return (
       <div className="flex-1 mx-4 flex items-center justify-center">
-        <span className="text-xs text-red-400">
+        <span className="text-xs text-negative">
           ⚠ Ticker data unavailable - check backend logs
         </span>
       </div>
@@ -157,13 +171,13 @@ export function InlineTicker() {
         {loopedData.map((item, index) => (
           <div
             key={`${item.symbol}-${index}`}
-            className="flex items-center space-x-2.5 flex-shrink-0 group cursor-pointer transition-all duration-200 hover:scale-105"
+            className="flex items-center space-x-2.5 flex-shrink-0 group cursor-pointer transition-all duration-150 hover:scale-[1.03] active:scale-95"
             onClick={() => handleClick(item.symbol)}
           >
-            <span className="text-[11px] font-semibold tracking-wide text-zinc-400 group-hover:text-zinc-200 transition-colors">
+            <span className="text-[11px] font-semibold tracking-wide text-dim group-hover:text-sidebar-foreground transition-colors duration-100">
               {item.symbol}
             </span>
-            <span className="text-[13px] font-medium text-zinc-100 tabular-nums">
+            <span className="text-[13px] font-medium text-sidebar-foreground tabular-nums">
               {item.value.toLocaleString(undefined, { 
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2 
@@ -171,15 +185,15 @@ export function InlineTicker() {
             </span>
             <span
               className={`text-[11px] font-semibold tabular-nums ${
-                item.changePercent >= 0 
-                  ? 'text-emerald-400' 
-                  : 'text-red-400'
+                item.changePercent >= 0
+                  ? 'text-positive'
+                  : 'text-negative'
               }`}
             >
               {item.changePercent >= 0 ? '+' : ''}
               {item.changePercent.toFixed(2)}%
             </span>
-            <span className="text-zinc-800 text-xs mx-1">- </span>
+            <span className="text-border text-xs mx-1">- </span>
           </div>
         ))}
       </div>

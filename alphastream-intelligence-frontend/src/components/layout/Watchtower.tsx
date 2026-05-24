@@ -56,18 +56,18 @@ export function Watchtower() {
 
   if (isCollapsed) {
     return (
-      <aside className="flex flex-col items-center w-8 bg-zinc-950 border-l border-zinc-800">
+      <aside className="flex flex-col items-center w-8 bg-background border-l border-border">
         <Button
           variant="ghost"
           size="icon"
-          className="mt-3 h-6 w-6 text-zinc-400 hover:text-white hover:bg-zinc-800"
+          className="mt-3 h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-muted"
           onClick={() => setIsCollapsed(false)}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1 flex flex-col items-center justify-center">
           <span 
-            className="text-[10px] text-zinc-600 font-medium tracking-widest" 
+            className="text-[10px] text-dim font-medium tracking-widest" 
             style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
           >
             WATCHTOWER
@@ -78,18 +78,18 @@ export function Watchtower() {
   }
 
   return (
-    <aside className="flex flex-col w-[280px] bg-zinc-950 border-l border-zinc-800">
+    <aside className="flex flex-col w-[280px] bg-background border-l border-border">
       {/* Header */}
-      <div className="flex items-center justify-between h-14 px-4 border-b border-zinc-800">
+      <div className="flex items-center justify-between h-14 px-4 border-b border-border">
         <div className="flex items-center gap-2">
-          <Activity className="w-4 h-4 text-emerald-400" />
-          <span className="text-sm font-semibold text-white">Watchtower</span>
+          <Activity className="w-4 h-4 text-positive" />
+          <span className="text-sm font-semibold text-foreground">Watchtower</span>
         </div>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-zinc-800"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
             onClick={refreshMarketData}
             disabled={isLoading}
           >
@@ -98,7 +98,7 @@ export function Watchtower() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-zinc-800"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
             onClick={() => setIsCollapsed(true)}
           >
             <ChevronRight className="h-4 w-4" />
@@ -107,17 +107,17 @@ export function Watchtower() {
       </div>
 
       {/* Market Status Bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-zinc-900/50 border-b border-zinc-800">
+      <div className="flex items-center justify-between px-4 py-2 bg-card/50 border-b border-border">
         <div className="flex items-center gap-2">
           <div className={cn(
             "w-2 h-2 rounded-full",
-            isMarketOpen ? "bg-emerald-400 animate-pulse" : "bg-zinc-500"
+            isMarketOpen ? "bg-positive animate-pulse" : "bg-dim"
           )} />
-          <span className="text-xs text-zinc-400">
+          <span className="text-xs text-muted-foreground">
             Market {isMarketOpen ? 'Open' : 'Closed'}
           </span>
         </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
+        <div className="flex items-center gap-1.5 text-[10px] text-dim">
           <Clock className="w-3 h-3" />
           <span>{formatRelativeTime(marketState.lastUpdated)}</span>
         </div>
@@ -131,8 +131,8 @@ export function Watchtower() {
         {/* Market Indices */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <BarChart3 className="w-3.5 h-3.5 text-zinc-500" />
-            <h4 className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+            <BarChart3 className="w-3.5 h-3.5 text-dim" />
+            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               Market Indices
             </h4>
           </div>
@@ -142,20 +142,20 @@ export function Watchtower() {
               return (
                 <div 
                   key={index.symbol} 
-                  className="flex items-center justify-between p-2.5 bg-zinc-900/50 rounded-lg border border-zinc-800/50 hover:border-zinc-700 transition-colors cursor-pointer"
+                  className="flex items-center justify-between p-2.5 bg-card/50 rounded-lg border border-border/50 hover:border-secondary transition-colors cursor-pointer"
                   onClick={() => navigate(`/market/${encodeURIComponent(index.symbol)}`)}
                 >
                   <div>
-                    <span className="text-xs font-medium text-white">{index.symbol}</span>
-                    <div className="text-[10px] text-zinc-500 mt-0.5">{index.name}</div>
+                    <span className="text-xs font-medium text-foreground">{index.symbol}</span>
+                    <div className="text-[10px] text-dim mt-0.5">{index.name}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xs font-mono text-white">
+                    <div className="text-xs font-mono text-foreground">
                       {formatPrice(index.value ?? 0)}
                     </div>
                     <div className={cn(
                       "text-[10px] font-mono flex items-center justify-end gap-0.5",
-                      isPositive ? "text-emerald-400" : "text-red-400"
+                      isPositive ? "text-positive" : "text-negative"
                     )}>
                       {isPositive ? (
                         <TrendingUp className="w-2.5 h-2.5" />
@@ -174,8 +174,8 @@ export function Watchtower() {
         {/* Sector Performance */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="w-3.5 h-3.5 text-zinc-500" />
-            <h4 className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+            <TrendingUp className="w-3.5 h-3.5 text-dim" />
+            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               Sectors (1D)
             </h4>
           </div>
@@ -191,21 +191,21 @@ export function Watchtower() {
                 return (
                   <div key={sector.sector} className="group">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] text-zinc-300 truncate max-w-[140px] group-hover:text-white transition-colors">
+                      <span className="text-[11px] text-soft truncate max-w-[140px] group-hover:text-foreground transition-colors">
                         {sector.sector}
                       </span>
                       <span className={cn(
                         "text-[11px] font-mono",
-                        isPositive ? "text-emerald-400" : "text-red-400"
+                        isPositive ? "text-positive" : "text-negative"
                       )}>
                         {isPositive ? '+' : ''}{change.toFixed(2)}%
                       </span>
                     </div>
-                    <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-1 bg-muted rounded-full overflow-hidden">
                       <div 
                         className={cn(
                           "h-full rounded-full transition-all duration-500",
-                          isPositive ? "bg-emerald-500/60" : "bg-red-500/60"
+                          isPositive ? "bg-positive/60" : "bg-negative/60"
                         )}
                         style={{ width: `${barWidth}%` }}
                       />
@@ -220,8 +220,8 @@ export function Watchtower() {
         {macroIndicators.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <Activity className="w-3.5 h-3.5 text-zinc-500" />
-              <h4 className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+              <Activity className="w-3.5 h-3.5 text-dim" />
+              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                 Key Indicators
               </h4>
             </div>
@@ -233,23 +233,23 @@ export function Watchtower() {
                 return (
                   <div 
                     key={indicator.name}
-                    className="p-2.5 bg-zinc-900/50 rounded-lg border border-zinc-800/50"
+                    className="p-2.5 bg-card/50 rounded-lg border border-border/50"
                   >
-                    <div className="text-[10px] text-zinc-500 truncate mb-1">
+                    <div className="text-[10px] text-dim truncate mb-1">
                       {indicator.name}
                     </div>
                     <div className="flex items-baseline gap-1.5">
-                      <span className="text-sm font-mono text-white">
+                      <span className="text-sm font-mono text-foreground">
                         {typeof indicator.value === 'number' 
                           ? indicator.value.toFixed(indicator.unit === '%' ? 2 : 1)
                           : indicator.value}
                       </span>
-                      <span className="text-[9px] text-zinc-500">{indicator.unit}</span>
+                      <span className="text-[9px] text-dim">{indicator.unit}</span>
                     </div>
                     {change !== 0 && (
                       <div className={cn(
                         "text-[10px] font-mono mt-0.5",
-                        isPositive ? "text-emerald-400" : "text-red-400"
+                        isPositive ? "text-positive" : "text-negative"
                       )}>
                         {isPositive ? '+' : ''}{change.toFixed(2)}
                       </div>
@@ -264,8 +264,8 @@ export function Watchtower() {
         {/* Top Movers Preview */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-            <h4 className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+            <TrendingUp className="w-3.5 h-3.5 text-positive" />
+            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               Top Sectors
             </h4>
           </div>
@@ -276,15 +276,15 @@ export function Watchtower() {
               .map((sector, idx) => (
                 <div 
                   key={sector.sector}
-                  className="flex items-center gap-3 p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20"
+                  className="flex items-center gap-3 p-2 bg-positive/10 rounded-lg border border-positive/20"
                 >
-                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                    <span className="text-[10px] font-bold text-emerald-400">{idx + 1}</span>
+                  <div className="w-5 h-5 rounded-full bg-positive/20 flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-positive">{idx + 1}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-[11px] text-white truncate block">{sector.sector}</span>
+                    <span className="text-[11px] text-foreground truncate block">{sector.sector}</span>
                   </div>
-                  <span className="text-[11px] font-mono text-emerald-400">
+                  <span className="text-[11px] font-mono text-positive">
                     +{(sector.change1D ?? 0).toFixed(2)}%
                   </span>
                 </div>
@@ -295,8 +295,8 @@ export function Watchtower() {
         {/* Bottom Movers */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <TrendingDown className="w-3.5 h-3.5 text-red-400" />
-            <h4 className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+            <TrendingDown className="w-3.5 h-3.5 text-negative" />
+            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               Bottom Sectors
             </h4>
           </div>
@@ -307,15 +307,15 @@ export function Watchtower() {
               .map((sector, idx) => (
                 <div 
                   key={sector.sector}
-                  className="flex items-center gap-3 p-2 bg-red-500/10 rounded-lg border border-red-500/20"
+                  className="flex items-center gap-3 p-2 bg-negative/10 rounded-lg border border-red-500/20"
                 >
-                  <div className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center">
-                    <span className="text-[10px] font-bold text-red-400">{idx + 1}</span>
+                  <div className="w-5 h-5 rounded-full bg-negative/20 flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-negative">{idx + 1}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-[11px] text-white truncate block">{sector.sector}</span>
+                    <span className="text-[11px] text-foreground truncate block">{sector.sector}</span>
                   </div>
-                  <span className="text-[11px] font-mono text-red-400">
+                  <span className="text-[11px] font-mono text-negative">
                     {(sector.change1D ?? 0).toFixed(2)}%
                   </span>
                 </div>
@@ -325,8 +325,8 @@ export function Watchtower() {
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t border-zinc-800 bg-zinc-900/30">
-        <div className="flex items-center justify-between text-[10px] text-zinc-500">
+      <div className="px-4 py-3 border-t border-border bg-card/30">
+        <div className="flex items-center justify-between text-[10px] text-dim">
           <span>Last updated</span>
           <span>{new Date(marketState.lastUpdated).toLocaleTimeString()}</span>
         </div>

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { API_BASE_URL } from '@/config/api';
 
 export interface TickerItem {
   symbol: string;
@@ -10,7 +11,7 @@ export interface TickerItem {
   displayFormat?: 'decimal' | 'percent' | 'currency';
 }
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = API_BASE_URL;
 
 export function useGlobalTicker() {
   return useQuery({

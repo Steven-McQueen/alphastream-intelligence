@@ -95,7 +95,7 @@ export default function Optimizer() {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">Portfolio Optimizer</h1>
+          <h1 className="text-xl font-semibold" style={{ fontFamily: 'var(--font-serif)' }}>Portfolio Optimizer</h1>
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'optimization' | 'montecarlo')}>
             <TabsList className="h-8">
               <TabsTrigger value="optimization" className="text-xs px-3 h-6">

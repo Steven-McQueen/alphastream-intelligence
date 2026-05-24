@@ -1,7 +1,8 @@
 import { ReactNode, useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { AppSidebar } from './AppSidebar';
 import { TopBar } from './TopBar';
+import { SecondaryNav } from './SecondaryNav';
+import { AppSidebar } from './AppSidebar';
 import { Watchtower } from './Watchtower';
 import { CommandPalette } from '@/components/CommandPalette';
 
@@ -10,9 +11,12 @@ const ROUTE_TITLES: Record<string, string> = {
   '/intelligence': 'Intelligence',
   '/market': 'Market',
   '/screener': 'Screener',
+  '/earnings': 'Earnings',
   '/portfolio': 'Portfolio',
   '/optimizer': 'Optimizer',
   '/simulation': 'Simulation',
+  '/news': 'News',
+  '/politicians': 'Politicians',
 };
 
 interface AppLayoutProps {
@@ -46,10 +50,13 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Bar */}
-        <TopBar 
-          title={title} 
-          onCommandPaletteOpen={() => setCommandPaletteOpen(true)} 
+        <TopBar
+          title={title}
+          onCommandPaletteOpen={() => setCommandPaletteOpen(true)}
         />
+
+        {/* Secondary Navigation */}
+        <SecondaryNav />
 
         {/* Page Content */}
         <main className="flex-1 overflow-auto scrollbar-thin">
@@ -61,9 +68,9 @@ export function AppLayout({ children }: AppLayoutProps) {
       <Watchtower />
 
       {/* Command Palette */}
-      <CommandPalette 
-        open={commandPaletteOpen} 
-        onOpenChange={setCommandPaletteOpen} 
+      <CommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
       />
     </div>
   );

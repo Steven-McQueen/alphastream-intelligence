@@ -138,25 +138,25 @@ export function HistoricalBacktest() {
         <div className="grid grid-cols-4 gap-3">
           <div className="text-center p-2 rounded-lg bg-secondary/30">
             <p className="text-[10px] text-muted-foreground">Portfolio</p>
-            <p className={`text-lg font-semibold ${currentStats.portfolioReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+            <p className={`text-lg font-semibold ${currentStats.portfolioReturn >= 0 ? 'text-positive' : 'text-negative'}`}>
               {currentStats.portfolioReturn > 0 ? '+' : ''}{currentStats.portfolioReturn.toFixed(1)}%
             </p>
           </div>
           <div className="text-center p-2 rounded-lg bg-secondary/30">
             <p className="text-[10px] text-muted-foreground">Benchmark</p>
-            <p className={`text-lg font-semibold ${currentStats.benchmarkReturn >= 0 ? 'text-blue-500' : 'text-red-500'}`}>
+            <p className={`text-lg font-semibold ${currentStats.benchmarkReturn >= 0 ? 'text-blue-500' : 'text-negative'}`}>
               {currentStats.benchmarkReturn > 0 ? '+' : ''}{currentStats.benchmarkReturn.toFixed(1)}%
             </p>
           </div>
           <div className="text-center p-2 rounded-lg bg-secondary/30">
             <p className="text-[10px] text-muted-foreground">Excess Return</p>
-            <p className={`text-lg font-semibold ${currentStats.excessReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+            <p className={`text-lg font-semibold ${currentStats.excessReturn >= 0 ? 'text-positive' : 'text-negative'}`}>
               {currentStats.excessReturn > 0 ? '+' : ''}{currentStats.excessReturn.toFixed(1)}%
             </p>
           </div>
           <div className="text-center p-2 rounded-lg bg-secondary/30">
             <p className="text-[10px] text-muted-foreground">Max Drawdown</p>
-            <p className="text-lg font-semibold text-red-500">
+            <p className="text-lg font-semibold text-negative">
               {currentStats.maxDrawdown.toFixed(1)}%
             </p>
           </div>
@@ -255,19 +255,19 @@ export function HistoricalBacktest() {
                     className={`border-b border-border/50 ${stat.period === selectedPeriod ? 'bg-secondary/50' : ''}`}
                   >
                     <td className="py-2 font-medium">{stat.period}</td>
-                    <td className={`py-2 text-right font-mono ${stat.portfolioReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    <td className={`py-2 text-right font-mono ${stat.portfolioReturn >= 0 ? 'text-positive' : 'text-negative'}`}>
                       {stat.portfolioReturn > 0 ? '+' : ''}{stat.portfolioReturn.toFixed(1)}%
                     </td>
-                    <td className={`py-2 text-right font-mono ${stat.excessReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    <td className={`py-2 text-right font-mono ${stat.excessReturn >= 0 ? 'text-positive' : 'text-negative'}`}>
                       {stat.excessReturn > 0 ? '+' : ''}{stat.excessReturn.toFixed(1)}%
                     </td>
                     <td className="py-2 text-right font-mono text-muted-foreground">
                       {stat.volatility.toFixed(1)}%
                     </td>
-                    <td className={`py-2 text-right font-mono ${stat.sharpe >= 1 ? 'text-emerald-500' : 'text-foreground'}`}>
+                    <td className={`py-2 text-right font-mono ${stat.sharpe >= 1 ? 'text-positive' : 'text-foreground'}`}>
                       {stat.sharpe.toFixed(2)}
                     </td>
-                    <td className="py-2 text-right font-mono text-red-500">
+                    <td className="py-2 text-right font-mono text-negative">
                       {stat.maxDrawdown.toFixed(1)}%
                     </td>
                   </tr>
@@ -279,10 +279,10 @@ export function HistoricalBacktest() {
 
         {/* Key insights */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+          <div className="p-3 rounded-lg bg-positive/10 border border-positive/20">
             <div className="flex items-center gap-1.5 mb-1">
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-              <span className="text-xs font-medium text-emerald-500">Outperformance</span>
+              <TrendingUp className="w-3.5 h-3.5 text-positive" />
+              <span className="text-xs font-medium text-positive">Outperformance</span>
             </div>
             <p className="text-xs text-muted-foreground">
               Portfolio beat benchmark in {currentStats.winRate}% of months with 

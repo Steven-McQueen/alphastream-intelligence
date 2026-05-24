@@ -55,8 +55,8 @@ const CHANGE_TYPE_ICONS = {
 };
 
 const CHANGE_TYPE_COLORS = {
-  add: 'text-green-500 bg-green-500/10',
-  remove: 'text-red-500 bg-red-500/10',
+  add: 'text-positive bg-green-500/10',
+  remove: 'text-negative bg-negative/10',
   rebalance: 'text-blue-500 bg-blue-500/10',
   substitute: 'text-purple-500 bg-purple-500/10',
 };
@@ -127,8 +127,8 @@ export function WhatIfAnalysis() {
                       variant={scenario.impactVsBaseline >= 0 ? 'default' : 'secondary'}
                       className={`text-xs ${
                         scenario.impactVsBaseline >= 0
-                          ? 'bg-green-500/10 text-green-500'
-                          : 'bg-red-500/10 text-red-500'
+                          ? 'bg-green-500/10 text-positive'
+                          : 'bg-negative/10 text-negative'
                       }`}
                     >
                       {scenario.impactVsBaseline >= 0 ? '+' : ''}
@@ -250,11 +250,11 @@ export function WhatIfAnalysis() {
                         className={`text-right font-mono font-medium ${
                           row.change >= 0 &&
                           (row.metric === 'Expected Return' || row.metric === 'Sharpe Ratio')
-                            ? 'text-green-500'
+                            ? 'text-positive'
                             : row.change <= 0 &&
                               (row.metric === 'Volatility' || row.metric === 'Max Drawdown')
-                            ? 'text-green-500'
-                            : 'text-red-500'
+                            ? 'text-positive'
+                            : 'text-negative'
                         }`}
                       >
                         {row.change >= 0 ? '+' : ''}
@@ -272,8 +272,8 @@ export function WhatIfAnalysis() {
                 <div className="flex items-center gap-2 mb-2">
                   {selectedScenarioData.impactVsBaseline >= 0 ? (
                     <>
-                      <Check className="w-4 h-4 text-green-500" />
-                      <span className="text-sm font-medium text-green-500">
+                      <Check className="w-4 h-4 text-positive" />
+                      <span className="text-sm font-medium text-positive">
                         Recommended
                       </span>
                     </>

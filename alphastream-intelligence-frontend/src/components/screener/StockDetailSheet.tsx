@@ -1,23 +1,24 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Stock } from "@/types"
 import { X, Star, ExternalLink, ChevronRight, ChevronLeft } from "lucide-react"
-import { ChatInterface } from "@/components/chat/ChatInterface"
+import { ChatOverlay } from "@/components/chat/ChatOverlay"
 import { cn } from "@/lib/utils"
 import { useWatchlist } from "@/contexts/WatchlistContext"
+import { useStockDetail } from "@/contexts/StockDetailContext"
 import { useMarket } from "@/context/MarketContext"
 import { StockChart } from "@/components/charts/StockChart"
 import { StockNews } from "@/components/screener/StockNews"
 import { FinancialReports } from "@/components/screener/FinancialReports"
 import { HistoricalData } from "@/components/screener/HistoricalData"
 import { StockNotes } from "@/components/screener/StockNotes"
+import { ValuationMetrics } from "@/components/screener/ValuationMetrics"
 import { DCFValuation } from "@/components/screener/DCFValuation"
 import { AnalystRatings } from "@/components/screener/AnalystRatings"
 import { PoliticianTrades } from "@/components/screener/PoliticianTrades"
-
-const API_BASE_URL = "http://localhost:8000";
+import { API_BASE_URL } from "@/config/api";
 
 // Navigation tabs
 const NAV_TABS = ["Overview", "Financial Reports", "Historical Data", "DCF", "Politicians", "News"] as const;
@@ -82,8 +83,8 @@ function formatIpoDate(dateStr: string | undefined): string {
 // Info row component for the company panel
 function InfoRow({ label, value, isLink }: { label: string; value: string; isLink?: boolean }) {
   return (
-    <div className="flex items-center justify-between py-3 border-b border-zinc-800/50 last:border-0">
-      <span className="text-sm text-zinc-500">{label}</span>
+    <div className="flex items-center justify-between py-3 px-2 -mx-2 rounded-lg border-b border-border/50 last:border-0 hover:bg-muted transition-colors duration-200">
+      <span className="text-sm text-dim">{label}</span>
       {isLink && value !== "N/A" ? (
         <a 
           href={value.startsWith("http") ? value : `https://${value}`} 
@@ -95,7 +96,7 @@ function InfoRow({ label, value, isLink }: { label: string; value: string; isLin
           <ExternalLink className="w-3 h-3" />
         </a>
       ) : (
-        <span className="text-sm font-medium text-white">{value}</span>
+        <span className="text-sm font-medium text-foreground">{value}</span>
       )}
     </div>
   );
@@ -109,48 +110,85 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
   const [activeTab, setActiveTab] = useState<NavTab>("Overview")
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false)
   const { toggleWatchlist, isInWatchlist } = useWatchlist();
+  const { closeStockDetail } = useStockDetail();
   const { isMarketOpen } = useMarket();
 
+  // Track the latest stock data for passing on close
+  const latestStockDataRef = useRef<Stock | null>(null);
+
+  // Keep ref updated with latest fetched data
   useEffect(() => {
-    const fetchDetail = async (fresh: boolean) => {
-      if (!stock?.ticker) return;
-      try {
-        setLoadingDetail(true);
-        const url = `${API_BASE_URL}/api/stock/${stock.ticker}${fresh ? '?fresh=1' : ''}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("Stock not found");
-        const data: Stock = await res.json();
-        setStockData(data);
-      } catch (err) {
-        console.error("Error fetching stock detail", err);
-      } finally {
-        setLoadingDetail(false);
-      }
+    if (stockData) {
+      latestStockDataRef.current = stockData;
+    }
+  }, [stockData]);
+
+  // Handle sheet close - pass fresh data back to parent components
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen && latestStockDataRef.current) {
+      // Pass the fresh stock data to context so Screener/Watchlist can update
+      closeStockDetail(latestStockDataRef.current);
+      latestStockDataRef.current = null;
+    } else {
+      onOpenChange(isOpen);
+    }
+  };
+
+  // Signal coordinator when sheet opens/closes for priority handling
+  useEffect(() => {
+    if (!open || !stock?.ticker) return;
+
+    // Signal that this stock is now active (gets priority)
+    fetch(`${API_BASE_URL}/api/coordinator/active-stock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticker: stock.ticker }),
+    }).catch(() => {
+      // Silently fail - coordinator is optional optimization
+    });
+
+    return () => {
+      // Clear active stock when sheet closes
+      fetch(`${API_BASE_URL}/api/coordinator/active-stock`, {
+        method: 'DELETE',
+      }).catch(() => {});
     };
-    fetchDetail(true);
+  }, [open, stock?.ticker]);
+
+  // Parallel fetch: Load stock detail and profile simultaneously for instant load
+  useEffect(() => {
+    if (!stock?.ticker) return;
+
+    const ticker = stock.ticker;
+    setLoadingDetail(true);
+    setLoadingProfile(true);
+
+    // Fire ALL requests in parallel for fastest possible load
+    Promise.all([
+      fetch(`${API_BASE_URL}/api/stock/${ticker}?fresh=1`),
+      fetch(`${API_BASE_URL}/api/stock/${ticker}/profile`),
+    ]).then(async ([stockRes, profileRes]) => {
+      // Process stock detail
+      if (stockRes.ok) {
+        const stockData: Stock = await stockRes.json();
+        setStockData(stockData);
+      }
+      setLoadingDetail(false);
+
+      // Process profile
+      if (profileRes.ok) {
+        const profileData: CompanyProfile = await profileRes.json();
+        setProfile(profileData);
+      }
+      setLoadingProfile(false);
+    }).catch((err) => {
+      console.error("Error fetching stock data", err);
+      setLoadingDetail(false);
+      setLoadingProfile(false);
+    });
   }, [stock?.ticker]);
 
-  // Fetch company profile (logo, description, etc.)
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!stock?.ticker) return;
-      try {
-        setLoadingProfile(true);
-        const res = await fetch(`${API_BASE_URL}/api/stock/${stock.ticker}/profile`);
-        if (res.ok) {
-          const data: CompanyProfile = await res.json();
-          setProfile(data);
-        }
-      } catch (err) {
-        console.error("Error fetching company profile", err);
-      } finally {
-        setLoadingProfile(false);
-      }
-    };
-    fetchProfile();
-  }, [stock?.ticker]);
-
-  // Live polling every 5s when market open and sheet open
+  // Live polling every 10s when market open and sheet open - priority for visible content
   useEffect(() => {
     if (!open || !stock?.ticker || !isMarketOpen) return;
     let cancelled = false;
@@ -165,7 +203,7 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
         // ignore single errors
       }
     };
-    const id = setInterval(poll, 5000);
+    const id = setInterval(poll, 10000); // 10s polling - active stock sheet is priority
     return () => {
       cancelled = true;
       clearInterval(id);
@@ -181,7 +219,7 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
   const currentStock = stockData ?? stock
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent 
         side="right" 
         className="w-full max-w-none p-0 !max-w-[100vw]"
@@ -207,7 +245,7 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
                 <div className="flex items-center gap-3 mb-1">
                   <h2 className="text-2xl font-bold">{profile?.companyName || currentStock.name}</h2>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-zinc-400">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span className="font-medium">{currentStock.ticker}</span>
                   <span>·</span>
                   <span>{profile?.exchange || currentStock.sector}</span>
@@ -225,7 +263,7 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
                 <div className="text-3xl font-bold">
                   ${typeof currentStock.price === 'number' ? currentStock.price.toFixed(2) : currentStock.price}
                 </div>
-                <div className={`text-sm font-medium ${(currentStock.change1D ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                <div className={`text-sm font-medium ${(currentStock.change1D ?? 0) >= 0 ? 'text-positive' : 'text-negative'}`}>
                   {(currentStock.change1D ?? 0) >= 0 ? '+' : ''}{(currentStock.change1D ?? 0).toFixed(2)}%
                 </div>
               </div>
@@ -235,7 +273,7 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
                   "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-all",
                   isInWatchlist(currentStock.ticker)
                     ? "bg-yellow-500/20 text-yellow-500 border border-yellow-500/40 hover:bg-yellow-500/30"
-                    : "bg-zinc-800 text-zinc-300 border border-zinc-700 hover:bg-zinc-700"
+                    : "bg-muted text-soft border border-secondary hover:bg-secondary"
                 )}
               >
                 <Star className={cn("w-4 h-4", isInWatchlist(currentStock.ticker) && "fill-current")} />
@@ -261,8 +299,8 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
                   className={cn(
                     "px-4 py-3 text-sm font-medium transition-colors relative",
                     activeTab === tab
-                      ? "text-white"
-                      : "text-zinc-500 hover:text-zinc-300"
+                      ? "text-foreground"
+                      : "text-dim hover:text-soft"
                   )}
                 >
                   {tab}
@@ -298,16 +336,21 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
                     }}
                   />
 
+                  {/* Valuation Metrics */}
+                  <div className="mt-6">
+                    <ValuationMetrics ticker={currentStock.ticker} />
+                  </div>
+
                   {/* About Company */}
                   <div className="mt-6">
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-                      <h3 className="text-lg font-semibold text-white mb-4 tracking-tight">
+                    <div className="bg-card border border-border rounded-xl p-6">
+                      <h3 className="text-lg font-semibold text-foreground mb-4 tracking-tight">
                         About {profile?.companyName || currentStock.name}
                       </h3>
                       {loadingProfile ? (
-                        <div className="text-sm text-zinc-500 italic">Loading company information...</div>
+                        <div className="text-sm text-dim italic">Loading company information...</div>
                       ) : (
-                        <p className="text-sm text-zinc-400 leading-relaxed">
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                           {profile?.description || (
                             <span className="italic">
                               Company description will be available soon.
@@ -322,10 +365,9 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
                   <StockNews ticker={currentStock.ticker} />
 
                   {/* AI CHAT SECTION */}
-                  <ChatInterface
-                    contextType="stock"
+                  <ChatOverlay
+                    mode="embedded"
                     contextLabel={currentStock.ticker}
-                    placeholder={`Ask about ${currentStock.ticker}...`}
                     suggestedPrompts={[
                       `What's the outlook for ${currentStock.ticker}?`,
                       `Analyze ${currentStock.ticker}'s valuation`,
@@ -333,7 +375,6 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
                       `Compare to sector peers`,
                     ]}
                     className="h-[500px]"
-                    compact
                   />
                 </>
               )}
@@ -380,20 +421,20 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
               {/* Collapse Toggle Button */}
               <button
                 onClick={() => setIsPanelCollapsed(!isPanelCollapsed)}
-                className="flex-shrink-0 w-6 bg-zinc-900 border-l border-r border-border hover:bg-zinc-800 transition-colors flex items-center justify-center"
+                className="flex-shrink-0 w-6 bg-card border-l border-r border-border hover:bg-muted transition-colors flex items-center justify-center"
                 title={isPanelCollapsed ? "Expand panel" : "Collapse panel"}
               >
                 {isPanelCollapsed ? (
-                  <ChevronLeft className="w-4 h-4 text-zinc-500" />
+                  <ChevronLeft className="w-4 h-4 text-dim" />
                 ) : (
-                  <ChevronRight className="w-4 h-4 text-zinc-500" />
+                  <ChevronRight className="w-4 h-4 text-dim" />
                 )}
               </button>
 
               {/* Panel Content */}
               <div 
                 className={cn(
-                  "border-l border-border bg-zinc-950/50 overflow-y-auto flex-shrink-0 transition-all duration-300 scrollbar-slim",
+                  "border-l border-border bg-background/50 overflow-y-auto flex-shrink-0 transition-all duration-300 scrollbar-slim",
                   isPanelCollapsed ? "w-0 opacity-0 overflow-hidden" : "w-[380px] opacity-100"
                 )}
               >
@@ -446,7 +487,7 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
                   </div>
 
                   {/* Notes & Tags Section */}
-                  <div className="pt-4 border-t border-zinc-800">
+                  <div className="pt-4 border-t border-border">
                     <StockNotes ticker={currentStock.ticker} />
                   </div>
                 </div>

@@ -1,6 +1,5 @@
 import { useRef, useCallback } from 'react';
 import { MacroIndicators } from '@/components/market/MacroIndicators';
-import { SectorHeatmap } from '@/components/market/SectorHeatmap';
 import { MacroCharts } from '@/components/market/MacroCharts';
 import { IndicesOverview } from '@/components/market/IndicesOverview';
 import { MarketNewsSummary } from '@/components/market/MarketNewsSummary';
@@ -28,7 +27,7 @@ export default function Market() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h2 className="text-lg font-semibold">Market Overview</h2>
+          <h2 className="text-lg font-semibold" style={{ fontFamily: 'var(--font-serif)' }}>Market Overview</h2>
           <LiveBadge lastUpdated={lastUpdated} isLoading={isLoading} />
         </div>
         <Button
@@ -46,11 +45,8 @@ export default function Market() {
       {/* Market Indices with Sparkline Charts */}
       <IndicesOverview />
 
-      {/* Middle Row: Sector Heatmap + Macro Indicators */}
-      <div className="grid grid-cols-2 gap-4">
-        <SectorHeatmap />
-        <MacroIndicators />
-      </div>
+      {/* Macro Indicators */}
+      <MacroIndicators />
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 gap-4">

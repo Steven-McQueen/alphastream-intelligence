@@ -61,7 +61,7 @@ const STRATEGY_COLORS: Record<string, string> = {
   'Core Quality': 'bg-blue-500/15 text-blue-400 border-blue-500/30',
   'Tactical': 'bg-orange-500/15 text-orange-400 border-orange-500/30',
   'Macro Bet': 'bg-purple-500/15 text-purple-400 border-purple-500/30',
-  'Income': 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  'Income': 'bg-positive/15 text-positive border-positive/30',
   'Growth': 'bg-pink-500/15 text-pink-400 border-pink-500/30',
 };
 

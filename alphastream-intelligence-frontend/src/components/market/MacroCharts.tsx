@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { API_BASE_URL } from '@/config/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -29,7 +30,7 @@ export function MacroCharts() {
   useEffect(() => {
     const fetchTreasury = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/macro/treasury-history?days=365');
+        const response = await fetch(`${API_BASE_URL}/api/macro/treasury-history?days=365`);
         const data = await response.json();
         const chartData = (data || []).map((item: any) => ({
           date: item.date,
@@ -44,7 +45,7 @@ export function MacroCharts() {
 
     const fetchCpi = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/macro/cpi-history?months=12');
+        const response = await fetch(`${API_BASE_URL}/api/macro/cpi-history?months=12`);
         const data = await response.json();
         const chartData = (data || []).map((item: any) => ({
           date: item.date,
@@ -59,7 +60,7 @@ export function MacroCharts() {
 
     const fetchVix = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/macro/vix-history?days=365');
+        const response = await fetch(`${API_BASE_URL}/api/macro/vix-history?days=365`);
         const data = await response.json();
         const chartData = (data || []).map((item: any) => ({
           date: item.date,
@@ -106,7 +107,7 @@ export function MacroCharts() {
       return (
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 shadow-lg">
           <p className="text-slate-300 text-sm mb-1">{point.displayDate}</p>
-          <p className="text-white font-semibold">
+          <p className="text-foreground font-semibold">
             {payload[0].value?.toFixed(2)}
             {selectedIndicator.includes('Yield') || selectedIndicator.includes('YoY') ? '%' : ''}
           </p>
@@ -117,10 +118,10 @@ export function MacroCharts() {
   };
 
   return (
-    <Card className="bg-card border-border">
+    <Card className="bg-sidebar-accent border-border">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium">Macro Time Series</CardTitle>
+          <CardTitle className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-widget-heading)' }}>Macro Time Series</CardTitle>
           <Tabs
             value={selectedIndicator}
             onValueChange={(v) => setSelectedIndicator(v as Indicator)}

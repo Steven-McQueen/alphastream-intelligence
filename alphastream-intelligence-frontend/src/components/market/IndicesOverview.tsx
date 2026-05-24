@@ -22,15 +22,15 @@ function IndexCard({ symbol, name, value, change, changePercent, flashDir, serie
   const isPositive = changePercent >= 0;
   const flashClass =
     flashDir === 'up'
-      ? 'bg-emerald-500/10'
+      ? 'bg-positive/10'
       : flashDir === 'down'
-        ? 'bg-red-500/10'
+        ? 'bg-negative/10'
         : '';
   
   return (
-    <Card 
+    <Card
       className={cn(
-        "p-4 bg-card border-border overflow-hidden cursor-pointer hover:bg-muted/50 transition-all",
+        "p-4 bg-sidebar-accent border-border overflow-hidden cursor-pointer hover:bg-muted/50 transition-all",
         flashClass
       )}
       style={{
@@ -41,8 +41,8 @@ function IndexCard({ symbol, name, value, change, changePercent, flashDir, serie
     >
       <div className="flex items-start justify-between mb-2">
         <div>
-          <div className="font-semibold text-base text-foreground">{name}</div>
-          <div className="text-xs text-muted-foreground">{symbol}</div>
+          <div className="font-semibold text-base text-foreground" style={{ fontFamily: 'var(--font-widget-heading)' }}>{name}</div>
+          <div className="text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>{symbol}</div>
         </div>
         <div className="text-right">
           <div
@@ -114,7 +114,7 @@ function IndexCard({ symbol, name, value, change, changePercent, flashDir, serie
       </div>
       
       {/* Current Value */}
-      <div className="font-mono text-2xl font-semibold text-foreground">
+      <div className="font-mono text-2xl font-semibold text-foreground" style={{ fontFamily: 'var(--font-body)' }}>
         {value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </div>
     </Card>

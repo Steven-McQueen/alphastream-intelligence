@@ -436,9 +436,9 @@ export function ShadowPortfolioBuilder({
                   <span
                     className={`font-mono font-medium ${
                       totalWeight === 100
-                        ? 'text-green-500'
+                        ? 'text-positive'
                         : totalWeight > 100
-                        ? 'text-red-500'
+                        ? 'text-negative'
                         : 'text-amber-500'
                     }`}
                   >
@@ -466,7 +466,7 @@ export function ShadowPortfolioBuilder({
                   </div>
                 )}
                 {totalWeight === 100 && (
-                  <div className="flex items-center gap-1.5 text-xs text-green-500">
+                  <div className="flex items-center gap-1.5 text-xs text-positive">
                     <Check className="w-3.5 h-3.5" />
                     <span>Fully allocated</span>
                   </div>

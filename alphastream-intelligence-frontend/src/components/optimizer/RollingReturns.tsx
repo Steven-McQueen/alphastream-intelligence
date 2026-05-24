@@ -142,25 +142,25 @@ export function RollingReturns() {
         <div className="grid grid-cols-4 gap-3">
           <div className="text-center p-2 rounded-lg bg-secondary/30">
             <p className="text-[10px] text-muted-foreground">Current {rollingPeriod}</p>
-            <p className={`text-lg font-semibold ${stats.currentReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+            <p className={`text-lg font-semibold ${stats.currentReturn >= 0 ? 'text-positive' : 'text-negative'}`}>
               {stats.currentReturn > 0 ? '+' : ''}{stats.currentReturn.toFixed(1)}%
             </p>
           </div>
           <div className="text-center p-2 rounded-lg bg-secondary/30">
             <p className="text-[10px] text-muted-foreground">Percentile</p>
-            <p className={`text-lg font-semibold ${stats.currentPercentile > 50 ? 'text-emerald-500' : 'text-amber-500'}`}>
+            <p className={`text-lg font-semibold ${stats.currentPercentile > 50 ? 'text-positive' : 'text-amber-500'}`}>
               {stats.currentPercentile.toFixed(0)}th
             </p>
           </div>
           <div className="text-center p-2 rounded-lg bg-secondary/30">
             <p className="text-[10px] text-muted-foreground">Average</p>
-            <p className={`text-lg font-semibold ${stats.mean >= 0 ? 'text-foreground' : 'text-red-500'}`}>
+            <p className={`text-lg font-semibold ${stats.mean >= 0 ? 'text-foreground' : 'text-negative'}`}>
               {stats.mean > 0 ? '+' : ''}{stats.mean.toFixed(1)}%
             </p>
           </div>
           <div className="text-center p-2 rounded-lg bg-secondary/30">
             <p className="text-[10px] text-muted-foreground">Win Rate</p>
-            <p className={`text-lg font-semibold ${stats.winRate > 60 ? 'text-emerald-500' : 'text-foreground'}`}>
+            <p className={`text-lg font-semibold ${stats.winRate > 60 ? 'text-positive' : 'text-foreground'}`}>
               {stats.winRate.toFixed(0)}%
             </p>
           </div>
@@ -272,7 +272,7 @@ export function RollingReturns() {
         {/* Legend */}
         <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
-            <div className="w-4 h-0.5 bg-emerald-500 rounded" />
+            <div className="w-4 h-0.5 bg-positive rounded" />
             <span>Portfolio</span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -293,7 +293,7 @@ export function RollingReturns() {
         <div className="grid grid-cols-5 gap-2 pt-3 border-t border-border">
           <div className="text-center">
             <p className="text-[10px] text-muted-foreground">5th %ile</p>
-            <p className="text-sm font-mono text-red-500">{stats.p5.toFixed(1)}%</p>
+            <p className="text-sm font-mono text-negative">{stats.p5.toFixed(1)}%</p>
           </div>
           <div className="text-center">
             <p className="text-[10px] text-muted-foreground">25th %ile</p>
@@ -305,11 +305,11 @@ export function RollingReturns() {
           </div>
           <div className="text-center">
             <p className="text-[10px] text-muted-foreground">75th %ile</p>
-            <p className="text-sm font-mono text-emerald-500">{stats.p75.toFixed(1)}%</p>
+            <p className="text-sm font-mono text-positive">{stats.p75.toFixed(1)}%</p>
           </div>
           <div className="text-center">
             <p className="text-[10px] text-muted-foreground">95th %ile</p>
-            <p className="text-sm font-mono text-emerald-500">{stats.p95.toFixed(1)}%</p>
+            <p className="text-sm font-mono text-positive">{stats.p95.toFixed(1)}%</p>
           </div>
         </div>
 
@@ -322,13 +322,13 @@ export function RollingReturns() {
             </div>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1">
-                <TrendingDown className="w-3 h-3 text-red-500" />
-                <span className="text-xs font-mono text-red-500">{stats.min.toFixed(1)}%</span>
+                <TrendingDown className="w-3 h-3 text-negative" />
+                <span className="text-xs font-mono text-negative">{stats.min.toFixed(1)}%</span>
               </div>
-              <div className="flex-1 h-1.5 bg-gradient-to-r from-red-500 via-foreground to-emerald-500 rounded-full" />
+              <div className="flex-1 h-1.5 bg-gradient-to-r from-negative via-foreground to-positive rounded-full" />
               <div className="flex items-center gap-1">
-                <TrendingUp className="w-3 h-3 text-emerald-500" />
-                <span className="text-xs font-mono text-emerald-500">{stats.max.toFixed(1)}%</span>
+                <TrendingUp className="w-3 h-3 text-positive" />
+                <span className="text-xs font-mono text-positive">{stats.max.toFixed(1)}%</span>
               </div>
             </div>
           </div>
@@ -348,7 +348,7 @@ export function RollingReturns() {
         <div className="p-3 rounded-lg bg-secondary/30 border border-border">
           <p className="text-xs text-muted-foreground">
             <strong className="text-foreground">Current Context:</strong> The trailing {rollingPeriod} return of{' '}
-            <span className={stats.currentReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}>
+            <span className={stats.currentReturn >= 0 ? 'text-positive' : 'text-negative'}>
               {stats.currentReturn > 0 ? '+' : ''}{stats.currentReturn.toFixed(1)}%
             </span>{' '}
             is in the <span className="text-primary">{stats.currentPercentile.toFixed(0)}th percentile</span> of 
