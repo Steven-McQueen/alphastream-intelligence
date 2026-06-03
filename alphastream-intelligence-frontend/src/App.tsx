@@ -3,9 +3,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { PortfolioProvider } from "@/context/PortfolioContext";
-import { MarketProvider } from "@/context/MarketContext";
-import { AuthProvider } from "@/context/AuthContext";
+import { PortfolioProvider } from "@/contexts/PortfolioContext";
+import { MarketProvider } from "@/contexts/MarketContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import FinanceHome from "./pages/FinanceHome";
@@ -18,6 +18,7 @@ import IndexDetail from "./pages/IndexDetail";
 import Intelligence from "./pages/Intelligence";
 import Earnings from "./pages/Earnings";
 import Optimizer from "./pages/Optimizer";
+import Notebook from "./pages/Notebook";
 import Simulation from "./pages/Simulation";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
@@ -176,6 +177,16 @@ const App = () => (
                     <ProtectedRoute>
                       <AppLayout>
                         <Optimizer />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/notebook"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Notebook />
                       </AppLayout>
                     </ProtectedRoute>
                   }

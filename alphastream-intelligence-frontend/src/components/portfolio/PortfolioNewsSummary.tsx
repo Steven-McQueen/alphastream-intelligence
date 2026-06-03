@@ -1,4 +1,4 @@
-import { usePortfolio } from '@/context/PortfolioContext';
+import { usePortfolio } from '@/contexts/PortfolioContext';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';

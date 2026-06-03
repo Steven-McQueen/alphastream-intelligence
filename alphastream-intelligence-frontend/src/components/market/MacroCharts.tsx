@@ -121,7 +121,7 @@ export function MacroCharts() {
     <Card className="bg-sidebar-accent border-border">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-widget-heading)' }}>Macro Time Series</CardTitle>
+          <CardTitle className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-page-heading)' }}>Macro Time Series</CardTitle>
           <Tabs
             value={selectedIndicator}
             onValueChange={(v) => setSelectedIndicator(v as Indicator)}

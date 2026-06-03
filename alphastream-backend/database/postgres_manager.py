@@ -605,8 +605,8 @@ class PostgresDatabaseManager:
                     session.execute(
                         text("""
                             INSERT INTO news_articles
-                            (ticker, title, url, published_date, snippet, site, publisher, image, last_cached)
-                            VALUES (:ticker, :title, :url, :published_date, :snippet, :site, :publisher, :image, NOW())
+                            (ticker, title, url, published_date, snippet, site, publisher, image, category, author, source_api, last_cached)
+                            VALUES (:ticker, :title, :url, :published_date, :snippet, :site, :publisher, :image, :category, :author, :source_api, NOW())
                             ON CONFLICT (url) DO UPDATE SET
                                 ticker = EXCLUDED.ticker,
                                 title = EXCLUDED.title,
@@ -615,6 +615,9 @@ class PostgresDatabaseManager:
                                 site = EXCLUDED.site,
                                 publisher = EXCLUDED.publisher,
                                 image = EXCLUDED.image,
+                                category = EXCLUDED.category,
+                                author = EXCLUDED.author,
+                                source_api = EXCLUDED.source_api,
                                 last_cached = NOW()
                         """),
                         {
@@ -625,7 +628,10 @@ class PostgresDatabaseManager:
                             "snippet": item.get("snippet"),
                             "site": item.get("site"),
                             "publisher": item.get("publisher"),
-                            "image": item.get("image")
+                            "image": item.get("image"),
+                            "category": item.get("category"),
+                            "author": item.get("author"),
+                            "source_api": item.get("source_api"),
                         }
                     )
                     inserted += 1
@@ -645,6 +651,31 @@ class PostgresDatabaseManager:
                 """),
                 {"limit": limit}
             )
+            return self._rows_to_dicts(result.fetchall())
+
+    def get_news_by_category(self, category: str = "all", limit: int = 50) -> List[dict]:
+        """Get recent newsroom feed rows by category (across all sources)."""
+        normalized = (category or "all").lower()
+        with self.get_session() as session:
+            if normalized in {"all", "general"}:
+                result = session.execute(
+                    text("""
+                        SELECT * FROM news_articles
+                        ORDER BY published_date DESC NULLS LAST
+                        LIMIT :limit
+                    """),
+                    {"limit": limit},
+                )
+            else:
+                result = session.execute(
+                    text("""
+                        SELECT * FROM news_articles
+                        WHERE lower(category) = :category
+                        ORDER BY published_date DESC NULLS LAST
+                        LIMIT :limit
+                    """),
+                    {"category": normalized, "limit": limit},
+                )
             return self._rows_to_dicts(result.fetchall())
 
     def get_news_for_ticker(self, ticker: str, limit: int = 50) -> List[dict]:

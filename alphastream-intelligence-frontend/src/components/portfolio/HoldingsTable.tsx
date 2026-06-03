@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { usePortfolio } from '@/context/PortfolioContext';
+import { usePortfolio } from '@/contexts/PortfolioContext';
 import {
   useReactTable,
   getCoreRowModel,

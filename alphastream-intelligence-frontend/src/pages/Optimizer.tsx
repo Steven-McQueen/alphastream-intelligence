@@ -22,7 +22,7 @@ import { RollingReturns } from '@/components/optimizer/RollingReturns';
 import { StressTestScenarios } from '@/components/optimizer/StressTestScenarios';
 import { getMockOptimizationResult, DEFAULT_CONSTRAINTS, type OptimizationConstraints } from '@/data/mockOptimizer';
 import { runMonteCarloSimulation, type MonteCarloParams, type MonteCarloResult } from '@/data/mockMonteCarlo';
-import { usePortfolio } from '@/context/PortfolioContext';
+import { usePortfolio } from '@/contexts/PortfolioContext';
 import { toast } from '@/hooks/use-toast';
 
 export default function Optimizer() {

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useMarket } from '@/context/MarketContext';
+import { useMarket } from '@/contexts/MarketContext';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Command, Hexagon } from 'lucide-react';

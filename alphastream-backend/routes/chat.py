@@ -25,6 +25,7 @@ class ChatRequest(BaseModel):
     messages: List[ChatMessageIn]
     contextLabel: Optional[str] = None
     chatMode: Optional[str] = None
+    model_id: Optional[str] = None
 
 
 @router.post("/chat")
@@ -36,6 +37,7 @@ async def chat_endpoint(body: ChatRequest):
             messages=messages,
             context_label=body.contextLabel,
             chat_mode=body.chatMode,
+            model_id=body.model_id,
         ):
             yield event
 

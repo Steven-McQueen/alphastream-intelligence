@@ -1,151 +1,144 @@
-import { useEffect, useState } from 'react';
-import { Clock3, Loader2, ExternalLink } from 'lucide-react';
-import { API_BASE_URL } from '@/config/api';
+import { useMemo, useState } from 'react';
+import { Loader2 } from 'lucide-react';
+import { useNewsFeed, useTopStories } from '@/hooks/useNews';
+import { NEWS_CATEGORIES, type MarketNewsItem, type NewsCategoryId } from '@/types';
+import { NewsCard, timeAgo } from '@/components/news/NewsCard';
+import { NewsHero } from '@/components/news/NewsHero';
+import { NewsRail } from '@/components/news/NewsRail';
+import { NewsSkeleton } from '@/components/news/NewsSkeleton';
+import { NewsCategoryNav } from '@/components/news/NewsCategoryNav';
+import { LiveMarketVideo } from '@/components/news/LiveMarketVideo';
 
-interface NewsArticle {
-  id?: string;
-  headline?: string;
-  title?: string;
-  summary?: string;
-  text?: string;
-  publishedAt?: string;
-  publishedDate?: string;
-  source?: string;
-  publisher?: string;
-  url?: string;
-  image?: string;
-  site?: string;
+function SectionHeading({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className="h-5 w-1 rounded-full bg-[var(--text-author)]" aria-hidden />
+      <h2 className="font-page-heading text-xl font-semibold text-foreground">{label}</h2>
+    </div>
+  );
 }
 
-function timeAgo(dateStr: string): string {
-  if (!dateStr) return '';
-  const now = new Date();
-  const published = new Date(dateStr);
-  const diffMs = now.getTime() - published.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return 'Just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHrs = Math.floor(diffMin / 60);
-  if (diffHrs < 24) return `${diffHrs}h ago`;
-  const diffDays = Math.floor(diffHrs / 24);
-  return `${diffDays}d ago`;
+function dedupe(articles: MarketNewsItem[]): MarketNewsItem[] {
+  const seen = new Set<string>();
+  const out: MarketNewsItem[] = [];
+  for (const a of articles) {
+    const key = (a.url || a.headline || '').toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(a);
+  }
+  return out;
 }
 
 export default function News() {
-  const [articles, setArticles] = useState<NewsArticle[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [, setTick] = useState(0);
+  const [category, setCategory] = useState<NewsCategoryId>('all');
+  const { data: rawFeed = [], isLoading } = useNewsFeed(category, 80);
+  const { data: rawTop = [] } = useTopStories(15);
 
-  // Re-render every 30s for relative timestamps
-  useEffect(() => {
-    const timer = setInterval(() => setTick((t) => t + 1), 30_000);
-    return () => clearInterval(timer);
-  }, []);
+  const feed = useMemo(() => dedupe(rawFeed), [rawFeed]);
+  const topStories = useMemo(() => dedupe(rawTop).slice(0, 12), [rawTop]);
 
-  useEffect(() => {
-    const fetchNews = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch(`${API_BASE_URL}/api/news/general?limit=30`);
-        if (res.ok) {
-          const data = await res.json();
-          setArticles(Array.isArray(data) ? data : []);
-        }
-      } catch (err) {
-        console.error('Error fetching news:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchNews();
-    const interval = setInterval(fetchNews, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+  const heroArticles = useMemo(() => feed.slice(0, 3), [feed]);
+  const stripArticles = useMemo(() => feed.slice(3, 9), [feed]);
+  const remaining = useMemo(() => feed.slice(9), [feed]);
+  const lastUpdated = feed[0]?.publishedAt || topStories[0]?.publishedAt || '';
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-[1400px] mx-auto px-6 py-6 space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-foreground" style={{ fontFamily: 'var(--font-serif)' }}>
-            Market News
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Latest financial news and market developments</p>
-        </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center h-64 text-dim">
-            <Loader2 className="w-6 h-6 animate-spin mr-2" />
-            Loading news...
+      <div className="mx-auto max-w-[1500px] space-y-5 px-6 py-6">
+        {/* Masthead */}
+        <header className="space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
+            <div>
+              <h1 className="font-page-heading text-[34px] font-semibold leading-none text-foreground">
+                The Newsroom
+              </h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Institutional-grade market intelligence across macro, earnings, and sectors.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-dim">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-positive opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-positive" />
+              </span>
+              <span className="font-semibold uppercase tracking-wide text-sub">Live</span>
+              {lastUpdated ? <span>&middot; Updated {timeAgo(lastUpdated)}</span> : null}
+            </div>
           </div>
-        ) : articles.length === 0 ? (
-          <div className="flex items-center justify-center h-64 text-dim">
-            No news available
+          <NewsCategoryNav activeCategory={category} onChange={setCategory} />
+        </header>
+
+        <LiveMarketVideo />
+
+        {isLoading ? (
+          <NewsSkeleton />
+        ) : feed.length === 0 ? (
+          <div className="flex h-64 items-center justify-center text-dim">
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            Building your newsroom feed...
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {articles.map((article, idx) => {
-              const headline = article.headline || article.title || '';
-              const summary = article.summary || article.text || '';
-              const published = article.publishedAt || article.publishedDate || '';
-              const source = article.source || article.publisher || article.site || '';
-              const image = article.image || '';
+          <div className="grid grid-cols-1 gap-8 xl:grid-cols-12">
+            {/* Main column */}
+            <div className="space-y-8 xl:col-span-8">
+              <NewsHero articles={heroArticles} />
 
-              return (
-                <a
-                  key={article.url || idx}
-                  href={article.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group rounded-xl border border-border bg-card overflow-hidden hover:border-secondary transition-all duration-200 flex flex-col"
-                >
-                  {/* Image */}
-                  {image && (
-                    <div className="relative w-full h-44 overflow-hidden bg-muted">
-                      <img
-                        src={image}
-                        alt={headline}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        referrerPolicy="no-referrer"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-card/60 to-transparent" />
-                    </div>
-                  )}
-
-                  {/* Content */}
-                  <div className="p-5 flex flex-col flex-1">
-                    <div className="flex items-center gap-2 text-xs text-dim mb-2">
-                      <Clock3 className="h-3 w-3" />
-                      <span>{timeAgo(published)}</span>
-                      {source && (
-                        <>
-                          <span>&middot;</span>
-                          <span className="text-cyan-400 uppercase text-[10px] font-semibold tracking-wider">
-                            {source}
-                          </span>
-                        </>
-                      )}
-                    </div>
-
-                    <h3 className="text-base font-semibold text-foreground leading-snug mb-2 line-clamp-3 group-hover:text-foreground transition-colors">
-                      {headline}
-                    </h3>
-
-                    <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 flex-1">
-                      {summary}
-                    </p>
-
-                    <div className="flex items-center gap-1 mt-3 text-xs text-dim group-hover:text-muted-foreground">
-                      <ExternalLink className="h-3 w-3" />
-                      <span>Read more</span>
-                    </div>
+              {stripArticles.length > 0 && (
+                <section className="space-y-4 border-t border-border pt-6">
+                  <SectionHeading label={category === 'all' ? 'Top Stories' : NEWS_CATEGORIES.find((c) => c.id === category)?.label ?? 'Latest'} />
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                    {stripArticles.map((article) => (
+                      <NewsCard key={article.id} article={article} variant="standard" />
+                    ))}
                   </div>
-                </a>
-              );
-            })}
+                </section>
+              )}
+
+              {category === 'all' ? (
+                NEWS_CATEGORIES.filter((tab) => tab.id !== 'all').map((tab) => {
+                  const sectionRows = remaining.filter((a) => a.category === tab.id).slice(0, 4);
+                  if (sectionRows.length < 2) return null;
+                  return (
+                    <section key={tab.id} className="space-y-4 border-t border-border pt-6">
+                      <div className="flex items-center justify-between">
+                        <SectionHeading label={tab.label} />
+                        <button
+                          type="button"
+                          onClick={() => setCategory(tab.id)}
+                          className="text-xs font-semibold uppercase tracking-wide text-dim transition-colors hover:text-[var(--text-author)]"
+                        >
+                          View all
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                        {sectionRows.map((article) => (
+                          <NewsCard key={article.id} article={article} variant="standard" />
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })
+              ) : (
+                remaining.length > 0 && (
+                  <section className="space-y-4 border-t border-border pt-6">
+                    <SectionHeading label="More coverage" />
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                      {remaining.map((article) => (
+                        <NewsCard key={article.id} article={article} variant="standard" />
+                      ))}
+                    </div>
+                  </section>
+                )
+              )}
+            </div>
+
+            {/* Right rail */}
+            <div className="xl:col-span-4">
+              <div className="space-y-5 xl:sticky xl:top-4">
+                <NewsRail topHeadlines={topStories} />
+              </div>
+            </div>
           </div>
         )}
       </div>

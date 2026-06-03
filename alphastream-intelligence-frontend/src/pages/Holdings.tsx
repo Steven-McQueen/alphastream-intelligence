@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { usePortfolio } from '@/context/PortfolioContext';
+import { usePortfolio } from '@/contexts/PortfolioContext';
 import { getStockByTicker } from '@/data/mockStocks';
 import type { Stock, Sector, PortfolioHolding, StrategyTag } from '@/types';
 import { HoldingsDataTable } from '@/components/holdings/HoldingsDataTable';

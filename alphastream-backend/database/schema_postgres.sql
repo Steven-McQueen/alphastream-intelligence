@@ -251,8 +251,13 @@ CREATE TABLE IF NOT EXISTS news_articles (
     last_cached TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE news_articles ADD COLUMN IF NOT EXISTS category TEXT;
+ALTER TABLE news_articles ADD COLUMN IF NOT EXISTS author TEXT;
+ALTER TABLE news_articles ADD COLUMN IF NOT EXISTS source_api TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_news_ticker ON news_articles(ticker);
 CREATE INDEX IF NOT EXISTS idx_news_published ON news_articles(published_date DESC);
+CREATE INDEX IF NOT EXISTS idx_news_category ON news_articles(category);
 
 -- ============================================================================
 -- Price bars (intraday and EOD OHLCV data)
@@ -324,6 +329,45 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 );
 
 CREATE INDEX IF NOT EXISTS idx_chat_messages_thread ON chat_messages(thread_id, created_at ASC);
+
+-- Optional: model used when the thread was created (Phase 4)
+ALTER TABLE chat_threads ADD COLUMN IF NOT EXISTS model_id TEXT;
+
+-- ============================================================================
+-- AI providers and models (admin catalog, Phase 4)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS ai_providers (
+    id            TEXT PRIMARY KEY,
+    name          TEXT        NOT NULL,
+    display_name  TEXT        NOT NULL,
+    enabled       BOOLEAN     NOT NULL DEFAULT TRUE,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS ai_models (
+    id                          TEXT PRIMARY KEY,
+    provider_id                 TEXT        NOT NULL REFERENCES ai_providers(id) ON DELETE CASCADE,
+    display_label               TEXT        NOT NULL,
+    version                     TEXT        NOT NULL DEFAULT '',
+    provider_native_model_name  TEXT        NOT NULL,
+    enabled                     BOOLEAN     NOT NULL DEFAULT FALSE,
+    visible                     BOOLEAN     NOT NULL DEFAULT FALSE,
+    is_default                  BOOLEAN     NOT NULL DEFAULT FALSE,
+    sort_order                  INTEGER     NOT NULL DEFAULT 0,
+    created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_models_provider ON ai_models(provider_id, sort_order);
+
+CREATE TRIGGER IF NOT EXISTS ai_providers_updated_at
+    BEFORE UPDATE ON ai_providers
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER IF NOT EXISTS ai_models_updated_at
+    BEFORE UPDATE ON ai_models
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- ============================================================================
 -- Enable Row Level Security (optional - disabled for now since FastAPI handles auth)

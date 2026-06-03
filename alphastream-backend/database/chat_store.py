@@ -56,14 +56,15 @@ def create_thread(
     context_label: Optional[str] = None,
     chat_mode: Optional[str] = None,
     route_path: Optional[str] = None,
+    model_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     now = _now()
     thread_id = str(uuid.uuid4())
     with _get_engine().connect() as conn:
         conn.execute(
             text("""
-                INSERT INTO chat_threads (id, user_id, title, context_label, chat_mode, route_path, created_at, updated_at, expires_at)
-                VALUES (:id, :user_id, :title, :ctx, :mode, :route, :now, :now, :exp)
+                INSERT INTO chat_threads (id, user_id, title, context_label, chat_mode, route_path, model_id, created_at, updated_at, expires_at)
+                VALUES (:id, :user_id, :title, :ctx, :mode, :route, :model_id, :now, :now, :exp)
             """),
             {
                 "id": thread_id,
@@ -72,6 +73,7 @@ def create_thread(
                 "ctx": context_label,
                 "mode": chat_mode,
                 "route": route_path,
+                "model_id": model_id,
                 "now": now,
                 "exp": _expires_at(now),
             },
@@ -84,6 +86,7 @@ def create_thread(
         "context_label": context_label,
         "chat_mode": chat_mode,
         "route_path": route_path,
+        "model_id": model_id,
         "created_at": now.isoformat(),
         "updated_at": now.isoformat(),
     }
@@ -93,7 +96,7 @@ def list_threads(user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
     with _get_engine().connect() as conn:
         rows = conn.execute(
             text("""
-                SELECT t.id, t.title, t.context_label, t.chat_mode, t.route_path,
+                SELECT t.id, t.title, t.context_label, t.chat_mode, t.route_path, t.model_id,
                        t.created_at, t.updated_at,
                        (SELECT COUNT(*) FROM chat_messages m WHERE m.thread_id = t.id) AS message_count
                 FROM chat_threads t
@@ -110,7 +113,7 @@ def get_thread(thread_id: str, user_id: str) -> Optional[Dict[str, Any]]:
     with _get_engine().connect() as conn:
         row = conn.execute(
             text("""
-                SELECT id, user_id, title, context_label, chat_mode, route_path,
+                SELECT id, user_id, title, context_label, chat_mode, route_path, model_id,
                        created_at, updated_at
                 FROM chat_threads
                 WHERE id = :tid AND user_id = :uid AND expires_at > NOW()

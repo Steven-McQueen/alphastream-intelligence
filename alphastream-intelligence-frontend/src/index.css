@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -17,7 +18,7 @@
     --bg-hover: oklch(0.26 0.006 70);         /* Hover states */
 
     /* Text */
-    --text-primary: oklch(0.97 0.004 90);     /* Warm off-white */
+    --text-primary: oklch(0.84 0.004 90);     /* Soft warm gray base text (matches the Today's Brief body tone) */
     --text-secondary: oklch(0.72 0.006 90);   /* Muted warm gray */
     --text-tertiary: oklch(0.52 0.005 90);    /* Faint warm gray */
     --text-author: oklch(70.642% 0.12042 210.401);        /* Author names, turqouise */
@@ -38,7 +39,7 @@
 
     /* Shadcn/Tailwind mapped vars (HSL where expected) */
     --background: 40 6% 10%;                  /* Warm zinc-900 equivalent */
-    --foreground: 45 5% 95%;                  /* Warm white */
+    --foreground: 45 5% 83%;                  /* Soft warm gray for headings/titles (pulled down toward body text to kill glare) */
 
     --card: 40 5% 13%;                        /* Card surface */
     --card-foreground: 45 5% 95%;
@@ -54,6 +55,9 @@
 
     --muted: 40 5% 18%;                       /* Warm muted */
     --muted-foreground: 40 4% 55%;            /* Warm gray text */
+    --text-dim: 40 4% 55%;
+    --text-sub: 40 4% 63%;
+    --text-soft: 45 4% 75%;                   /* Slightly dimmed emphasis text (bold labels) - softer than foreground */
 
     --accent: 40 5% 18%;                      /* Warm accent bg */
     --accent-foreground: 45 5% 95%;
@@ -139,6 +143,9 @@
     --secondary-foreground: 40 8% 10%;
     --muted: 45 5% 88%;
     --muted-foreground: 40 5% 45%;
+    --text-dim: 40 5% 45%;
+    --text-sub: 40 5% 35%;
+    --text-soft: 40 8% 12%;
     --accent: 45 5% 88%;
     --accent-foreground: 40 8% 10%;
     --destructive: 0 84% 55%;
@@ -363,6 +370,14 @@
   .table-dense td {
     @apply px-2 py-1.5;
   }
+
+  .news-kicker {
+    color: var(--text-author);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.65rem;
+    font-weight: 600;
+  }
 }
 
 /* Perplexity shimmer skeleton */
@@ -375,6 +390,16 @@
   animation: pf-shimmer 2s ease-in-out infinite;
 }
 
+/* Live price tick — color flash + subtle slide that settles to foreground */
+@keyframes price-tick-up {
+  0%   { color: hsl(var(--positive)); transform: translateY(0.18em); opacity: 0.55; }
+  100% { color: hsl(var(--foreground)); transform: translateY(0); opacity: 1; }
+}
+@keyframes price-tick-down {
+  0%   { color: hsl(var(--negative)); transform: translateY(-0.18em); opacity: 0.55; }
+  100% { color: hsl(var(--foreground)); transform: translateY(0); opacity: 1; }
+}
+
 /* ── Chat component design tokens (warm palette) ── */
 :root {
   --chat-bg: oklch(0.15 0.006 70);
@@ -382,7 +407,7 @@
   --chat-surface-up: oklch(0.22 0.005 70);
   --chat-border: oklch(0.90 0.002 70 / 0.10);
   --chat-border-h: oklch(0.90 0.002 70 / 0.24);
-  --chat-text: oklch(0.97 0.004 90);
+  --chat-text: hsl(var(--text-soft));       /* Exact match to the Today's Brief body tone (soft warm gray) */
   --chat-muted: oklch(0.72 0.006 90);
   --chat-faint: oklch(0.52 0.005 90);
   --chat-send: oklch(0.75 0.18 145);
@@ -396,27 +421,108 @@
   40%            { transform: translateY(-5px); opacity: 1; }
 }
 
+/* ── Chat model selector ───────────────────────────────────────────── */
+.chat-model-label {
+  color: var(--chat-faint);
+}
+
+.chat-model-trigger {
+  background: var(--chat-surface-up);
+  border: 1px solid var(--chat-border);
+  font-family: var(--font-sans, Inter, system-ui, sans-serif);
+}
+button.chat-model-trigger:hover {
+  border-color: var(--chat-border-h);
+}
+
+.chat-model-menu {
+  background: var(--chat-surface);
+  border: 1px solid var(--chat-border);
+  color: var(--chat-text);
+  font-family: var(--font-sans, Inter, system-ui, sans-serif);
+  box-shadow: 0 16px 40px oklch(0 0 0 / 0.45);
+}
+
+.chat-model-menu-item {
+  color: var(--chat-muted);
+}
+.chat-model-menu-item:hover,
+.chat-model-menu-item:focus {
+  background: var(--chat-surface-up);
+  color: var(--chat-text);
+}
+.chat-model-menu-item-active {
+  color: var(--chat-text);
+}
+
+/* ── Chat composer ─────────────────────────────────────────────────── */
+.chat-composer {
+  background: var(--chat-surface-up);
+  border: 1px solid var(--chat-border);
+  border-radius: 1rem;
+  transition: border-color 0.18s var(--chat-ease), box-shadow 0.18s var(--chat-ease);
+}
+.chat-composer:focus-within {
+  border-color: var(--chat-border-h);
+  box-shadow: 0 0 0 3px oklch(0.90 0.002 70 / 0.04);
+}
+
+/* ── Chat assistant action toolbar ─────────────────────────────────── */
+.chat-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--chat-faint);
+  cursor: pointer;
+  outline: none;
+  transition: color 0.15s var(--chat-ease), background 0.15s var(--chat-ease);
+}
+.chat-action-btn:hover,
+.chat-action-btn:focus-visible {
+  color: var(--chat-text);
+  background: var(--chat-surface-up);
+}
+
+/* ── Chat suggestion rows (empty state) ────────────────────────────── */
+.chat-suggest-row {
+  background: transparent;
+  border: 1px solid var(--chat-border);
+  color: var(--chat-muted);
+  transition: border-color 0.15s var(--chat-ease), color 0.15s var(--chat-ease),
+    background 0.15s var(--chat-ease);
+}
+.chat-suggest-row:hover {
+  border-color: var(--chat-border-h);
+  color: var(--chat-text);
+  background: var(--chat-surface-up);
+}
+
 /* ── Chat markdown ─────────────────────────────────────────────────── */
 
 .chat-md > :first-child { margin-top: 0; }
 .chat-md > :last-child  { margin-bottom: 0; }
 
 .chat-md-p {
-  margin: 0.45em 0;
+  margin: 0.5em 0;
 }
 
 .chat-md-ul {
-  margin: 0.4em 0;
-  padding-left: 1.25em;
+  margin: 0.5em 0;
+  padding-left: 1.3em;
   list-style-type: disc;
 }
 .chat-md-ol {
-  margin: 0.4em 0;
-  padding-left: 1.35em;
+  margin: 0.5em 0;
+  padding-left: 1.4em;
   list-style-type: decimal;
 }
 .chat-md-li {
-  margin: 0.15em 0;
+  margin: 0.2em 0;
 }
 .chat-md-li > .chat-md-p {
   margin: 0;
@@ -450,8 +556,8 @@
   color: var(--chat-accent);
 }
 .chat-md-pre {
-  margin: 0.55em 0;
-  padding: 0.7em 0.9em;
+  margin: 0.6em 0;
+  padding: 0.75em 0.95em;
   border-radius: 8px;
   background: var(--chat-surface-up);
   border: 1px solid var(--chat-border);
@@ -471,7 +577,7 @@
   font-family: var(--font-sans, Inter, system-ui, sans-serif);
   font-size: 0.92em;
   font-weight: 600;
-  margin: 0.75em 0 0.3em;
+  margin: 0.85em 0 0.35em;
   color: var(--chat-text);
 }
 .chat-md-heading-sm {
@@ -480,7 +586,7 @@
 }
 
 .chat-md-table-wrap {
-  margin: 0.55em 0;
+  margin: 0.6em 0;
   overflow-x: auto;
   border-radius: 6px;
   border: 1px solid var(--chat-border);
@@ -511,19 +617,103 @@
 }
 
 .chat-md-hr {
-  margin: 0.65em 0;
+  margin: 0.7em 0;
   border: none;
   border-top: 1px solid var(--chat-border);
 }
 
 .chat-md-blockquote {
-  margin: 0.45em 0;
+  margin: 0.5em 0;
   padding: 0.15em 0 0.15em 0.85em;
   border-left: 2px solid var(--chat-border-h);
   color: var(--chat-muted);
 }
 
 /* ── End chat markdown ─────────────────────────────────────────────── */
+
+/* ── Notebook workspace (aligned with the chat design system) ───────── */
+.notebook-workspace {
+  /* Surfaces map onto the core app tokens so the page coincides with the
+     Intelligence page (background, card, muted, border, foreground). */
+  --nb-bg: hsl(var(--background));
+  --nb-chrome: hsl(var(--background));
+  --nb-tab-active: hsl(var(--muted));
+  --nb-tab-inactive: hsl(var(--background));
+  --nb-toolbar: hsl(var(--background));
+  --nb-cell-bg: hsl(var(--card));
+  --nb-cell-border: hsl(var(--border));
+  --nb-cell-border-active: hsl(var(--ring) / 0.5);
+  --nb-output-bg: hsl(var(--background));
+  --nb-gutter: transparent;
+  --nb-badge: hsl(var(--muted-foreground));
+  --nb-toolbar-bg: hsl(var(--muted));
+  --nb-kernel-pill: hsl(var(--muted));
+  /* Text + interaction */
+  --nb-fg: hsl(var(--foreground));
+  --nb-fg-muted: hsl(var(--muted-foreground));
+  --nb-hover: hsl(var(--muted));
+  --nb-accent: hsl(var(--primary));
+  --nb-error: hsl(var(--destructive));
+  /* Syntax (balanced Dark+ set, readable on the warm surfaces) */
+  --nb-syntax-keyword: #c586c0;
+  --nb-syntax-function: #dcdcaa;
+  --nb-syntax-type: #4ec9b0;
+  --nb-syntax-builtin: #569cd6;
+  --nb-syntax-number: #b5cea8;
+  --nb-syntax-string: #ce9178;
+  --nb-syntax-comment: #6a9955;
+  background-color: var(--nb-bg);
+  color: var(--nb-fg);
+  font-family: var(--font-body);
+}
+
+.notebook-workspace .nb-syntax-kw {
+  color: var(--nb-syntax-keyword);
+}
+.notebook-workspace .nb-syntax-fn {
+  color: var(--nb-syntax-function);
+}
+.notebook-workspace .nb-syntax-type {
+  color: var(--nb-syntax-type);
+}
+.notebook-workspace .nb-syntax-builtin {
+  color: var(--nb-syntax-builtin);
+}
+.notebook-workspace .nb-syntax-num {
+  color: var(--nb-syntax-number);
+}
+.notebook-workspace .nb-syntax-str {
+  color: var(--nb-syntax-string);
+}
+.notebook-workspace .nb-syntax-comment {
+  color: var(--nb-syntax-comment);
+  font-style: italic;
+}
+
+.notebook-workspace .nb-html-output table {
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.notebook-workspace .nb-html-output th,
+.notebook-workspace .nb-html-output td {
+  border: 1px solid var(--nb-cell-border);
+  padding: 4px 8px;
+}
+
+.notebook-workspace .nb-markdown-render {
+  overflow: visible;
+}
+
+.notebook-workspace .nb-markdown-render .katex {
+  color: var(--nb-fg);
+}
+
+.notebook-workspace .monaco-editor,
+.notebook-workspace .monaco-editor .overflow-guard {
+  overflow: visible !important;
+}
+
+/* ── End notebook workspace ───────────────────────────────────────── */
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {

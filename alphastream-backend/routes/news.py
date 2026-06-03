@@ -7,8 +7,7 @@ from fastapi import APIRouter, HTTPException
 
 from database.db_manager import db
 from models import MarketNewsItem
-from services.fmp_client import fmp_client
-from services.news_importer import refresh_general_news, refresh_ticker_news
+from services.news_importer import refresh_general_news, refresh_newsapi_categories, refresh_ticker_news
 
 router = APIRouter(prefix="/api/news")
 
@@ -27,6 +26,23 @@ def _news_row_to_item(row: dict, category: str, tickers: List[str]) -> MarketNew
     )
 
 
+def _news_row_to_rich(row: dict) -> dict:
+    return {
+        "id": row.get("url") or row.get("title", ""),
+        "headline": row.get("title", ""),
+        "summary": row.get("snippet", ""),
+        "source": row.get("publisher") or row.get("site") or "",
+        "publishedAt": row.get("published_date") or datetime.now().isoformat(),
+        "category": row.get("category") or "general",
+        "sentiment": "neutral",
+        "tickers": [row.get("ticker")] if row.get("ticker") else [],
+        "url": row.get("url", ""),
+        "image": row.get("image", ""),
+        "site": row.get("site", ""),
+        "author": row.get("author", ""),
+    }
+
+
 @router.get("", response_model=List[MarketNewsItem])
 def news(category: str = "general"):
     try:
@@ -42,45 +58,33 @@ def news(category: str = "general"):
 
 @router.get("/general")
 def general_news(limit: int = 20):
-    """Get general latest market news from FMP API."""
+    """Backward-compatible general news endpoint (cached merged feed)."""
     try:
-        print(f"[DATA] Fetching general news, limit={limit}")
-        articles = fmp_client.get_general_latest_news(page=0, limit=limit)
+        articles = db.get_news_by_category("all", limit=limit)
         if not articles:
-            print("[WARN] No general news returned from FMP")
-            return []
-
-        # Debug: log first article keys to verify image field presence
-        if articles:
-            print(f"[DATA] First article keys: {list(articles[0].keys())}")
-            print(f"[DATA] First article image: {articles[0].get('image', 'NO IMAGE KEY')}")
-
-        result = []
-        for article in articles:
-            # FMP may use different field names across endpoints
-            image = (
-                article.get("image")
-                or article.get("imageUrl")
-                or article.get("banner_image")
-                or article.get("thumbnail")
-                or ""
-            )
-            result.append({
-                "id": article.get("url") or article.get("title", ""),
-                "headline": article.get("title", ""),
-                "summary": article.get("text", "")[:200],
-                "source": article.get("publisher", ""),
-                "publishedAt": article.get("publishedDate", ""),
-                "category": "general",
-                "sentiment": "neutral",
-                "tickers": [],
-                "url": article.get("url", ""),
-                "image": image,
-                "site": article.get("site", ""),
-            })
-        return result
+            refresh_general_news(limit=150)
+            refresh_newsapi_categories(per_category_limit=40)
+            articles = db.get_news_by_category("all", limit=limit)
+        return [_news_row_to_rich(row) for row in articles]
     except Exception as exc:
         print(f"Error in general_news: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get("/feed")
+def newsroom_feed(category: str = "all", limit: int = 60):
+    """Category-aware newsroom feed (merged FMP + NewsAPI cache)."""
+    try:
+        safe_limit = max(1, min(limit, 200))
+        normalized_category = (category or "all").lower()
+        rows = db.get_news_by_category(normalized_category, limit=safe_limit)
+        if not rows:
+            refresh_general_news(limit=150)
+            refresh_newsapi_categories(per_category_limit=40)
+            rows = db.get_news_by_category(normalized_category, limit=safe_limit)
+        return [_news_row_to_rich(row) for row in rows]
+    except Exception as exc:
+        print(f"Error in newsroom_feed: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
 
 

@@ -4,7 +4,7 @@ import { TopBar } from './TopBar';
 import { SecondaryNav } from './SecondaryNav';
 import { AppSidebar } from './AppSidebar';
 import { Watchtower } from './Watchtower';
-import { CommandPalette } from '@/components/CommandPalette';
+import { CommandPalette } from '@/components/layout/CommandPalette';
 
 const ROUTE_TITLES: Record<string, string> = {
   '/': 'AlphaStream',
@@ -14,6 +14,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/earnings': 'Earnings',
   '/portfolio': 'Portfolio',
   '/optimizer': 'Optimizer',
+  '/notebook': 'Notebook',
   '/simulation': 'Simulation',
   '/news': 'News',
   '/politicians': 'Politicians',

@@ -11,7 +11,7 @@ import json
 import logging
 from typing import AsyncIterator, List, Dict, Optional
 
-from services.chat import gemini_provider as provider
+from services.chat.provider_registry import get_provider_module, resolve_model
 
 logger = logging.getLogger(__name__)
 
@@ -74,13 +74,16 @@ def chat_blocking(
     messages: List[Dict[str, str]],
     context_label: Optional[str] = None,
     chat_mode: Optional[str] = None,
+    model_id: Optional[str] = None,
 ) -> str:
     """Non-streaming completion (Phase 1 validation helper)."""
     system_prompt = _build_system_prompt(context_label, chat_mode)
     cleaned = _normalise_messages(messages)
     if not cleaned:
         raise ValueError("No valid messages provided")
-    return provider.chat(system_prompt, cleaned)
+    spec = resolve_model(model_id)
+    provider = get_provider_module(spec.provider)
+    return provider.chat(system_prompt, cleaned, api_model_name=spec.api_model_name)
 
 
 def _sse_event(data: dict) -> str:
@@ -91,6 +94,7 @@ async def stream_chat(
     messages: List[Dict[str, str]],
     context_label: Optional[str] = None,
     chat_mode: Optional[str] = None,
+    model_id: Optional[str] = None,
 ) -> AsyncIterator[str]:
     """Yield SSE-formatted events: ``{"token": "..."}`` then ``{"done": true}``."""
     system_prompt = _build_system_prompt(context_label, chat_mode)
@@ -99,10 +103,29 @@ async def stream_chat(
         yield _sse_event({"error": "No valid messages provided"})
         return
 
+    spec = resolve_model(model_id)
+    logger.info(
+        "[CHAT] Request: model_id=%r -> resolved provider=%s, api_model_name=%s",
+        model_id,
+        spec.provider,
+        spec.api_model_name,
+    )
+    provider = get_provider_module(spec.provider)
+
     try:
-        async for chunk in provider.stream_chat(system_prompt, cleaned):
+        async for chunk in provider.stream_chat(
+            system_prompt, cleaned, api_model_name=spec.api_model_name
+        ):
             yield _sse_event({"token": chunk})
         yield _sse_event({"done": True})
     except Exception as exc:
-        logger.exception("[CHAT] Streaming error: %s", exc)
-        yield _sse_event({"error": "Chat generation failed. Please try again."})
+        logger.exception(
+            "[CHAT] Streaming error (model_id=%s, provider=%s, api_model=%s): %s",
+            spec.model_id,
+            spec.provider,
+            spec.api_model_name,
+            exc,
+        )
+        yield _sse_event({
+            "error": f"Chat failed ({spec.provider}/{spec.api_model_name}): {type(exc).__name__}: {exc}"
+        })

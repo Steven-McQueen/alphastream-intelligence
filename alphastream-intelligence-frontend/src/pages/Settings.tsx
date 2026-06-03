@@ -31,15 +31,21 @@ import {
   EyeOff,
   Shield,
   AlertTriangle,
+  Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useIntegrationsStore } from '@/hooks/useIntegrationsStore';
+import { useTimezone } from '@/hooks/useTimezone';
+import { TIMEZONE_OPTIONS, resolveTimezone } from '@/config/timezone';
+import { AiModelsSettings } from '@/components/settings/AiModelsSettings';
 
 const SETTINGS_SECTIONS = [
   { id: 'overview', label: 'Overview & Onboarding', icon: BookOpen },
   { id: 'modules', label: 'Modules Guide', icon: Layers },
   { id: 'preferences', label: 'Portfolio & Risk Preferences', icon: Target },
+  { id: 'display', label: 'Display & Region', icon: Clock },
   { id: 'ai-behavior', label: 'AI & Data Behavior', icon: Bot },
+  { id: 'ai-models', label: 'AI Models', icon: Bot },
   { id: 'integrations', label: 'API & Integrations', icon: Plug },
   { id: 'shortcuts', label: 'Shortcuts & Power-User Tips', icon: Keyboard },
 ];
@@ -141,6 +147,7 @@ export default function Settings() {
   const [showMarketDataKey, setShowMarketDataKey] = useState(false);
   
   const integrations = useIntegrationsStore();
+  const { timezone, setTimezone } = useTimezone();
 
   const handleSavePreferences = () => {
     // In a real app, persist to localStorage or backend
@@ -424,6 +431,57 @@ export default function Settings() {
           </Card>
         </section>
 
+        {/* Section: Display & Region */}
+        <section id="display" className="space-y-6">
+          <div>
+            <h2 className="text-xl font-semibold text-foreground mb-2">Display & Region</h2>
+            <p className="text-muted-foreground">Control how dates and times are shown across the app</p>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Clock className="h-4 w-4 text-primary" />
+                Timezone
+              </CardTitle>
+              <CardDescription>
+                Timestamps (e.g. the Market Summary "Updated" time) are shown in this timezone.
+                Market data itself is always recorded in absolute time — this only changes the display.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <Label>Display Timezone</Label>
+                <Select value={timezone} onValueChange={setTimezone}>
+                  <SelectTrigger className="w-full max-w-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIMEZONE_OPTIONS.map((tz) => (
+                      <SelectItem key={tz.value} value={tz.value}>
+                        {tz.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Current time here:{' '}
+                  <span className="font-medium text-foreground tabular-nums">
+                    {new Intl.DateTimeFormat('en-GB', {
+                      weekday: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false,
+                      timeZone: resolveTimezone(timezone),
+                      timeZoneName: 'short',
+                    }).format(new Date())}
+                  </span>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
         {/* Section 4: AI & Data Behavior */}
         <section id="ai-behavior" className="space-y-6">
           <div>
@@ -499,6 +557,18 @@ export default function Settings() {
               </p>
             </CardContent>
           </Card>
+        </section>
+
+        {/* Section: AI Models */}
+        <section id="ai-models" className="space-y-6">
+          <div>
+            <h2 className="text-xl font-semibold text-foreground mb-2">AI Models</h2>
+            <p className="text-muted-foreground">
+              Manage the model catalog that powers the Intelligence composer
+            </p>
+          </div>
+
+          <AiModelsSettings />
         </section>
 
         {/* Section 5: API & Integrations */}

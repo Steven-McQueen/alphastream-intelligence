@@ -231,6 +231,9 @@ CREATE TABLE IF NOT EXISTS news_articles (
     site TEXT,
     publisher TEXT,
     image TEXT,
+    category TEXT,
+    author TEXT,
+    source_api TEXT,
     last_cached TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -255,6 +258,7 @@ CREATE TABLE IF NOT EXISTS price_bars (
 CREATE INDEX IF NOT EXISTS idx_market_movers_category ON market_movers(category);
 CREATE INDEX IF NOT EXISTS idx_earnings_report_date ON earnings_calendar(report_date);
 CREATE INDEX IF NOT EXISTS idx_news_ticker ON news_articles(ticker);
+CREATE INDEX IF NOT EXISTS idx_news_category ON news_articles(category);
 CREATE INDEX IF NOT EXISTS idx_sector_perf_history_date ON sector_performance_history(date);
 CREATE INDEX IF NOT EXISTS idx_price_bars_symbol_timeframe ON price_bars(symbol, timeframe, bar_time);
 

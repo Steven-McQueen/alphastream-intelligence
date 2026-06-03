@@ -1,4 +1,4 @@
-import { useMarket } from '@/context/MarketContext';
+import { useMarket } from '@/contexts/MarketContext';
 import { useGlobalTicker } from '@/hooks/useGlobalTicker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -34,7 +34,7 @@ export function MacroIndicators() {
   return (
     <Card className="bg-sidebar-accent border-border h-full">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-widget-heading)' }}>Macro Indicators</CardTitle>
+        <CardTitle className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-page-heading)' }}>Macro Indicators</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-3">

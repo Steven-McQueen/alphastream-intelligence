@@ -70,9 +70,13 @@ export function RecentDevelopments() {
     <div className="bg-sidebar-accent rounded-xl p-6 border border-border">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-widget-heading)' }}>Recent Developments</h2>
+        <h2 className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-page-heading)' }}>Recent Developments</h2>
         {lastUpdated && (
-          <span className="text-xs text-primary">
+          <span className="inline-flex items-center gap-2 text-xs text-dim">
+            <span className="relative flex h-1.5 w-1.5" aria-hidden>
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-positive opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-positive" />
+            </span>
             Updated {timeAgo(lastUpdated.toISOString())}
           </span>
         )}

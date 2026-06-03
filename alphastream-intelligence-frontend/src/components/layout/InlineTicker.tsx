@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMarket } from '@/context/MarketContext';
+import { useMarket } from '@/contexts/MarketContext';
 import { useStockDetail } from '@/contexts/StockDetailContext';
 import { API_BASE_URL } from '@/config/api';
 

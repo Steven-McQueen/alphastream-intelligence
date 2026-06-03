@@ -82,7 +82,7 @@ export function EarningsHub() {
     <Card className="bg-sidebar-accent border-border">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-widget-heading)' }}>Earnings Hub</CardTitle>
+          <CardTitle className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-page-heading)' }}>Earnings Hub</CardTitle>
           <div className="flex items-center gap-3">
             <ToggleGroup
               type="single"

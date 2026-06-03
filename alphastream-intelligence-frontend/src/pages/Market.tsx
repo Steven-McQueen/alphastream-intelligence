@@ -3,7 +3,7 @@ import { MacroIndicators } from '@/components/market/MacroIndicators';
 import { MacroCharts } from '@/components/market/MacroCharts';
 import { IndicesOverview } from '@/components/market/IndicesOverview';
 import { MarketNewsSummary } from '@/components/market/MarketNewsSummary';
-import { useMarket } from '@/context/MarketContext';
+import { useMarket } from '@/contexts/MarketContext';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { LiveBadge } from '@/components/ui/LiveBadge';

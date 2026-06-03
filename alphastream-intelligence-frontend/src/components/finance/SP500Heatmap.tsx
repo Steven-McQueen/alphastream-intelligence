@@ -208,7 +208,7 @@ export function SP500Heatmap() {
     return (
       <Card className="bg-sidebar-accent border-border h-full">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-widget-heading)' }}>
+          <CardTitle className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-page-heading)' }}>
             S&P 500 Heatmap
           </CardTitle>
         </CardHeader>
@@ -232,7 +232,7 @@ export function SP500Heatmap() {
   return (
     <Card className="bg-sidebar-accent border-border h-full flex flex-col">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-widget-heading)' }}>
+        <CardTitle className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-page-heading)' }}>
           S&P 500 Heatmap
         </CardTitle>
       </CardHeader>

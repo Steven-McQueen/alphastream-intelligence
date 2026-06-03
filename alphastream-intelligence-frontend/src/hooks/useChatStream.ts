@@ -10,21 +10,30 @@ export interface ChatMessage {
 interface UseChatStreamOptions {
   contextLabel?: string;
   chatMode?: string;
+  modelId?: string;
   onStreamComplete?: (userContent: string, assistantContent: string) => void;
 }
 
 interface UseChatStreamReturn {
   messages: ChatMessage[];
   sendMessage: (text: string) => void;
+  /** Re-run the most recent user turn, overwriting the last assistant answer. */
+  regenerate: () => void;
   isGenerating: boolean;
   error: string | null;
   clearMessages: () => void;
   setInitialMessages: (msgs: ChatMessage[]) => void;
 }
 
+interface OutgoingMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export function useChatStream({
   contextLabel,
   chatMode,
+  modelId,
   onStreamComplete,
 }: UseChatStreamOptions = {}): UseChatStreamReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -41,37 +50,23 @@ export function useChatStream({
     setError(null);
   }, []);
 
-  const sendMessage = useCallback(
-    (text: string) => {
-      const trimmed = text.trim();
-      if (!trimmed || isGenerating) return;
-
-      setError(null);
-
-      const userMsg: ChatMessage = {
-        id: `user-${Date.now()}`,
-        role: "user",
-        content: trimmed,
-      };
-
-      const assistantId = `assistant-${Date.now()}`;
-      const assistantMsg: ChatMessage = {
-        id: assistantId,
-        role: "assistant",
-        content: "",
-      };
-
-      setMessages((prev) => [...prev, userMsg, assistantMsg]);
+  /**
+   * Streams a completion into the placeholder assistant message identified by
+   * `assistantId`. Shared by both fresh sends and regenerations. When
+   * `userContent` is provided, the persistence callback fires on completion.
+   */
+  const runStream = useCallback(
+    (
+      outgoing: OutgoingMessage[],
+      assistantId: string,
+      userContent: string | null,
+    ) => {
       setIsGenerating(true);
+      setError(null);
 
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
-
-      const outgoing = [...messages, userMsg].map(({ role, content }) => ({
-        role,
-        content,
-      }));
 
       (async () => {
         let finalAssistantContent = "";
@@ -83,6 +78,7 @@ export function useChatStream({
               messages: outgoing,
               contextLabel: contextLabel || null,
               chatMode: chatMode || null,
+              model_id: modelId || null,
             }),
             signal: controller.signal,
           });
@@ -126,7 +122,9 @@ export function useChatStream({
 
                 if (event.done) {
                   setIsGenerating(false);
-                  onCompleteRef.current?.(trimmed, finalAssistantContent);
+                  if (userContent !== null) {
+                    onCompleteRef.current?.(userContent, finalAssistantContent);
+                  }
                   return;
                 }
 
@@ -145,8 +143,8 @@ export function useChatStream({
           }
 
           setIsGenerating(false);
-          if (finalAssistantContent) {
-            onCompleteRef.current?.(trimmed, finalAssistantContent);
+          if (finalAssistantContent && userContent !== null) {
+            onCompleteRef.current?.(userContent, finalAssistantContent);
           }
         } catch (err: unknown) {
           if ((err as Error).name === "AbortError") return;
@@ -158,8 +156,62 @@ export function useChatStream({
         }
       })();
     },
-    [messages, isGenerating, contextLabel, chatMode],
+    [contextLabel, chatMode, modelId],
   );
+
+  const sendMessage = useCallback(
+    (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed || isGenerating) return;
+
+      const userMsg: ChatMessage = {
+        id: `user-${Date.now()}`,
+        role: "user",
+        content: trimmed,
+      };
+      const assistantId = `assistant-${Date.now()}`;
+      const assistantMsg: ChatMessage = {
+        id: assistantId,
+        role: "assistant",
+        content: "",
+      };
+
+      setMessages((prev) => [...prev, userMsg, assistantMsg]);
+
+      const outgoing = [...messages, userMsg].map(({ role, content }) => ({
+        role,
+        content,
+      }));
+
+      runStream(outgoing, assistantId, trimmed);
+    },
+    [messages, isGenerating, runStream],
+  );
+
+  const regenerate = useCallback(() => {
+    if (isGenerating) return;
+
+    // Find the most recent user turn to replay.
+    let lastUserIdx = -1;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "user") {
+        lastUserIdx = i;
+        break;
+      }
+    }
+    if (lastUserIdx === -1) return;
+
+    // Keep history through the user turn; drop any answer that followed it.
+    const base = messages.slice(0, lastUserIdx + 1);
+    const outgoing = base.map(({ role, content }) => ({ role, content }));
+
+    const assistantId = `assistant-${Date.now()}`;
+    setMessages([...base, { id: assistantId, role: "assistant", content: "" }]);
+
+    // Frontend-only phase: skip the persistence callback so regenerated
+    // answers don't double-write the thread. Backend phase will update in place.
+    runStream(outgoing, assistantId, null);
+  }, [messages, isGenerating, runStream]);
 
   const clearMessages = useCallback(() => {
     abortRef.current?.abort();
@@ -171,6 +223,7 @@ export function useChatStream({
   return {
     messages,
     sendMessage,
+    regenerate,
     isGenerating,
     error,
     clearMessages,

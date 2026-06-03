@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Loader2, Download, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useMarket } from '@/context/MarketContext';
+import { useMarket } from '@/contexts/MarketContext';
 import {
   Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, ReferenceLine,
   BarChart, Bar

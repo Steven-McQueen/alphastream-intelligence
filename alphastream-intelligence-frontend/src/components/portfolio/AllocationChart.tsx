@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { usePortfolio } from '@/context/PortfolioContext';
+import { usePortfolio } from '@/contexts/PortfolioContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';

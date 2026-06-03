@@ -18,8 +18,10 @@ from services.macro_importer import refresh_all_macro_data, refresh_macro_histor
 from services.news_importer import (
     refresh_general_news,
     refresh_stock_latest,
+    refresh_newsapi_categories,
     prune_old_news,
 )
+from config import NEWSAPI_REFRESH_MINUTES
 from services.sector_importer import (
     refresh_sector_snapshot,
     backfill_sector_history,
@@ -67,6 +69,7 @@ def schedule_refresh():
 
     # News refresh (general + mixed stock feed) every 10 minutes
     schedule.every(10).minutes.do(news_job)
+    schedule.every(NEWSAPI_REFRESH_MINUTES).minutes.do(newsapi_job)
 
     # Fast market snapshot (sectors + movers) every 5 minutes during market hours
     schedule.every(5).minutes.do(lambda: fast_market_job() if is_market_hours() else None)
@@ -94,6 +97,7 @@ def schedule_refresh():
     print("   - Market hours (Mon-Fri 9:30 AM - 4:00 PM ET): Every 15 minutes")
     print("   - Outside market hours: Every hour")
     print("   - News: Every 10 minutes (general + stock latest)")
+    print(f"   - NewsAPI categories: Every {NEWSAPI_REFRESH_MINUTES} minutes")
     print("   - News prune: Daily at 03:00")
     print("   - Market summary (Gemini): Every hour during market hours")
 
@@ -121,6 +125,7 @@ def start_scheduler_background():
         try:
             refresh_job()
             news_job()
+            newsapi_job()
             fast_market_job()
             earnings_job(hourly=False)
             refresh_macro_history()
@@ -162,11 +167,21 @@ def market_summary_job():
 def news_job():
     """Refresh news caches."""
     try:
-        general_count = refresh_general_news(limit=50)
-        stock_latest_count = refresh_stock_latest(limit=100)
+        general_count = refresh_general_news(limit=150)
+        stock_latest_count = refresh_stock_latest(limit=200)
         print(f"[OK] News refresh: general={general_count}, stock_latest={stock_latest_count}")
     except Exception as e:
         print(f"News refresh failed: {e}")
+
+
+def newsapi_job():
+    """Refresh NewsAPI category caches."""
+    try:
+        inserted = refresh_newsapi_categories(per_category_limit=40)
+        if inserted:
+            print(f"[OK] NewsAPI category refresh: {inserted} articles")
+    except Exception as e:
+        print(f"NewsAPI refresh failed: {e}")
 
 
 def fast_market_job():

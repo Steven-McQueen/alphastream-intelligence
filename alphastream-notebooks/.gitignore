@@ -1,0 +1,4 @@
+# Local Python venv (may contain machine-specific paths)
+.venv/
+__pycache__/
+*.pyc

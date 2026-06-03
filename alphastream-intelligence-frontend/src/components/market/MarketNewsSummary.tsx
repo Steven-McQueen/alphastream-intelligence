@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useMarket } from '@/context/MarketContext';
+import { useMarket } from '@/contexts/MarketContext';
 import { Newspaper, Clock, ExternalLink, Loader2, Bell } from 'lucide-react';
 import type { MarketNewsItem } from '@/types';
 import { cn } from '@/lib/utils';

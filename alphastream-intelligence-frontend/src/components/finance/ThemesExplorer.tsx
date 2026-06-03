@@ -109,7 +109,7 @@ export function ThemesExplorer() {
   return (
     <Card className="border-border">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
+        <CardTitle className="text-lg font-semibold flex items-center gap-2" style={{ fontFamily: 'var(--font-page-heading)' }}>
           <Compass className="h-5 w-5" />
           Themes & Sectors to Explore
         </CardTitle>

@@ -30,6 +30,8 @@ from routes.analyst import router as analyst_router
 from routes.portfolio import router as portfolio_router
 from routes.chat import router as chat_router
 from routes.chat_threads import router as chat_threads_router
+from routes.ai_models import router as ai_models_router
+from routes.ai_config import router as ai_config_router
 
 # ── App creation ─────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -69,6 +71,8 @@ app.include_router(analyst_router)
 app.include_router(portfolio_router)
 app.include_router(chat_router)
 app.include_router(chat_threads_router)
+app.include_router(ai_models_router)
+app.include_router(ai_config_router)
 
 
 # ── Startup ──────────────────────────────────────────────────────────────────
@@ -93,6 +97,16 @@ async def startup_event():
             print(f"[STARTUP] Stocks table has {len(stocks)} records, skipping bootstrap")
     except Exception as e:
         print(f"[STARTUP] Error checking stocks table: {e}")
+
+    try:
+        from database.ai_model_store import bootstrap_if_empty
+        from services.chat.provider_registry import invalidate_cache
+
+        if bootstrap_if_empty():
+            print("[STARTUP] Seeded default AI provider/model catalog")
+        invalidate_cache()
+    except Exception as e:
+        print(f"[STARTUP] AI model catalog bootstrap skipped: {e}")
 
     start_scheduler_background()
 

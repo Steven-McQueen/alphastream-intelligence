@@ -4,7 +4,7 @@ import { HoldingsTable } from '@/components/portfolio/HoldingsTable';
 import { PortfolioInsights } from '@/components/portfolio/PortfolioInsights';
 import { PortfolioNewsSummary } from '@/components/portfolio/PortfolioNewsSummary';
 import { PerformanceTable } from '@/components/portfolio/PerformanceTable';
-import { usePortfolio } from '@/context/PortfolioContext';
+import { usePortfolio } from '@/contexts/PortfolioContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw, Download, Link2, ExternalLink } from 'lucide-react';

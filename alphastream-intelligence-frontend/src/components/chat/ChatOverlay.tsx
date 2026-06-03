@@ -1,7 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { X, ArrowUp } from 'lucide-react';
+import { X, ArrowUp, AlertTriangle, Copy, Check, Download, RefreshCw, Plug, ChevronDown } from 'lucide-react';
 import { useChatStream } from '@/hooks/useChatStream';
+import { ModelSelector } from '@/components/chat/ModelSelector';
+import { useComposerChatModels } from '@/hooks/useComposerChatModels';
+import { getStoredModelId, setStoredModelId } from '@/config/chatModels';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuCheckboxItem,
+} from '@/components/ui/dropdown-menu';
+import { copyText, downloadMarkdown, downloadDoc, exportPdf } from '@/lib/chatExport';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -15,6 +27,9 @@ export interface ChatMessage {
 }
 
 export type ChatMode = 'Portfolio' | 'Database' | 'FMP' | 'Internet';
+
+/** Centered reading column — Claude-style comfortable measure */
+const CHAT_COLUMN = 'max-w-[44rem] mx-auto w-full';
 
 export interface ChatOverlayProps {
   /** 'popup' floats above a ChatBar; 'embedded' renders inline */
@@ -37,6 +52,18 @@ export interface ChatOverlayProps {
   isGenerating?: boolean;
   /** Hide the close button (for embedded full-page usage) */
   hideClose?: boolean;
+  /** Active model id (controlled). If omitted, the overlay manages its own, seeded from storage. */
+  modelId?: string;
+  /** Called when the user picks a model (controlled). If omitted, the overlay persists locally. */
+  onModelIdChange?: (modelId: string) => void;
+  /** External error message to surface in the banner (controlled mode) */
+  error?: string | null;
+  /** Re-run the last user turn (controlled mode). If omitted, the overlay uses its own hook. */
+  onRegenerate?: () => void;
+  /** Show the internal header bar (title + close). Default true. Popup mode always shows it. */
+  showHeader?: boolean;
+  /** Blend into the page: transparent background, no border/shadow. Default false. */
+  seamless?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -44,42 +71,18 @@ export interface ChatOverlayProps {
 /* ------------------------------------------------------------------ */
 function TypingDots() {
   return (
-    <div className="flex items-start gap-3">
-      <MsgAvatar />
-      <div className="flex gap-[0.4rem] items-center py-[0.2rem]">
-        {[0, 1, 2].map((i) => (
-          <span
-            key={i}
-            className="w-[0.375rem] h-[0.375rem] rounded-full"
-            style={{
-              background: 'var(--chat-faint)',
-              animation: `chat-bounce 1.2s ease-in-out infinite`,
-              animationDelay: `${i * 0.2}s`,
-            }}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Message avatar                                                     */
-/* ------------------------------------------------------------------ */
-function MsgAvatar() {
-  return (
-    <div
-      className="flex items-center justify-center w-6 h-6 rounded-full flex-shrink-0 mt-0.5"
-      style={{
-        background: 'var(--chat-surface-up)',
-        border: '1px solid var(--chat-border)',
-        color: 'var(--chat-faint)',
-      }}
-    >
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 3a9 9 0 0 1 9 9 9 9 0 0 1-9 9A9 9 0 0 1 3 12a9 9 0 0 1 9-9Z" />
-        <path d="M12 8v4l3 3" />
-      </svg>
+    <div className="flex gap-[0.4rem] items-center py-[0.2rem]">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="w-[0.375rem] h-[0.375rem] rounded-full"
+          style={{
+            background: 'var(--chat-faint)',
+            animation: `chat-bounce 1.2s ease-in-out infinite`,
+            animationDelay: `${i * 0.2}s`,
+          }}
+        />
+      ))}
     </div>
   );
 }
@@ -124,23 +127,122 @@ const mdComponents: Components = {
 };
 
 /* ------------------------------------------------------------------ */
+/*  Assistant message actions (signature + toolbar)                    */
+/* ------------------------------------------------------------------ */
+function AssistantActions({
+  content,
+  modelLabel,
+  canRegenerate,
+  onRegenerate,
+}: {
+  content: string;
+  modelLabel?: string;
+  canRegenerate: boolean;
+  onRegenerate?: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    const ok = await copyText(content);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    }
+  };
+
+  return (
+    <div className="mt-2.5 flex flex-col gap-2">
+      {modelLabel && (
+        <span
+          className="text-[0.78rem]"
+          style={{ color: 'var(--chat-faint)', fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)' }}
+        >
+          Prepared using {modelLabel}
+        </span>
+      )}
+
+      <div className="flex items-center gap-0.5 -ml-1.5">
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="chat-action-btn"
+          aria-label={copied ? 'Copied' : 'Copy'}
+          title="Copy"
+        >
+          {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+        </button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger className="chat-action-btn" aria-label="Download" title="Download">
+            <Download className="w-3.5 h-3.5" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="chat-model-menu min-w-[10rem] p-1">
+            <DropdownMenuItem
+              onClick={() => downloadMarkdown(content)}
+              className="chat-model-menu-item rounded-md px-2 py-1.5 text-[0.8125rem] cursor-pointer"
+            >
+              Markdown (.md)
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => downloadDoc(content)}
+              className="chat-model-menu-item rounded-md px-2 py-1.5 text-[0.8125rem] cursor-pointer"
+            >
+              Word / Docs (.doc)
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => exportPdf(content)}
+              className="chat-model-menu-item rounded-md px-2 py-1.5 text-[0.8125rem] cursor-pointer"
+            >
+              PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {canRegenerate && onRegenerate && (
+          <button
+            type="button"
+            onClick={onRegenerate}
+            className="chat-action-btn"
+            aria-label="Regenerate response"
+            title="Regenerate"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Message bubble                                                     */
 /* ------------------------------------------------------------------ */
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageBubble({
+  message,
+  modelLabel,
+  showActions,
+  canRegenerate,
+  onRegenerate,
+}: {
+  message: ChatMessage;
+  modelLabel?: string;
+  showActions?: boolean;
+  canRegenerate?: boolean;
+  onRegenerate?: () => void;
+}) {
   const isUser = message.role === 'user';
 
   if (isUser) {
     return (
       <div className="flex justify-end">
         <div
-          className="max-w-[84%] px-3.5 py-2 text-sm leading-relaxed"
+          className="max-w-[85%] px-4 py-2.5 text-[0.9375rem] leading-relaxed"
           style={{
-            fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)',
-            color: 'var(--chat-muted)',
+            fontFamily: 'var(--font-page-heading)',
+            color: 'var(--chat-text)',
             background: 'var(--chat-surface-up)',
-            border: '1px solid var(--chat-border)',
-            borderRadius: '0.75rem',
-            borderBottomRightRadius: '0.25rem',
+            borderRadius: '1.125rem',
+            borderBottomRightRadius: '0.375rem',
           }}
         >
           {message.content}
@@ -150,14 +252,13 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   }
 
   return (
-    <div className="flex gap-3">
-      <MsgAvatar />
+    <div>
       <div
-        className="chat-md max-w-[84%]"
+        className="chat-md"
         style={{
-          fontFamily: 'var(--font-serif)',
-          fontSize: '0.9375rem',
-          lineHeight: '1.72',
+          fontFamily: 'var(--font-page-heading)',
+          fontSize: '1rem',
+          lineHeight: '1.74',
           color: 'var(--chat-text)',
         }}
       >
@@ -165,6 +266,14 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           {message.content}
         </ReactMarkdown>
       </div>
+      {showActions && message.content.trim().length > 0 && (
+        <AssistantActions
+          content={message.content}
+          modelLabel={modelLabel}
+          canRegenerate={!!canRegenerate}
+          onRegenerate={onRegenerate}
+        />
+      )}
     </div>
   );
 }
@@ -175,9 +284,17 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 function Composer({
   onSend,
   disabled,
+  modelId,
+  onModelIdChange,
+  connectors,
+  onToggleConnector,
 }: {
   onSend: (text: string) => void;
   disabled: boolean;
+  modelId: string;
+  onModelIdChange: (modelId: string) => void;
+  connectors: ConnectorState;
+  onToggleConnector: (key: ChatMode) => void;
 }) {
   const [text, setText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -200,75 +317,70 @@ function Composer({
   };
 
   return (
-    <div
-      className="border-t"
-      style={{ borderColor: 'var(--chat-border)', padding: '0.75rem 1rem 1rem' }}
-    >
-      <div
-        className="flex flex-col gap-2 rounded-[0.875rem] px-4 pt-3 pb-2.5"
-        style={{
-          background: 'var(--chat-surface-up)',
-          border: '1px solid var(--chat-border)',
-        }}
-      >
-        <div className="relative">
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              autoResize();
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            disabled={disabled}
-            rows={1}
-            className="w-full bg-transparent border-none outline-none resize-none overflow-auto text-sm leading-relaxed"
-            style={{
-              fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)',
-              color: 'var(--chat-text)',
-              caretColor: 'var(--chat-text)',
-              minHeight: '1.5rem',
-              maxHeight: '12.5rem',
-            }}
-            aria-label="Ask anything about US markets"
-          />
-          {!text && (
-            <span
-              className="pointer-events-none absolute top-0 left-0 text-sm leading-relaxed select-none"
-              style={{ color: 'var(--chat-faint)', fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)' }}
+    <div style={{ padding: '0.5rem 1.25rem 1.25rem' }}>
+      <div className={CHAT_COLUMN}>
+        <div className="chat-composer flex flex-col gap-2.5 px-4 pt-3.5 pb-2.5">
+          <div className="relative">
+            <textarea
+              ref={textareaRef}
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                autoResize();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              disabled={disabled}
+              rows={1}
+              className="w-full bg-transparent border-none outline-none resize-none overflow-auto text-[0.9375rem] leading-relaxed"
+              style={{
+                fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)',
+                color: 'var(--chat-text)',
+                caretColor: 'var(--chat-send)',
+                minHeight: '1.5rem',
+                maxHeight: '12.5rem',
+              }}
+              aria-label="Ask anything about US markets"
+            />
+            {!text && (
+              <span
+                className="pointer-events-none absolute top-0 left-0 text-[0.9375rem] leading-relaxed select-none"
+                style={{ color: 'var(--chat-faint)', fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)' }}
+              >
+                Ask anything about US markets
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0 flex-wrap">
+              <ModelSelector
+                activeModelId={modelId}
+                onChange={onModelIdChange}
+                className="min-w-0"
+              />
+              <ConnectorsButton connectors={connectors} onToggle={onToggleConnector} />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={!canSend}
+              className="flex items-center justify-center w-8 h-8 rounded-full shrink-0 transition-all duration-150"
+              style={{
+                background: canSend ? 'var(--chat-send)' : 'var(--chat-surface)',
+                color: canSend ? 'var(--chat-send-fg)' : 'var(--chat-faint)',
+                border: canSend ? '1px solid transparent' : '1px solid var(--chat-border)',
+              }}
+              aria-label="Send"
             >
-              Ask anything about US markets
-            </span>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span
-            className="text-[0.7rem]"
-            style={{ color: 'var(--chat-faint)', fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)' }}
-          >
-            &crarr; Enter to send &middot; &uArr; Shift+Enter for newline
-          </span>
-
-          <button
-            type="button"
-            onClick={handleSend}
-            disabled={!canSend}
-            className="flex items-center justify-center w-7 h-7 rounded-full transition-all duration-150"
-            style={{
-              background: canSend ? 'var(--chat-send)' : 'var(--chat-surface-up)',
-              color: canSend ? 'var(--chat-send-fg)' : 'var(--chat-faint)',
-              border: canSend ? '1px solid transparent' : '1px solid var(--chat-border)',
-            }}
-            aria-label="Send"
-          >
-            <ArrowUp className="w-3 h-3" strokeWidth={2.5} />
-          </button>
+              <ArrowUp className="w-3.5 h-3.5" strokeWidth={2.5} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -287,86 +399,101 @@ function SuggestionChips({
   onSelect: (text: string) => void;
   contextLabel?: string;
 }) {
+  // Treat the generic "Assistant" context as a plain greeting.
+  const isGeneric = !contextLabel || contextLabel === 'Assistant';
+  const heading = isGeneric ? 'How can I help?' : `Ask about ${contextLabel}`;
   return (
-    <div className="flex flex-col items-center text-center gap-4 py-6 px-4">
-      <h2
-        className="text-lg font-semibold"
-        style={{ color: 'var(--chat-text)', fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)' }}
-      >
-        {contextLabel ? `Ask about ${contextLabel}` : 'Ask anything'}
-      </h2>
-      <p
-        className="text-sm"
-        style={{ color: 'var(--chat-muted)', fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)' }}
-      >
-        AI-powered market analysis and insights
-      </p>
-      <div className="flex flex-wrap justify-center gap-2">
-        {prompts.map((prompt) => (
-          <button
-            key={prompt}
-            type="button"
-            onClick={() => onSelect(prompt)}
-            className="text-xs rounded-full px-3 py-1.5 cursor-pointer transition-colors duration-150"
-            style={{
-              color: 'var(--chat-muted)',
-              border: '1px solid var(--chat-border)',
-              background: 'transparent',
-              fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'var(--chat-border-h)';
-              e.currentTarget.style.color = 'var(--chat-text)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'var(--chat-border)';
-              e.currentTarget.style.color = 'var(--chat-muted)';
-            }}
-          >
-            {prompt}
-          </button>
-        ))}
+    <div className="flex flex-col items-center text-center gap-7 px-2">
+      <div className="flex flex-col items-center gap-2.5">
+        <h2
+          className="text-[1.6rem] leading-tight"
+          style={{ color: 'var(--chat-text)', fontFamily: 'var(--font-serif)' }}
+        >
+          {heading}
+        </h2>
+        <p
+          className="text-sm"
+          style={{ color: 'var(--chat-faint)', fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)' }}
+        >
+          AI-powered market analysis and insights
+        </p>
       </div>
+
+      {prompts.length > 0 && (
+        <div className="flex flex-col gap-2 w-full max-w-[26rem]">
+          {prompts.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              onClick={() => onSelect(prompt)}
+              className="chat-suggest-row group flex items-center justify-between gap-3 text-left text-[0.875rem] rounded-xl px-4 py-3 cursor-pointer"
+              style={{ fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)' }}
+            >
+              <span>{prompt}</span>
+              <ArrowUp
+                className="w-3.5 h-3.5 shrink-0 rotate-45 opacity-0 transition-opacity duration-150 group-hover:opacity-60"
+                strokeWidth={2}
+              />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Mode selector buttons                                              */
+/*  Connectors toggle                                                  */
 /* ------------------------------------------------------------------ */
-const MODES: ChatMode[] = ['Portfolio', 'Database', 'FMP', 'Internet'];
+/** Toggleable data sources. Underlying wiring is intentionally not built yet. */
+export const CONNECTORS: ChatMode[] = ['Portfolio', 'Database', 'FMP', 'Internet'];
 
-function ModeSelector({ activeMode, onChange }: { activeMode: ChatMode; onChange: (m: ChatMode) => void }) {
+export type ConnectorState = Record<ChatMode, boolean>;
+
+function ConnectorsButton({
+  connectors,
+  onToggle,
+}: {
+  connectors: ConnectorState;
+  onToggle: (key: ChatMode) => void;
+}) {
+  const activeCount = CONNECTORS.filter((c) => connectors[c]).length;
+
   return (
-    <div className="flex items-center gap-2">
-      <span
-        className="text-[0.7rem] uppercase tracking-wider"
-        style={{ color: 'var(--chat-faint)' }}
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className="chat-model-trigger flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.72rem] cursor-pointer transition-all duration-150 outline-none focus-visible:ring-1 focus-visible:ring-[var(--chat-text)]"
+        aria-label="Connectors"
       >
-        Mode
-      </span>
-      <div
-        className="flex rounded-full p-[3px] gap-[3px]"
-        style={{ background: 'var(--chat-surface-up)', border: '1px solid var(--chat-border)' }}
-      >
-        {MODES.map((mode) => (
-          <button
-            key={mode}
-            type="button"
-            onClick={() => onChange(mode)}
-            className="px-2.5 py-0.5 rounded-full text-[0.7rem] border-none cursor-pointer transition-all duration-150"
-            style={{
-              fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)',
-              background: activeMode === mode ? 'var(--chat-surface)' : 'transparent',
-              color: activeMode === mode ? 'var(--chat-text)' : 'var(--chat-faint)',
-              boxShadow: activeMode === mode ? '0 1px 3px oklch(0 0 0 / 0.3)' : 'none',
-            }}
+        <Plug className="h-3.5 w-3.5 text-[var(--chat-muted)]" />
+        <span className="text-[var(--chat-text)]">Connectors</span>
+        {activeCount > 0 && (
+          <span
+            className="flex items-center justify-center min-w-[1.05rem] h-[1.05rem] px-1 rounded-full text-[0.625rem] font-semibold"
+            style={{ background: 'var(--chat-send)', color: 'var(--chat-send-fg)' }}
           >
-            {mode}
-          </button>
+            {activeCount}
+          </span>
+        )}
+        <ChevronDown className="h-3 w-3 shrink-0 text-[var(--chat-faint)]" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="chat-model-menu min-w-[12rem] p-1">
+        <DropdownMenuLabel className="px-2 py-1 text-[0.65rem] uppercase tracking-wider text-[var(--chat-faint)]">
+          Connectors
+        </DropdownMenuLabel>
+        {CONNECTORS.map((c) => (
+          <DropdownMenuCheckboxItem
+            key={c}
+            checked={connectors[c]}
+            onCheckedChange={() => onToggle(c)}
+            onSelect={(e) => e.preventDefault()}
+            className="chat-model-menu-item rounded-md py-1.5 text-[0.8125rem] cursor-pointer"
+          >
+            {c}
+          </DropdownMenuCheckboxItem>
         ))}
-      </div>
-    </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -384,20 +511,66 @@ export function ChatOverlay({
   onSendMessage,
   isGenerating: externalGenerating,
   hideClose = false,
+  modelId: externalModelId,
+  onModelIdChange,
+  error: externalError,
+  onRegenerate,
+  showHeader = true,
+  seamless = false,
 }: ChatOverlayProps) {
-  const [chatMode, setChatMode] = useState<ChatMode>('Portfolio');
+  const [connectors, setConnectors] = useState<ConnectorState>({
+    Portfolio: false,
+    Database: false,
+    FMP: false,
+    Internet: false,
+  });
+  const [internalModelId, setInternalModelId] = useState<string>(() => getStoredModelId());
+
+  const toggleConnector = (key: ChatMode) =>
+    setConnectors((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  // Active connectors feed chat_mode for now; real wiring comes later.
+  const activeConnectors = CONNECTORS.filter((c) => connectors[c]);
+  const chatModeValue = activeConnectors.length ? activeConnectors.join(', ') : undefined;
   const scrollRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const { models } = useComposerChatModels();
 
   const isControlled = !!externalMessages;
 
+  // Model is controlled when the parent supplies a value; otherwise the
+  // overlay owns it and persists to localStorage (uncontrolled usage).
+  const activeModelId = externalModelId ?? internalModelId;
+
+  const activeModelLabel =
+    models.find((m) => m.model_id === activeModelId)?.label ?? activeModelId;
+
   const hook = useChatStream({
     contextLabel: contextLabel,
-    chatMode: chatMode,
+    chatMode: chatModeValue,
+    modelId: activeModelId,
   });
 
   const messages = isControlled ? externalMessages! : hook.messages;
   const isGenerating = isControlled ? (externalGenerating ?? false) : hook.isGenerating;
+  const displayError = externalError ?? hook.error;
+  const handleRegenerate = onRegenerate ?? hook.regenerate;
+
+  const lastAssistantIdx = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant') return i;
+    }
+    return -1;
+  })();
+
+  const handleModelIdChange = (id: string) => {
+    if (onModelIdChange) {
+      onModelIdChange(id);
+    } else {
+      setInternalModelId(id);
+      setStoredModelId(id);
+    }
+  };
 
   // Auto-scroll
   useEffect(() => {
@@ -431,9 +604,9 @@ export function ChatOverlay({
   // Popup mode with no content: don't render
   if (mode === 'popup' && messages.length === 0 && !isGenerating) return null;
 
-  const badgeLabel = contextLabel || 'Finance';
-  const userCount = messages.filter((m) => m.role === 'user').length;
   const showClose = !hideClose && onClose;
+  // Popup always needs a header (title + close); embedded can opt out.
+  const renderHeader = mode === 'popup' || showHeader;
 
   return (
     <div
@@ -444,57 +617,42 @@ export function ChatOverlay({
         className,
       )}
       style={{
-        background: 'var(--chat-surface)',
-        border: '1px solid var(--chat-border)',
-        borderRadius: '1.25rem',
-        boxShadow: mode === 'popup' ? '0 24px 64px oklch(0 0 0 / 0.45)' : '0 4px 24px oklch(0 0 0 / 0.25)',
+        background: seamless ? 'transparent' : 'var(--chat-surface)',
+        border: seamless ? 'none' : '1px solid var(--chat-border)',
+        borderRadius: seamless ? '0' : '1.25rem',
+        boxShadow: mode === 'popup' ? '0 24px 64px oklch(0 0 0 / 0.45)' : 'none',
       }}
     >
       {/* Top bar */}
-      <div
-        className="flex items-center justify-between px-4 py-3"
-        style={{ borderBottom: '1px solid var(--chat-border)' }}
-      >
-        <div className="flex items-center gap-2">
-          <svg
-            width="17"
-            height="17"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ color: 'var(--chat-faint)' }}
-          >
-            <path d="M12 3a9 9 0 0 1 9 9 9 9 0 0 1-9 9A9 9 0 0 1 3 12a9 9 0 0 1 9-9Z" />
-            <path d="M12 8v4l3 3" />
-          </svg>
-          <span
-            className="text-sm font-medium"
-            style={{ color: 'var(--chat-text)', fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)' }}
-          >
-            {contextLabel ? `Ask about ${contextLabel}` : 'New Thread'}
-          </span>
-          <span
-            className="text-[0.7rem] px-2.5 py-0.5 rounded-full"
-            style={{
-              color: 'var(--chat-muted)',
-              background: 'var(--chat-surface-up)',
-              border: '1px solid var(--chat-border)',
-            }}
-          >
-            {badgeLabel}
-          </span>
-          {userCount > 0 && (
-            <span className="text-xs" style={{ color: 'var(--chat-faint)' }}>
-              {userCount} message{userCount !== 1 ? 's' : ''}
+      {renderHeader && (
+        <div
+          className="flex items-center justify-between px-5 py-3"
+          style={{ borderBottom: '1px solid var(--chat-border)' }}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="shrink-0"
+              style={{ color: 'var(--chat-faint)' }}
+            >
+              <path d="M12 3a9 9 0 0 1 9 9 9 9 0 0 1-9 9A9 9 0 0 1 3 12a9 9 0 0 1 9-9Z" />
+              <path d="M12 8v4l3 3" />
+            </svg>
+            <span
+              className="text-sm font-medium truncate"
+              style={{ color: 'var(--chat-text)', fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)' }}
+            >
+              {contextLabel || 'New Thread'}
             </span>
-          )}
-        </div>
+          </div>
 
-        <div className="flex items-center gap-3">
-          <ModeSelector activeMode={chatMode} onChange={setChatMode} />
           {showClose && (
             <button
               type="button"
@@ -509,32 +667,80 @@ export function ChatOverlay({
             </button>
           )}
         </div>
-      </div>
+      )}
 
       {/* Messages area */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-5 py-4 overscroll-contain scrollbar-slim"
+        className="flex-1 overflow-y-auto px-6 py-6 overscroll-contain scrollbar-slim"
         style={{ minHeight: mode === 'embedded' ? '200px' : undefined }}
       >
         {messages.length === 0 && !isGenerating ? (
-          <SuggestionChips
-            prompts={suggestedPrompts}
-            onSelect={handleSend}
-            contextLabel={contextLabel}
-          />
+          <div className="flex min-h-full items-center justify-center">
+            <div className={CHAT_COLUMN}>
+              <SuggestionChips
+                prompts={suggestedPrompts}
+                onSelect={handleSend}
+                contextLabel={contextLabel}
+              />
+            </div>
+          </div>
         ) : (
-          <div className="flex flex-col gap-5">
-            {messages.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} />
-            ))}
-            {isGenerating && <TypingDots />}
+          <div className={cn(CHAT_COLUMN, 'flex flex-col gap-6')}>
+            {messages.map((msg, idx) => {
+              const isLastAssistant = idx === lastAssistantIdx;
+              const isStreamingThis = isLastAssistant && isGenerating;
+              return (
+                <MessageBubble
+                  key={msg.id}
+                  message={msg}
+                  modelLabel={activeModelLabel}
+                  showActions={msg.role === 'assistant' && !isStreamingThis}
+                  canRegenerate={isLastAssistant && !isGenerating}
+                  onRegenerate={handleRegenerate}
+                />
+              );
+            })}
+            {isGenerating && lastAssistantIdx >= 0 && messages[lastAssistantIdx].content === '' && <TypingDots />}
           </div>
         )}
       </div>
 
+      {/* Error banner */}
+      {displayError && (
+        <div
+          className="border-t"
+          style={{
+            borderColor: 'var(--chat-border)',
+            background: 'var(--chat-surface-up)',
+          }}
+          role="alert"
+        >
+          <div
+            className={cn(CHAT_COLUMN, 'flex items-start gap-2 py-2.5 text-[0.8rem]')}
+            style={{
+              color: 'var(--chat-muted)',
+              fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)',
+            }}
+          >
+            <AlertTriangle
+              className="w-3.5 h-3.5 shrink-0 mt-0.5"
+              style={{ color: 'var(--chat-accent)' }}
+            />
+            <span>{displayError}</span>
+          </div>
+        </div>
+      )}
+
       {/* Composer */}
-      <Composer onSend={handleSend} disabled={isGenerating} />
+      <Composer
+        onSend={handleSend}
+        disabled={isGenerating}
+        modelId={activeModelId}
+        onModelIdChange={handleModelIdChange}
+        connectors={connectors}
+        onToggleConnector={toggleConnector}
+      />
     </div>
   );
 }

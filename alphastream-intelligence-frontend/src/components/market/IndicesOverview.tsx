@@ -1,12 +1,46 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMarket } from '@/context/MarketContext';
+import { TrendingDown, TrendingUp } from 'lucide-react';
+import { useMarket } from '@/contexts/MarketContext';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Area, AreaChart, ResponsiveContainer, YAxis } from 'recharts';
 import { useIndicesIntraday } from '@/hooks/useIndicesIntraday';
 
 type FlashDir = 'up' | 'down' | null;
+
+/**
+ * Price value that animates on change: a brief color flash (green/red) plus a
+ * subtle slide that settles back to the foreground color — a clean, Perplexity-
+ * style tick. Replays by remounting via an incrementing key.
+ */
+function AnimatedPrice({ value }: { value: number }) {
+  const prevRef = useRef(value);
+  const dirRef = useRef<FlashDir>(null);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (prevRef.current !== value) {
+      dirRef.current = value > prevRef.current ? 'up' : 'down';
+      prevRef.current = value;
+      setTick((t) => t + 1);
+    }
+  }, [value]);
+
+  return (
+    <span
+      key={tick}
+      className={cn(
+        'inline-block text-2xl font-semibold tabular-nums text-foreground',
+        dirRef.current === 'up' && 'animate-[price-tick-up_0.55s_ease-out]',
+        dirRef.current === 'down' && 'animate-[price-tick-down_0.55s_ease-out]'
+      )}
+      style={{ fontFamily: 'var(--font-widget-heading)' }}
+    >
+      {value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+    </span>
+  );
+}
 
 function IndexCard({ symbol, name, value, change, changePercent, flashDir, series, onClick }: {
   symbol: string;
@@ -27,45 +61,45 @@ function IndexCard({ symbol, name, value, change, changePercent, flashDir, serie
         ? 'bg-negative/10'
         : '';
   
+  const Trend = isPositive ? TrendingUp : TrendingDown;
+
   return (
     <Card
       className={cn(
-        "p-4 bg-sidebar-accent border-border overflow-hidden cursor-pointer hover:bg-muted/50 transition-all",
+        "flex h-full flex-col p-4 bg-sidebar-accent border-border overflow-hidden cursor-pointer hover:bg-muted/50 transition-all",
         flashClass
       )}
       style={{
-        transform: flashDir ? 'scale(1.015)' : 'scale(1)',
-        transition: 'transform 0.25s ease, background-color 0.3s ease',
+        transition: 'background-color 0.3s ease',
       }}
       onClick={onClick}
     >
-      <div className="flex items-start justify-between mb-2">
-        <div>
-          <div className="font-semibold text-base text-foreground" style={{ fontFamily: 'var(--font-widget-heading)' }}>{name}</div>
-          <div className="text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>{symbol}</div>
-        </div>
-        <div className="text-right">
+      {/* Header — name block reserves 2 lines so charts/prices align across cards */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
           <div
-            className={cn(
-              'text-xs font-mono px-2 py-1 rounded',
-              isPositive ? 'text-positive bg-positive/10' : 'text-negative bg-negative/10'
-            )}
+            className="line-clamp-2 min-h-[2.4rem] text-sm font-semibold leading-tight text-foreground"
+            style={{ fontFamily: 'var(--font-page-heading)' }}
           >
-            {isPositive ? '↗' : '↘'} {Math.abs(changePercent).toFixed(2)}%
+            {name}
           </div>
-          <div
-            className={cn(
-              'text-xs font-mono mt-1',
-              isPositive ? 'text-positive' : 'text-negative'
-            )}
-          >
-            {change >= 0 ? '+' : ''}{change.toFixed(2)}
-          </div>
+          <div className="mt-0.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>{symbol}</div>
         </div>
+        <span
+          className={cn(
+            'inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold leading-none tabular-nums',
+            isPositive
+              ? 'border-positive/20 bg-positive/10 text-positive'
+              : 'border-negative/20 bg-negative/10 text-negative'
+          )}
+        >
+          <Trend className="h-3 w-3" strokeWidth={2.5} />
+          {Math.abs(changePercent).toFixed(2)}%
+        </span>
       </div>
-      
+
       {/* Sparkline Chart */}
-      <div className="h-16 -mx-2 my-2">
+      <div className="h-16 -mx-2 my-3">
         {intradayData.length > 0 ? (() => {
           // Calculate min/max for zoomed Y-axis
           const values = intradayData.map(d => d.value);
@@ -113,9 +147,12 @@ function IndexCard({ symbol, name, value, change, changePercent, flashDir, serie
         )}
       </div>
       
-      {/* Current Value */}
-      <div className="font-mono text-2xl font-semibold text-foreground" style={{ fontFamily: 'var(--font-body)' }}>
-        {value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      {/* Current value + absolute change — pinned to bottom so prices align across cards */}
+      <div className="mt-auto flex items-end justify-between gap-2">
+        <AnimatedPrice value={value} />
+        <span className="pb-0.5 text-xs font-medium tabular-nums text-dim">
+          {change >= 0 ? '+' : ''}{change.toFixed(2)}
+        </span>
       </div>
     </Card>
   );

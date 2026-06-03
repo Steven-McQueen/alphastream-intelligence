@@ -46,15 +46,17 @@ def _to_gemini_contents(
 def chat(
     system_prompt: str,
     messages: List[Dict[str, str]],
+    api_model_name: str | None = None,
 ) -> str:
     """Blocking single-shot completion (Phase 1 validation)."""
     from google.genai import types
 
     client = _get_client()
     contents = _to_gemini_contents(system_prompt, messages)
+    model = api_model_name or GEMINI_MODEL
 
     response = client.models.generate_content(
-        model=GEMINI_MODEL,
+        model=model,
         contents=contents,
         config=types.GenerateContentConfig(
             system_instruction=system_prompt,
@@ -69,10 +71,15 @@ def chat(
 
 _STREAM_SENTINEL = object()
 
+# Number of chunks drained per executor hop.  Keeping this small preserves
+# streaming responsiveness while cutting the number of thread-pool round-trips.
+_STREAM_BATCH_SIZE = 8
+
 
 async def stream_chat(
     system_prompt: str,
     messages: List[Dict[str, str]],
+    api_model_name: str | None = None,
 ) -> AsyncIterator[str]:
     """Yield text chunks from Gemini's streaming API.
 
@@ -85,12 +92,13 @@ async def stream_chat(
 
     client = _get_client()
     contents = _to_gemini_contents(system_prompt, messages)
+    model = api_model_name or GEMINI_MODEL
 
     loop = asyncio.get_running_loop()
 
     def _create_stream():
         return client.models.generate_content_stream(
-            model=GEMINI_MODEL,
+            model=model,
             contents=contents,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
@@ -100,12 +108,28 @@ async def stream_chat(
 
     stream = await loop.run_in_executor(None, _create_stream)
 
+    def _read_batch() -> tuple[str, bool]:
+        """Drain up to ``_STREAM_BATCH_SIZE`` chunks in a single executor hop.
+
+        Returns the coalesced text for the batch and a flag indicating the
+        stream is exhausted.  Coalescing reduces the per-token thread-pool
+        round-trip overhead while preserving chunk ordering and the final
+        flush (a partial batch still returns its accumulated text alongside
+        ``done=True``).
+        """
+        parts: list[str] = []
+        for _ in range(_STREAM_BATCH_SIZE):
+            chunk = next(stream, _STREAM_SENTINEL)
+            if chunk is _STREAM_SENTINEL:
+                return "".join(parts), True
+            text = getattr(chunk, "text", None) or ""
+            if text:
+                parts.append(text)
+        return "".join(parts), False
+
     while True:
-        chunk = await loop.run_in_executor(
-            None, lambda: next(stream, _STREAM_SENTINEL)
-        )
-        if chunk is _STREAM_SENTINEL:
-            break
-        text = getattr(chunk, "text", None) or ""
+        text, done = await loop.run_in_executor(None, _read_batch)
         if text:
             yield text
+        if done:
+            break

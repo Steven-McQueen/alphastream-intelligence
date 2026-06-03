@@ -286,14 +286,37 @@ export interface SimulationComparison {
 
 // ============ Market News ============
 
+export type NewsCategoryId =
+  | 'all'
+  | 'general'
+  | 'markets'
+  | 'economy'
+  | 'earnings'
+  | 'tech'
+  | 'crypto'
+  | 'geopolitics';
+
+export const NEWS_CATEGORIES: Array<{ id: NewsCategoryId; label: string }> = [
+  { id: 'all', label: 'All' },
+  { id: 'markets', label: 'Markets' },
+  { id: 'economy', label: 'Economy' },
+  { id: 'earnings', label: 'Earnings' },
+  { id: 'tech', label: 'Tech' },
+  { id: 'crypto', label: 'Crypto' },
+  { id: 'geopolitics', label: 'Geopolitics' },
+];
+
 export interface MarketNewsItem {
   id: string;
   headline: string;
   summary: string;
   source: string;
   publishedAt: string;
-  category: 'macro' | 'earnings' | 'sector' | 'geopolitical' | 'fed' | 'general';
+  category: NewsCategoryId | 'macro' | 'sector' | 'geopolitical' | 'fed';
   sentiment: 'bullish' | 'bearish' | 'neutral';
   tickers?: string[];
   url?: string;
+  image?: string;
+  site?: string;
+  author?: string;
 }

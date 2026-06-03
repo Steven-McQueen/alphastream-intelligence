@@ -84,7 +84,7 @@ export function StandoutsCard() {
 
   return (
     <div className="bg-sidebar-accent rounded-xl p-6 border border-border h-full">
-      <h2 className="text-lg font-semibold text-foreground mb-4" style={{ fontFamily: 'var(--font-widget-heading)' }}>Notable Standouts</h2>
+      <h2 className="text-lg font-semibold text-foreground mb-4" style={{ fontFamily: 'var(--font-page-heading)' }}>Notable Standouts</h2>
       <div className="space-y-3">
         {standouts.slice(0, 5).map((stock) => (
           <div

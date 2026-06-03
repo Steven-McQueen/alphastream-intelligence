@@ -1,7 +1,7 @@
 import { useLocation, Link } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { Search } from 'lucide-react';
-import { useMarket } from '@/context/MarketContext';
+import { useMarket } from '@/contexts/MarketContext';
 import { useStockDetail } from '@/contexts/StockDetailContext';
 import { API_BASE_URL } from '@/config/api';
 import { cn } from '@/lib/utils';
@@ -16,6 +16,7 @@ const NAV_TABS = [
   { path: '/watchlist', label: 'Watchlist' },
   { path: '/portfolio', label: 'Portfolio' },
   { path: '/optimizer', label: 'Optimizer' },
+  { path: '/notebook', label: 'Notebook' },
 ];
 
 /* ── VIX → Score mapping ── */
@@ -72,42 +73,25 @@ function SentimentIndicator() {
     sentimentColor = 'text-red-500';
   }
 
-  // 10 bars: indices 0-4 are LEFT (bearish side), 5-9 are RIGHT (bullish side)
-  // Score maps to how many bars fill from center outward:
-  //   score +100 → 5 bars fill rightward (green)
-  //   score -100 → 5 bars fill leftward (red)
-  //   score 0    → center, no fill
-  // Each bar = 20 score units (100 / 5 bars)
-
-  const fillBars = Math.abs(score) / 20; // 0 to 5
+  // Left-anchored magnitude meter: bars fill from the LEFT edge rightward,
+  // length = sentiment strength. Green when bullish, red when bearish.
+  //   score 0    → no bars filled (neutral)
+  //   score ±100 → all bars filled
+  // Full width now serves a single direction, so resolution is doubled
+  // versus the old center-diverging design (10 units per bar instead of 20).
+  const TOTAL_BARS = 10;
+  const unitsPerBar = 100 / TOTAL_BARS; // 10 score units per bar
+  const fillBars = Math.abs(score) / unitsPerBar; // 0 to TOTAL_BARS
 
   function getBarColor(barIndex: number): string {
-    // Bars 0-4: left side (bearish, red), bar 4 is closest to center
-    // Bars 5-9: right side (bullish, green), bar 5 is closest to center
-    if (score >= 0) {
-      // Bullish: fill bars from center (5) rightward (to 9)
-      const distFromCenter = barIndex - 5; // -5 to 4 for bars 0-9
-      if (distFromCenter >= 0 && distFromCenter < fillBars) {
-        return 'bg-positive';
-      }
-      // Partially filled bar
-      if (distFromCenter >= 0 && distFromCenter < fillBars + 1 && fillBars % 1 > 0) {
-        const partial = fillBars % 1;
-        if (partial >= 0.5) return 'bg-positive/60';
-      }
-      return 'bg-secondary';
-    } else {
-      // Bearish: fill bars from center (4) leftward (to 0)
-      const distFromCenter = 4 - barIndex; // 0 at bar 4, 4 at bar 0
-      if (distFromCenter >= 0 && distFromCenter < fillBars) {
-        return 'bg-red-400';
-      }
-      if (distFromCenter >= 0 && distFromCenter < fillBars + 1 && fillBars % 1 > 0) {
-        const partial = fillBars % 1;
-        if (partial >= 0.5) return 'bg-red-400/60';
-      }
-      return 'bg-secondary';
-    }
+    // barIndex 0 = leftmost. Fill grows left → right.
+    const fullColor = score >= 0 ? 'bg-positive' : 'bg-red-400';
+    const partialColor = score >= 0 ? 'bg-positive/60' : 'bg-red-400/60';
+    const filled = Math.floor(fillBars);
+    if (barIndex < filled) return fullColor;
+    // Partially filled leading bar
+    if (barIndex === filled && fillBars - filled >= 0.5) return partialColor;
+    return 'bg-secondary';
   }
 
   // All bars same height — straight vertical bars, no curve
@@ -116,7 +100,7 @@ function SentimentIndicator() {
   return (
     <div className="flex items-center gap-2">
       <div className="flex items-end gap-[2px] h-4">
-        {Array.from({ length: 10 }).map((_, i) => (
+        {Array.from({ length: TOTAL_BARS }).map((_, i) => (
           <div
             key={i}
             className={cn('w-[3px] rounded-[1px] transition-colors', getBarColor(i))}

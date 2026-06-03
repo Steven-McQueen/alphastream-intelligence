@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useMarket } from "@/context/MarketContext";
+import { useMarket } from "@/contexts/MarketContext";
 import { API_BASE_URL } from "@/config/api";
 
 export type TimeRange = "1D" | "5D" | "1M" | "6M" | "1Y" | "YTD" | "5Y";

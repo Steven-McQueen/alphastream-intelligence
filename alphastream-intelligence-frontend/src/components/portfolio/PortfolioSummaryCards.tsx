@@ -1,4 +1,4 @@
-import { usePortfolio } from '@/context/PortfolioContext';
+import { usePortfolio } from '@/contexts/PortfolioContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { TrendingUp, TrendingDown, DollarSign, Activity, BarChart3, Percent } from 'lucide-react';

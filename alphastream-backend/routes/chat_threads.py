@@ -5,6 +5,7 @@ All endpoints require a valid Supabase JWT (``Authorization: Bearer ...``).
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Optional
 
@@ -33,6 +34,7 @@ class CreateThreadRequest(BaseModel):
     context_label: Optional[str] = None
     chat_mode: Optional[str] = None
     route_path: Optional[str] = None
+    model_id: Optional[str] = None
 
 
 class AddMessageRequest(BaseModel):
@@ -48,12 +50,14 @@ async def create_thread_endpoint(
     body: CreateThreadRequest,
     user_id: str = Depends(get_current_user_id),
 ):
-    thread = create_thread(
+    thread = await asyncio.to_thread(
+        create_thread,
         user_id=user_id,
         title=body.title,
         context_label=body.context_label,
         chat_mode=body.chat_mode,
         route_path=body.route_path,
+        model_id=body.model_id,
     )
     return thread
 
@@ -62,7 +66,7 @@ async def create_thread_endpoint(
 async def list_threads_endpoint(
     user_id: str = Depends(get_current_user_id),
 ):
-    return list_threads(user_id)
+    return await asyncio.to_thread(list_threads, user_id)
 
 
 @router.get("/{thread_id}")
@@ -70,7 +74,7 @@ async def get_thread_endpoint(
     thread_id: str,
     user_id: str = Depends(get_current_user_id),
 ):
-    thread = get_thread(thread_id, user_id)
+    thread = await asyncio.to_thread(get_thread, thread_id, user_id)
     if not thread:
         raise HTTPException(status_code=404, detail="Thread not found")
     return thread
@@ -81,7 +85,7 @@ async def delete_thread_endpoint(
     thread_id: str,
     user_id: str = Depends(get_current_user_id),
 ):
-    deleted = delete_thread(thread_id, user_id)
+    deleted = await asyncio.to_thread(delete_thread, thread_id, user_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Thread not found")
     return {"ok": True}
@@ -98,7 +102,8 @@ async def add_message_endpoint(
     if not body.content.strip():
         raise HTTPException(status_code=422, detail="content must not be empty")
 
-    msg = add_message(
+    msg = await asyncio.to_thread(
+        add_message,
         thread_id=thread_id,
         user_id=user_id,
         role=body.role,

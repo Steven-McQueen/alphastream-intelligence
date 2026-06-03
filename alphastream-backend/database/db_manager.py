@@ -74,9 +74,22 @@ class SQLiteDatabaseManager:
 
     conn = self.connect()
     conn.executescript(schema)
+    self._ensure_news_columns(conn)
     conn.commit()
     print(f"Database initialized at {self.db_path}")
     self.close()
+
+  def _ensure_news_columns(self, conn):
+    """Backfill additive news columns on existing SQLite databases."""
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(news_articles)")
+    existing_cols = {row[1] for row in cursor.fetchall()}
+    for col_name in ("category", "author", "source_api"):
+      if col_name not in existing_cols:
+        try:
+          cursor.execute(f"ALTER TABLE news_articles ADD COLUMN {col_name} TEXT")
+        except sqlite3.OperationalError as exc:
+          print(f"[DB] Could not add news_articles.{col_name}: {exc}")
 
   def insert_stocks_bulk(self, stocks: List[dict]) -> int:
     """Insert multiple stocks efficiently"""
@@ -533,8 +546,8 @@ class SQLiteDatabaseManager:
         cursor.execute(
           """
           INSERT OR REPLACE INTO news_articles
-          (ticker, title, url, published_date, snippet, site, publisher, image, last_cached)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (ticker, title, url, published_date, snippet, site, publisher, image, category, author, source_api, last_cached)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           """,
           (
             item.get("ticker"),
@@ -545,6 +558,9 @@ class SQLiteDatabaseManager:
             item.get("site"),
             item.get("publisher"),
             item.get("image"),
+            item.get("category"),
+            item.get("author"),
+            item.get("source_api"),
             datetime.now().isoformat(),
           ),
         )
@@ -568,6 +584,36 @@ class SQLiteDatabaseManager:
         """,
         (limit,),
       )
+      rows = cursor.fetchall()
+      return [dict(row) for row in rows]
+    finally:
+      self.close()
+
+  def get_news_by_category(self, category: str = "all", limit: int = 50) -> List[dict]:
+    """Get recent newsroom feed rows by category."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    normalized = (category or "all").lower()
+    try:
+      if normalized in ("all", "general"):
+        cursor.execute(
+          """
+          SELECT * FROM news_articles
+          ORDER BY published_date DESC
+          LIMIT ?
+          """,
+          (limit,),
+        )
+      else:
+        cursor.execute(
+          """
+          SELECT * FROM news_articles
+          WHERE lower(category) = ?
+          ORDER BY published_date DESC
+          LIMIT ?
+          """,
+          (normalized, limit),
+        )
       rows = cursor.fetchall()
       return [dict(row) for row in rows]
     finally:

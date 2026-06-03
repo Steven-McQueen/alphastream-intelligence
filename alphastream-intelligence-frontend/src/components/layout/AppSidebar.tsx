@@ -2,33 +2,28 @@ import { useLocation, Link } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import {
-  Brain,
-  LineChart,
-  List,
-  Briefcase,
-  Sliders,
-  GitCompare,
+  TrendingUp,
+  Landmark,
+  Calculator,
+  Code2,
+  Sparkles,
   Settings,
   Sun,
   Moon,
   Hexagon,
-  Star,
 } from 'lucide-react';
 import { useWatchlist } from '@/contexts/WatchlistContext';
-import { useMarket } from '@/context/MarketContext';
+import { useMarket } from '@/contexts/MarketContext';
 import { useStockDetail } from '@/contexts/StockDetailContext';
-import { ChatHistoryList } from '@/components/chat/ChatHistoryList';
 import type { Stock } from '@/types';
 import { API_BASE_URL } from '@/config/api';
 
 const NAV_ITEMS = [
-  { path: '/intelligence', label: 'Intelligence', icon: Brain },
-  { path: '/market', label: 'Market', icon: LineChart },
-  { path: '/screener', label: 'Screener', icon: List },
-  { path: '/watchlist', label: 'Watchlist', icon: Star },
-  { path: '/portfolio', label: 'Portfolio', icon: Briefcase },
-  { path: '/optimizer', label: 'Optimizer', icon: Sliders },
-  { path: '/simulation', label: 'Simulation', icon: GitCompare },
+  { path: '/', label: 'Investing', icon: TrendingUp, disabled: false },
+  { path: '#', label: 'Banking', icon: Landmark, disabled: true },
+  { path: '#', label: 'Accounting', icon: Calculator, disabled: true },
+  { path: '#', label: 'Develop', icon: Code2, disabled: true },
+  { path: '#', label: 'Omniscience', icon: Sparkles, disabled: true },
 ];
 
 export function AppSidebar() {
@@ -110,7 +105,10 @@ export function AppSidebar() {
     return filtered.slice(0, 4);
   }, [stocks, watchlist]);
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => {
+    if (path === '/') return location.pathname === '/' || location.pathname === '/finance';
+    return location.pathname === path;
+  };
 
   return (
     <aside className="flex h-full w-[260px] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
@@ -129,31 +127,38 @@ export function AppSidebar() {
 
       {/* Navigation */}
       <nav className="px-3 py-3 space-y-1">
-        <p className="px-2 pb-1 text-[11px] uppercase tracking-[0.08em] text-dim">Navigation</p>
+        <p className="px-2 pb-1 text-[11px] uppercase tracking-[0.08em] text-dim">Environments</p>
         {NAV_ITEMS.map((item) => {
+          if (item.disabled) {
+            return (
+              <div
+                key={item.label}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground/50 cursor-not-allowed"
+              >
+                <item.icon className="h-4 w-4" />
+                <span>{item.label}</span>
+                <span className="ml-auto text-[10px] text-dim/60 uppercase tracking-wider">Soon</span>
+              </div>
+            );
+          }
           const active = isActive(item.path);
           return (
             <Link
-              key={item.path}
+              key={item.label}
               to={item.path}
-                    className={cn(
+              className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-100',
                 active
                   ? 'bg-muted text-foreground'
                   : 'text-muted-foreground hover:bg-muted hover:text-sidebar-foreground'
-                    )}
-                  >
+              )}
+            >
               <item.icon className="h-4 w-4" />
               <span>{item.label}</span>
-                </Link>
+            </Link>
           );
         })}
       </nav>
-
-      {/* Chat History */}
-      <div className="px-3 pt-3 pb-2">
-        <ChatHistoryList />
-      </div>
 
       {/* Mini Watchlist */}
       <div className="px-3 pt-2 pb-2">

@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ChatOverlay } from "@/components/chat/ChatOverlay";
+import { ChatHistorySidebar } from "@/components/chat/ChatHistorySidebar";
 import { useChatStream, type ChatMessage } from "@/hooks/useChatStream";
+import { getStoredModelId, setStoredModelId } from "@/config/chatModels";
 import {
   useChatHistory,
   generateThreadTitle,
@@ -35,6 +37,13 @@ export default function Intelligence() {
   const activeThreadRef = useRef<string | null>(threadIdParam);
   const skipNextRestoreRef = useRef(false);
 
+  const [modelId, setModelId] = useState<string>(() => getStoredModelId());
+
+  const handleModelIdChange = useCallback((id: string) => {
+    setModelId(id);
+    setStoredModelId(id);
+  }, []);
+
   const handleStreamComplete = useCallback(
     async (userContent: string, assistantContent: string) => {
       let tid = activeThreadRef.current;
@@ -66,6 +75,7 @@ export default function Intelligence() {
 
   const chat = useChatStream({
     contextLabel: "Assistant",
+    modelId,
     onStreamComplete: handleStreamComplete,
   });
 
@@ -109,22 +119,14 @@ export default function Intelligence() {
 
   return (
     <div className="relative flex flex-col h-full bg-background">
-      <div className="px-6 pt-6 pb-4 flex-shrink-0">
-        <div>
-          <h1
-            className="text-2xl font-bold text-foreground"
-            style={{ fontFamily: "var(--font-serif)" }}
-          >
-            Intelligence Center
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            AI-powered market analysis and insights
-          </p>
-        </div>
-      </div>
-
-      <div className="sticky top-0 z-40 px-6 py-3 bg-background/95 backdrop-blur-sm border-b border-border flex-shrink-0">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-4 px-6 pt-4 pb-3 border-b border-border/50 flex-shrink-0">
+        <h1
+          className="text-lg font-semibold text-foreground shrink-0"
+          style={{ fontFamily: "var(--font-serif)" }}
+        >
+          Intelligence Center
+        </h1>
+        <div className="flex items-center gap-1">
           {TABS.map((tab) => {
             const active = tab.key === activeTab;
             const Icon = tab.icon;
@@ -133,10 +135,10 @@ export default function Intelligence() {
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={cn(
-                  "px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2",
+                  "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2",
                   active
-                    ? "bg-positive/20 text-positive border border-positive/30"
-                    : "bg-card text-muted-foreground border border-border hover:text-foreground hover:bg-muted",
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -147,18 +149,29 @@ export default function Intelligence() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 px-6 py-4">
+      <div className="flex-1 min-h-0">
         {activeTab === "agent" && (
-          <ChatOverlay
-            mode="embedded"
-            contextLabel="Assistant"
-            suggestedPrompts={AGENT_PROMPTS}
-            messages={chat.messages}
-            onSendMessage={chat.sendMessage}
-            isGenerating={chat.isGenerating}
-            className="h-full"
-            hideClose
-          />
+          <div className="flex h-full">
+            <ChatHistorySidebar />
+            <div className="flex-1 min-w-0 h-full">
+              <ChatOverlay
+                mode="embedded"
+                contextLabel="Assistant"
+                suggestedPrompts={AGENT_PROMPTS}
+                messages={chat.messages}
+                onSendMessage={chat.sendMessage}
+                onRegenerate={chat.regenerate}
+                isGenerating={chat.isGenerating}
+                modelId={modelId}
+                onModelIdChange={handleModelIdChange}
+                error={chat.error}
+                className="h-full"
+                hideClose
+                showHeader={false}
+                seamless
+              />
+            </div>
+          </div>
         )}
 
         {activeTab === "database" && (
