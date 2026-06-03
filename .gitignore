@@ -1,0 +1,3 @@
+# Local Claude Code config (permissions etc.) — not shared
+.claude/settings.json
+.claude/settings.local.json
