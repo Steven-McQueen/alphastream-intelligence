@@ -19,8 +19,15 @@ logger = logging.getLogger(__name__)
 # (agent_slug, trigger keywords). First rule whose agent is available and whose
 # keyword appears in the message wins; otherwise the default agent is used.
 _ROUTING_RULES: List[Tuple[str, Set[str]]] = [
-    # ("news_scanner", {"news", "headline", "breaking", "latest", "article"}),
-    # ("quant_explainer", {"sharpe", "beta", "volatility", "formula", "explain"}),
+    ("news_scanner", {
+        "news", "headline", "headlines", "breaking", "latest", "article",
+        "story", "happening", "developments", "announced", "announcement",
+    }),
+    ("quant_explainer", {
+        "explain", "definition", "define", "formula", "sharpe", "beta",
+        "volatility", "std dev", "standard deviation", "correlation",
+        "intuition behind", "how is it calculated", "how do you calculate",
+    }),
 ]
 
 

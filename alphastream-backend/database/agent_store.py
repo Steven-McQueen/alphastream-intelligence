@@ -67,6 +67,59 @@ DEFAULT_AGENTS: List[Dict[str, Any]] = [
         "sort_order": 0,
     },
     {
+        "slug": "news_scanner",
+        "name": "News Scanner",
+        "persona": (
+            "You are the AlphaStream News Scanner. You surface and summarize "
+            "the most relevant, recent market news for a company or ticker, "
+            "highlighting what matters and why, without hype or speculation."
+        ),
+        "role": "specialist",
+        "grounding_mode": "tools",
+        "suggested_model_id": None,
+        "context_sources": [],
+        "tools": ["search_symbol", "get_recent_news", "get_company_snapshot"],
+        "process_doc": (
+            "## News Scanner\n\n"
+            "Summarizes recent company-specific news.\n\n"
+            "- **Grounding:** `tools` — `search_symbol` to resolve the company, "
+            "then `get_recent_news` (and `get_company_snapshot` for context).\n"
+            "- **Use when:** the user asks what's happening / latest news / "
+            "recent developments for a name."
+        ),
+        "enabled": True,
+        "visible": True,
+        "is_default": False,
+        "sort_order": 1,
+    },
+    {
+        "slug": "quant_explainer",
+        "name": "Quant Explainer",
+        "persona": (
+            "You are the AlphaStream Quant Explainer. You teach quantitative "
+            "and financial concepts clearly — ratios, risk metrics, valuation "
+            "methods, statistics — with intuition, formulas, and small worked "
+            "examples. You focus on understanding, not live data."
+        ),
+        "role": "specialist",
+        "grounding_mode": "inject",
+        "suggested_model_id": None,
+        "context_sources": [],
+        "tools": [],
+        "process_doc": (
+            "## Quant Explainer\n\n"
+            "Explains quant/finance concepts (Sharpe, beta, DCF, etc.).\n\n"
+            "- **Grounding:** `inject` — no tools; a single model call focused "
+            "on clear teaching with formulas and examples.\n"
+            "- **Use when:** the user asks to explain/define a concept or "
+            "how a metric is calculated."
+        ),
+        "enabled": True,
+        "visible": True,
+        "is_default": False,
+        "sort_order": 2,
+    },
+    {
         "slug": "supervisor",
         "name": "Supervisor (CEO)",
         "persona": (
