@@ -242,6 +242,82 @@ class FMPClient:
             f"/stable/historical-chart/{interval}", params={"symbol": symbol}
         )
 
+    def get_aftermarket_quote(self, symbol: str) -> Optional[Dict]:
+        """Latest extended-hours (pre/post market) bid/ask quote."""
+        data = self._make_request("/stable/aftermarket-quote", params={"symbol": symbol})
+        if isinstance(data, list):
+            return data[0] if data else None
+        return data or None
+
+    def get_aftermarket_trade(self, symbol: str) -> Optional[Dict]:
+        """Latest extended-hours (pre/post market) trade (price + size)."""
+        data = self._make_request("/stable/aftermarket-trade", params={"symbol": symbol})
+        if isinstance(data, list):
+            return data[0] if data else None
+        return data or None
+
+    def get_stock_peers(self, symbol: str) -> List[str]:
+        """Return a list of peer ticker symbols for a company (similar companies)."""
+        data = self._make_request("/stable/stock-peers", params={"symbol": symbol})
+        peers: List[str] = []
+        if isinstance(data, list):
+            for item in data:
+                if isinstance(item, dict):
+                    if item.get("symbol"):
+                        peers.append(item["symbol"])
+                    for key in ("peersList", "peers"):
+                        vals = item.get(key)
+                        if isinstance(vals, list):
+                            peers.extend([p for p in vals if isinstance(p, str)])
+                elif isinstance(item, str):
+                    peers.append(item)
+        elif isinstance(data, dict):
+            for key in ("peersList", "peers"):
+                vals = data.get(key)
+                if isinstance(vals, list):
+                    peers.extend([p for p in vals if isinstance(p, str)])
+
+        seen = set()
+        out: List[str] = []
+        for p in peers:
+            pu = p.upper()
+            if pu and pu != symbol.upper() and pu not in seen:
+                seen.add(pu)
+                out.append(pu)
+        return out
+
+    def search_symbol(self, query: str, limit: int = 5) -> List[Dict]:
+        """Resolve a company name or partial ticker to symbols.
+
+        Uses FMP's name search; US exchanges (NASDAQ/NYSE/AMEX) are surfaced
+        first so an agent asking for 'Apple' gets AAPL, not a foreign listing.
+        """
+        data = self._make_request(
+            "/stable/search-name", params={"query": query, "limit": limit * 3}
+        )
+        if not isinstance(data, list):
+            return []
+        us = {"NASDAQ", "NYSE", "AMEX"}
+        rows = [
+            {
+                "symbol": d.get("symbol"),
+                "name": d.get("name"),
+                "exchange": d.get("exchange"),
+                "currency": d.get("currency"),
+            }
+            for d in data
+            if isinstance(d, dict) and d.get("symbol")
+        ]
+        rows.sort(key=lambda r: 0 if (r.get("exchange") or "").upper() in us else 1)
+        return rows[:limit]
+
+    def get_sec_filings(self, symbol: str, from_date: str, to_date: str, limit: int = 1000) -> List[Dict]:
+        """SEC filings for a symbol over a date range (each item has link + finalLink)."""
+        return self._make_request(
+            "/stable/sec-filings-search/symbol",
+            params={"symbol": symbol, "from": from_date, "to": to_date, "limit": limit},
+        )
+
     def get_eod_history(
         self, symbol: str, adjusted: bool = False, limit: int = None
     ) -> List[Dict]:
@@ -275,6 +351,33 @@ class FMPClient:
         return self._make_request(
             "/stable/earnings-calendar", params={"from": from_date, "to": to_date}
         )
+
+    # ========= MARKET CALENDARS (IPO / DIVIDENDS / SPLITS) =========
+    def get_ipos_calendar(self, from_date: str, to_date: str) -> List[Dict]:
+        """Upcoming/recent IPOs for a date range."""
+        return self._make_request(
+            "/stable/ipos-calendar", params={"from": from_date, "to": to_date}
+        )
+
+    def get_dividends_calendar(self, from_date: str, to_date: str) -> List[Dict]:
+        """Dividend ex-dates for a date range."""
+        return self._make_request(
+            "/stable/dividends-calendar", params={"from": from_date, "to": to_date}
+        )
+
+    def get_splits_calendar(self, from_date: str, to_date: str) -> List[Dict]:
+        """Stock splits for a date range."""
+        return self._make_request(
+            "/stable/splits-calendar", params={"from": from_date, "to": to_date}
+        )
+
+    def get_ipo_disclosure(self, symbol: str) -> List[Dict]:
+        """IPO disclosure filings for a specific symbol."""
+        return self._make_request("/stable/ipos-disclosure", params={"symbol": symbol})
+
+    def get_ipo_prospectus(self, symbol: str) -> List[Dict]:
+        """IPO prospectus filings for a specific symbol."""
+        return self._make_request("/stable/ipos-prospectus", params={"symbol": symbol})
 
     def get_index_intraday_chart(self, symbol: str, interval: str = "5min") -> List[Dict]:
         """

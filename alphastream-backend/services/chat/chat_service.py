@@ -7,10 +7,12 @@ single dispatch point — swap the import to switch LLMs.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import AsyncIterator, List, Dict, Optional
 
+from services.chat.grounding import build_grounding_block
 from services.chat.provider_registry import get_provider_module, resolve_model
 
 logger = logging.getLogger(__name__)
@@ -25,8 +27,11 @@ Personality & Constraints:
   and quantitative finance.
 • Conversational, clear, and concise — favour bullets and structure \
   over dense prose.
-• You do NOT have access to live market data in this conversation. \
-  Never fabricate real-time prices, quotes, or breaking news.
+• You have access to live market data ONLY when a "LIVE MARKET DATA" \
+  block appears below. When present, treat those figures as authoritative, \
+  cite specific numbers, and prefer them over your training knowledge. \
+  When no such block is present, do NOT fabricate real-time prices, quotes, \
+  or breaking news — say you don't have live data for that ticker.
 • If you don't know something, say so honestly.
 • When appropriate, reference financial concepts, ratio definitions, \
   or analytical frameworks to educate the user.
@@ -47,14 +52,25 @@ Formatting rules:
 def _build_system_prompt(
     context_label: Optional[str] = None,
     chat_mode: Optional[str] = None,
+    grounding_block: Optional[str] = None,
 ) -> str:
     parts: list[str] = []
     if context_label:
         parts.append(f"The user is currently viewing: {context_label}.")
     if chat_mode:
         parts.append(f"Chat mode: {chat_mode}.")
-    context_block = "\n".join(parts)
+    if grounding_block:
+        parts.append(grounding_block)
+    context_block = "\n\n".join(parts)
     return SYSTEM_PROMPT_TEMPLATE.format(context_block=context_block)
+
+
+def _latest_user_message(messages: List[Dict[str, str]]) -> str:
+    """Text of the most recent user turn, used to resolve tickers."""
+    for msg in reversed(messages):
+        if msg.get("role") == "user":
+            return msg.get("content") or ""
+    return ""
 
 
 def _normalise_messages(raw: List[Dict[str, str]]) -> List[Dict[str, str]]:
@@ -77,10 +93,13 @@ def chat_blocking(
     model_id: Optional[str] = None,
 ) -> str:
     """Non-streaming completion (Phase 1 validation helper)."""
-    system_prompt = _build_system_prompt(context_label, chat_mode)
     cleaned = _normalise_messages(messages)
     if not cleaned:
         raise ValueError("No valid messages provided")
+    grounding_block = build_grounding_block(
+        _latest_user_message(cleaned), context_label
+    )
+    system_prompt = _build_system_prompt(context_label, chat_mode, grounding_block)
     spec = resolve_model(model_id)
     provider = get_provider_module(spec.provider)
     return provider.chat(system_prompt, cleaned, api_model_name=spec.api_model_name)
@@ -97,11 +116,27 @@ async def stream_chat(
     model_id: Optional[str] = None,
 ) -> AsyncIterator[str]:
     """Yield SSE-formatted events: ``{"token": "..."}`` then ``{"done": true}``."""
-    system_prompt = _build_system_prompt(context_label, chat_mode)
     cleaned = _normalise_messages(messages)
     if not cleaned:
         yield _sse_event({"error": "No valid messages provided"})
         return
+
+    # FMP grounding hits sync network I/O; run it off the event loop so the
+    # first token isn't delayed by blocking the loop. Never let a data-fetch
+    # failure break the chat — fall back to an ungrounded prompt.
+    grounding_block = ""
+    try:
+        loop = asyncio.get_running_loop()
+        grounding_block = await loop.run_in_executor(
+            None,
+            build_grounding_block,
+            _latest_user_message(cleaned),
+            context_label,
+        )
+    except Exception as exc:
+        logger.warning("[CHAT] Grounding failed, continuing ungrounded: %s", exc)
+
+    system_prompt = _build_system_prompt(context_label, chat_mode, grounding_block)
 
     spec = resolve_model(model_id)
     logger.info(
