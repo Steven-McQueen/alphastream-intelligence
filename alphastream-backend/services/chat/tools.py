@@ -89,6 +89,34 @@ def _h_statement(
     return method(symbol.upper(), period=period, limit=min(int(limit or 2), 5))
 
 
+def _h_dividends(symbol: str) -> Any:
+    return {"symbol": symbol.upper(), "dividends": fmp_client.get_dividends(symbol.upper())}
+
+
+def _h_technical(
+    symbol: str,
+    indicator: str = "rsi",
+    period_length: int = 14,
+    timeframe: str = "1day",
+) -> Any:
+    return {
+        "symbol": symbol.upper(),
+        "indicator": indicator,
+        "period_length": int(period_length or 14),
+        "latest": fmp_client.get_technical_indicator(
+            symbol.upper(), indicator, int(period_length or 14), timeframe, limit=1
+        ),
+    }
+
+
+def _h_insider(symbol: str) -> Any:
+    return {"symbol": symbol.upper(), "trades": fmp_client.get_insider_trades(symbol.upper())}
+
+
+def _h_executives(symbol: str) -> Any:
+    return {"symbol": symbol.upper(), "executives": fmp_client.get_key_executives(symbol.upper())}
+
+
 # --------------------------------------------------------------------------- #
 # Registry
 # --------------------------------------------------------------------------- #
@@ -202,6 +230,62 @@ _SPECS: List[ToolSpec] = [
             "required": ["symbol"],
         },
         handler=_h_statement,
+    ),
+    ToolSpec(
+        name="get_dividends",
+        description="Dividend history for a ticker (dates, amounts, yield).",
+        parameters={
+            "type": "object",
+            "properties": {"symbol": _string("Stock ticker, e.g. 'AAPL'")},
+            "required": ["symbol"],
+        },
+        handler=_h_dividends,
+    ),
+    ToolSpec(
+        name="get_technical_indicator",
+        description=(
+            "Latest value of a technical indicator for a ticker (momentum/"
+            "trend). Use for RSI, moving averages, ADX, etc."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "symbol": _string("Stock ticker, e.g. 'AAPL'"),
+                "indicator": {
+                    "type": "string",
+                    "enum": ["rsi", "sma", "ema", "wma", "dema", "tema", "adx", "standardDeviation"],
+                    "description": "Indicator (default rsi)",
+                },
+                "period_length": {"type": "integer", "description": "Look-back period (default 14)"},
+                "timeframe": {
+                    "type": "string",
+                    "enum": ["1min", "5min", "15min", "30min", "1hour", "4hour", "1day"],
+                    "description": "Bar timeframe (default 1day)",
+                },
+            },
+            "required": ["symbol"],
+        },
+        handler=_h_technical,
+    ),
+    ToolSpec(
+        name="get_insider_trades",
+        description="Recent insider (Form 4) buy/sell transactions for a ticker.",
+        parameters={
+            "type": "object",
+            "properties": {"symbol": _string("Stock ticker, e.g. 'AAPL'")},
+            "required": ["symbol"],
+        },
+        handler=_h_insider,
+    ),
+    ToolSpec(
+        name="get_key_executives",
+        description="Company leadership / key executives (name, title, pay).",
+        parameters={
+            "type": "object",
+            "properties": {"symbol": _string("Stock ticker, e.g. 'AAPL'")},
+            "required": ["symbol"],
+        },
+        handler=_h_executives,
     ),
 ]
 

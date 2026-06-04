@@ -50,6 +50,10 @@ DEFAULT_AGENTS: List[Dict[str, Any]] = [
             "get_recent_news",
             "get_peers",
             "get_financial_statement",
+            "get_dividends",
+            "get_technical_indicator",
+            "get_insider_trades",
+            "get_key_executives",
         ],
         "process_doc": (
             "## Financial Advisor\n\n"

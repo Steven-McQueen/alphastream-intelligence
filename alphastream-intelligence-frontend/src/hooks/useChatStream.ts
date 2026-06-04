@@ -5,6 +5,8 @@ export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  /** Which agent produced this assistant turn (for the "via <Agent>" tag). */
+  agent?: { slug: string; name: string };
 }
 
 interface UseChatStreamOptions {
@@ -134,6 +136,14 @@ export function useChatStream({
               const jsonStr = trimmedLine.slice(6);
               try {
                 const event = JSON.parse(jsonStr);
+
+                if (event.agent) {
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantId ? { ...m, agent: event.agent } : m,
+                    ),
+                  );
+                }
 
                 if (event.tool_call) {
                   setToolActivity(

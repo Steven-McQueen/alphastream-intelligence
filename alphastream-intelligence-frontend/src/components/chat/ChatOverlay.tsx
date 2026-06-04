@@ -272,6 +272,11 @@ function MessageBubble({
 
   return (
     <div>
+      {message.agent && (
+        <div className="mb-1 text-[0.7rem] uppercase tracking-wider text-[var(--chat-faint)]">
+          via {message.agent.name}
+        </div>
+      )}
       <div
         className="chat-md"
         style={{

@@ -53,6 +53,17 @@ def get_agents():
     return {"agents": list_agents(), "default": get_default_agent().slug}
 
 
+@router.get("/agents/tools")
+def get_available_tools():
+    """All tools an agent can be assigned (for the Settings tool-picker)."""
+    return {
+        "tools": [
+            {"name": s.name, "description": s.description}
+            for s in tools.get_specs()
+        ]
+    }
+
+
 @router.get("/agents/config")
 async def get_agents_config(_user_id: str = Depends(get_current_user_id)):
     """Full agent catalog for the Settings UI."""

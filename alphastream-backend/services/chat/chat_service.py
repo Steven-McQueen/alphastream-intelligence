@@ -202,6 +202,9 @@ async def stream_chat(
         spec.provider, spec.api_model_name, len(agent_tools),
     )
 
+    # Tell the client which agent is answering (for the "via <Agent>" tag).
+    yield _sse_event({"agent": {"slug": agent.slug, "name": agent.name}})
+
     if use_tools:
         system_prompt = _build_system_prompt(
             agent.persona, context_label, chat_mode,

@@ -1,12 +1,23 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { AgentGraph, type LayoutMode } from '@/components/atlas/AgentGraph';
 import {
   fetchAtlasGraph,
   fetchAtlasSchema,
   type AtlasAgentNode,
   type AtlasGraph,
+  type AtlasNode,
   type AtlasToolNode,
 } from '@/lib/atlasApi';
 import { Bot, Crown, Database, Sparkles, Wrench } from 'lucide-react';
@@ -73,9 +84,51 @@ function AgentCard({ agent }: { agent: AtlasAgentNode }) {
   );
 }
 
+function NodeDetail({ node }: { node: AtlasNode }) {
+  if (node.type === 'tool') {
+    return (
+      <div className="space-y-2">
+        <Badge variant="outline" className="font-mono text-xs">{node.data.name}</Badge>
+        <p className="text-sm text-muted-foreground">{node.data.description}</p>
+      </div>
+    );
+  }
+  const d = node.data;
+  return (
+    <div className="space-y-3 text-sm">
+      <div className="flex gap-1.5">
+        <Badge variant="outline">{d.role}</Badge>
+        <Badge variant="secondary">{d.grounding_mode}</Badge>
+        {d.is_default && <Badge>default</Badge>}
+      </div>
+      <div>
+        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Persona</p>
+        <p className="text-muted-foreground">{d.process_doc?.replace(/[#*`]/g, '') || '—'}</p>
+      </div>
+      <div>
+        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Model</p>
+        <p className="text-muted-foreground">{d.suggested_model_id ?? 'user-selected'}</p>
+      </div>
+      <div>
+        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Tools</p>
+        <div className="flex flex-wrap gap-1">
+          {d.tools.length === 0
+            ? <span className="text-muted-foreground text-xs">none</span>
+            : d.tools.map((t) => (
+                <Badge key={t} variant="outline" className="font-mono text-[0.65rem]">{t}</Badge>
+              ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Atlas() {
   const graphQuery = useQuery({ queryKey: ['atlas-graph'], queryFn: fetchAtlasGraph });
   const schemaQuery = useQuery({ queryKey: ['atlas-schema'], queryFn: fetchAtlasSchema });
+  const [view, setView] = useState<'cards' | 'graph'>('cards');
+  const [layout, setLayout] = useState<LayoutMode>('hierarchical');
+  const [selected, setSelected] = useState<AtlasNode | null>(null);
 
   const agents = agentNodes(graphQuery.data);
   const supervisors = agents.filter((a) => a.data.role === 'supervisor');
@@ -105,10 +158,40 @@ export default function Atlas() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="agents" className="space-y-6">
+        <TabsContent value="agents" className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <ToggleGroup
+              type="single"
+              value={view}
+              onValueChange={(v) => v && setView(v as 'cards' | 'graph')}
+              variant="outline"
+              size="sm"
+            >
+              <ToggleGroupItem value="cards">Cards</ToggleGroupItem>
+              <ToggleGroupItem value="graph">Graph</ToggleGroupItem>
+            </ToggleGroup>
+            {view === 'graph' && (
+              <ToggleGroup
+                type="single"
+                value={layout}
+                onValueChange={(v) => v && setLayout(v as LayoutMode)}
+                variant="outline"
+                size="sm"
+              >
+                <ToggleGroupItem value="hierarchical">Hierarchy</ToggleGroupItem>
+                <ToggleGroupItem value="organic">Organic</ToggleGroupItem>
+              </ToggleGroup>
+            )}
+          </div>
+
           {graphQuery.isLoading && (
             <p className="text-sm text-muted-foreground">Loading…</p>
           )}
+
+          {view === 'graph' && graphQuery.data ? (
+            <AgentGraph graph={graphQuery.data} layout={layout} onSelect={setSelected} />
+          ) : (
+          <div className="space-y-6">
 
           {supervisors.length > 0 && (
             <section className="space-y-2">
@@ -150,6 +233,8 @@ export default function Atlas() {
               ))}
             </div>
           </section>
+          </div>
+          )}
         </TabsContent>
 
         <TabsContent value="database" className="space-y-3">
@@ -182,6 +267,26 @@ export default function Atlas() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <SheetContent>
+          {selected && (
+            <>
+              <SheetHeader>
+                <SheetTitle>
+                  {selected.type === 'agent' ? selected.data.name : selected.data.name}
+                </SheetTitle>
+                <SheetDescription>
+                  {selected.type === 'agent' ? 'Agent profile' : 'Tool'}
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-4">
+                <NodeDetail node={selected} />
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

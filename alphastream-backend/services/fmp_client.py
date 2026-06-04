@@ -311,12 +311,60 @@ class FMPClient:
         rows.sort(key=lambda r: 0 if (r.get("exchange") or "").upper() in us else 1)
         return rows[:limit]
 
+    # ========= AGENT TOOLS (starter-plan verified) =========
+    def get_dividends(self, symbol: str, limit: int = 8) -> List[Dict]:
+        """Dividend history for a symbol (date, dividend, yield)."""
+        return self._make_request(
+            "/stable/dividends", params={"symbol": symbol, "limit": limit}
+        )
+
+    def get_technical_indicator(
+        self,
+        symbol: str,
+        indicator: str = "rsi",
+        period_length: int = 14,
+        timeframe: str = "1day",
+        limit: int = 1,
+    ) -> List[Dict]:
+        """Technical indicator series (rsi, sma, ema, wma, dema, tema, adx, ...).
+
+        Returns most-recent-first OHLCV rows with the indicator value appended.
+        """
+        data = self._make_request(
+            f"/stable/technical-indicators/{indicator}",
+            params={"symbol": symbol, "periodLength": period_length, "timeframe": timeframe},
+        )
+        return data[:limit] if isinstance(data, list) else data
+
+    def get_insider_trades(self, symbol: str, limit: int = 8) -> List[Dict]:
+        """Recent insider (Form 4) transactions for a symbol."""
+        return self._make_request(
+            "/stable/insider-trading/search", params={"symbol": symbol, "limit": limit}
+        )
+
+    def get_key_executives(self, symbol: str) -> List[Dict]:
+        """Key executives / leadership for a company (name, title, pay)."""
+        return self._make_request("/stable/key-executives", params={"symbol": symbol})
+
     def get_sec_filings(self, symbol: str, from_date: str, to_date: str, limit: int = 1000) -> List[Dict]:
         """SEC filings for a symbol over a date range (each item has link + finalLink)."""
         return self._make_request(
             "/stable/sec-filings-search/symbol",
             params={"symbol": symbol, "from": from_date, "to": to_date, "limit": limit},
         )
+
+    def get_insider_trades(self, symbol: str, limit: int = 50) -> List[Dict]:
+        """Insider (executives / 10% owners) open-market trades for a symbol.
+
+        Distinct from congressional (senate/house) trading. Each item has
+        transactionType, acquisitionOrDisposition (A=acquired/buy, D=disposed/sell),
+        securitiesTransacted (shares), price, reportingName, typeOfOwner.
+        """
+        data = self._make_request(
+            "/stable/insider-trading/search",
+            params={"symbol": symbol, "page": 0, "limit": limit},
+        )
+        return data if isinstance(data, list) else []
 
     def get_eod_history(
         self, symbol: str, adjusted: bool = False, limit: int = None
