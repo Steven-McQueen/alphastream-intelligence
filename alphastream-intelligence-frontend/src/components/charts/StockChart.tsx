@@ -25,10 +25,17 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import html2canvas from "html2canvas";
 import { useStockChart, TimeRange, StockDataPoint } from "@/hooks/useStockChart";
-import { Loader2, RefreshCw, Camera, Maximize2, Minimize2 } from "lucide-react";
+import { Loader2, RefreshCw, Camera, Maximize2, Minimize2, Pencil, Slash, Type } from "lucide-react";
 
 type ChartType = "line" | "candle";
 type MovingAverage = "none" | "sma" | "ema" | "wma" | "dema" | "tema";
+
+// Annotation drawing tools
+type DrawTool = "free" | "line" | "text";
+type DrawShape =
+  | { type: "free"; points: { x: number; y: number }[] }
+  | { type: "line"; x1: number; y1: number; x2: number; y2: number }
+  | { type: "text"; x: number; y: number; text: string };
 
 interface StockChartProps {
   symbol: string;
@@ -41,6 +48,7 @@ interface StockChartProps {
     marketCap?: number;
     ytdReturn?: number;
     oneYearReturn?: number;
+    beta?: number;
   };
 }
 
@@ -132,13 +140,20 @@ const getTickInterval = (dataLength: number, timeRange: TimeRange): number => {
 };
 
 // Candlestick custom shape component
-const Candlestick = (props: any) => {
-  const { x, y, width, height, payload } = props;
+interface CandlestickProps {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  payload?: { open: number; close: number; high: number; low: number };
+}
+const Candlestick = (props: CandlestickProps) => {
+  const { x = 0, y = 0, width = 0, height = 0, payload } = props;
   if (!payload) return null;
   
   const { open, close, high, low } = payload;
   const isGrowing = close > open;
-  const color = isGrowing ? "hsl(158, 74%, 43%)" : "hsl(0, 100%, 57%)";
+  const color = isGrowing ? "hsl(var(--primary))" : "hsl(0, 84%, 60%)";
   
   const candleWidth = width * 0.7;
   const centerX = x + width / 2;
@@ -178,7 +193,7 @@ const CustomTooltip = ({
   showReturns,
 }: {
   active?: boolean;
-  payload?: any[];
+  payload?: { payload: StockDataPoint }[];
   chartType: ChartType;
   timeRange: TimeRange;
   movingAverage: MovingAverage;
@@ -289,13 +304,22 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
   const [movingAverage, setMovingAverage] = useState<MovingAverage>("none");
   const [showReturns, setShowReturns] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [drawMode, setDrawMode] = useState(false);
+  const [drawTool, setDrawTool] = useState<DrawTool>("free");
+  const [shapes, setShapes] = useState<DrawShape[]>([]);
+  const [draft, setDraft] = useState<DrawShape | null>(null);
+  const [textDraft, setTextDraft] = useState<{ x: number; y: number; value: string } | null>(null);
+  // Visible window as [startIndex, endIndex] into allData; null = full range.
   const [zoomDomain, setZoomDomain] = useState<[number, number] | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStartX, setDragStartX] = useState<number | null>(null);
+  const [isPanning, setIsPanning] = useState(false);
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const drawLayerRef = useRef<HTMLDivElement>(null);
+  const isDrawingRef = useRef(false);
+  // Pan gesture anchors (captured on mouse-down to avoid drift).
+  const panAnchorRef = useRef<{ startX: number; domain: [number, number] } | null>(null);
 
   // Fetch data using the hook
-  const { data: rawData, isLoading, error, refetch, lastUpdated, avgVolume: calculatedAvgVolume, maPeriod } = useStockChart(symbol, timeRange);
+  const { data: rawData, isLoading, error, refetch, lastUpdated, avgVolume: calculatedAvgVolume, maPeriod, afterHours } = useStockChart(symbol, timeRange);
 
   // Apply returns transformation if needed
   const allData = useMemo(() => 
@@ -303,18 +327,57 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
     [rawData, showReturns]
   );
 
-  // Apply zoom if domain is set
-  const data = useMemo(() => {
+  // `data` is the FULL timeframe and drives the headline price + footer stats, so
+  // they stay fixed while panning/zooming. The chart itself renders `viewData`,
+  // the visible window selected by scroll-zoom / drag-pan.
+  const data = allData;
+  const viewData = useMemo(() => {
     if (!zoomDomain) return allData;
-    
-    const [startIdx, endIdx] = zoomDomain;
-    return allData.slice(startIdx, endIdx + 1);
+    const [s, e] = zoomDomain;
+    return allData.slice(s, e + 1);
   }, [allData, zoomDomain]);
 
-  // Reset zoom when timerange or returns mode changes
+  // Chart data with an optional after-hours marker appended for the 1D view.
+  // The regular line uses `close` (the appended point sets close=null so the solid
+  // line stops at the regular close); a separate dashed line uses `extendedClose`
+  // to draw the after-hours segment in a distinct style.
+  const chartData = useMemo(() => {
+    if (timeRange !== "1D" || !afterHours || showReturns || chartType !== "line" || viewData.length === 0) {
+      return viewData;
+    }
+    const last = viewData[viewData.length - 1];
+    const ahTs = afterHours.timestamp ?? last.timestamp + 5 * 60 * 1000;
+    const withMarker = viewData.map((d, i) =>
+      i === viewData.length - 1 ? { ...d, extendedClose: d.close } : d
+    );
+    const ahPoint: StockDataPoint = {
+      ...last,
+      timestamp: ahTs,
+      date: new Date(ahTs).toISOString(),
+      close: null as unknown as number,
+      price: afterHours.price,
+      open: afterHours.price,
+      high: afterHours.price,
+      low: afterHours.price,
+      volume: 0,
+      extendedClose: afterHours.price,
+      sma: undefined,
+      ema: undefined,
+      wma: undefined,
+      dema: undefined,
+      tema: undefined,
+    };
+    return [...withMarker, ahPoint];
+  }, [viewData, afterHours, timeRange, showReturns, chartType]);
+
+  // Reset zoom + drawings when the underlying view changes (indices/pixels no longer
+  // map to the new data/scale).
   useEffect(() => {
     setZoomDomain(null);
-  }, [timeRange, showReturns]);
+    setShapes([]);
+    setDraft(null);
+    setTextDraft(null);
+  }, [timeRange, showReturns, chartType, symbol]);
 
   const handleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
@@ -347,97 +410,115 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
     };
   }, [isFullscreen]);
 
-  // Ref for the chart area to attach wheel event
-  const chartAreaRef = useRef<HTMLDivElement>(null);
-
-  // Handle mouse wheel zoom - use native event for better control
-  useEffect(() => {
-    const chartArea = chartAreaRef.current;
-    if (!chartArea) return;
-
-    const handleWheelZoom = (e: WheelEvent) => {
-      // Prevent page scroll when hovering over chart
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (allData.length === 0) return;
-
-      const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
-      const currentStart = zoomDomain ? zoomDomain[0] : 0;
-      const currentEnd = zoomDomain ? zoomDomain[1] : allData.length - 1;
-      const currentRange = currentEnd - currentStart;
-
-      const newRange = Math.max(10, Math.min(allData.length, Math.floor(currentRange * zoomFactor)));
-      const center = Math.floor((currentStart + currentEnd) / 2);
-
-      let newStart = Math.max(0, center - Math.floor(newRange / 2));
-      let newEnd = Math.min(allData.length - 1, newStart + newRange);
-
-      if (newEnd === allData.length - 1 && newRange < allData.length) {
-        newStart = Math.max(0, newEnd - newRange);
-      }
-
-      if (newStart === 0 && newEnd === allData.length - 1) {
-        setZoomDomain(null);
-      } else {
-        setZoomDomain([newStart, newEnd]);
-      }
-    };
-
-    // Add non-passive event listener to allow preventDefault
-    chartArea.addEventListener("wheel", handleWheelZoom, { passive: false });
-
-    return () => {
-      chartArea.removeEventListener("wheel", handleWheelZoom);
-    };
-  }, [allData.length, zoomDomain]);
-
-  // Handle drag to pan functionality
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    setDragStartX(e.clientX);
+  // ── Annotation layer (freehand / straight line / text) ────────────────────
+  const getRelativePoint = (e: React.PointerEvent) => {
+    const rect = drawLayerRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || dragStartX === null || allData.length === 0) return;
-    
-    const chartArea = chartAreaRef.current;
-    if (!chartArea) return;
-    
-    const deltaX = e.clientX - dragStartX;
-    const chartWidth = chartArea.offsetWidth;
-    
-    // Calculate how many data points to shift based on drag distance
-    const currentStart = zoomDomain ? zoomDomain[0] : 0;
-    const currentEnd = zoomDomain ? zoomDomain[1] : allData.length - 1;
-    const visibleRange = currentEnd - currentStart;
-    
-    // Sensitivity: how much drag moves the chart
-    const pointsPerPixel = visibleRange / chartWidth;
-    const pointsToShift = Math.round(-deltaX * pointsPerPixel * 0.5); // 0.5 = sensitivity factor
-    
-    if (Math.abs(pointsToShift) < 1) return;
-    
-    let newStart = Math.max(0, Math.min(allData.length - visibleRange - 1, currentStart + pointsToShift));
-    let newEnd = newStart + visibleRange;
-    
-    if (newEnd >= allData.length) {
-      newEnd = allData.length - 1;
-      newStart = Math.max(0, newEnd - visibleRange);
+  const commitTextDraft = () => {
+    setTextDraft((prev) => {
+      if (prev && prev.value.trim()) {
+        setShapes((s) => [...s, { type: "text", x: prev.x, y: prev.y, text: prev.value.trim() }]);
+      }
+      return null;
+    });
+  };
+  const clearDrawings = () => {
+    setShapes([]);
+    setDraft(null);
+    setTextDraft(null);
+  };
+  const handleDrawPointerDown = (e: React.PointerEvent) => {
+    if (!drawMode) return;
+    const p = getRelativePoint(e);
+    if (drawTool === "text") {
+      commitTextDraft();
+      setTextDraft({ x: p.x, y: p.y, value: "" });
+      return;
     }
-    
+    isDrawingRef.current = true;
+    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+    setDraft(
+      drawTool === "free"
+        ? { type: "free", points: [p] }
+        : { type: "line", x1: p.x, y1: p.y, x2: p.x, y2: p.y }
+    );
+  };
+  const handleDrawPointerMove = (e: React.PointerEvent) => {
+    if (!drawMode || !isDrawingRef.current) return;
+    const p = getRelativePoint(e);
+    setDraft((prev) => {
+      if (!prev) return prev;
+      if (prev.type === "free") return { ...prev, points: [...prev.points, p] };
+      if (prev.type === "line") return { ...prev, x2: p.x, y2: p.y };
+      return prev;
+    });
+  };
+  const handleDrawPointerUp = () => {
+    if (!isDrawingRef.current) return;
+    isDrawingRef.current = false;
+    setDraft((prev) => {
+      if (prev?.type === "free" && prev.points.length > 1) setShapes((s) => [...s, prev]);
+      else if (prev?.type === "line" && (prev.x1 !== prev.x2 || prev.y1 !== prev.y2))
+        setShapes((s) => [...s, prev]);
+      return null;
+    });
+  };
+  const pointsToStr = (pts: { x: number; y: number }[]) => pts.map((p) => `${p.x},${p.y}`).join(" ");
+  const hasDrawings = shapes.length > 0 || !!draft || !!textDraft;
+
+  // ── Scroll-zoom (cursor-centered) + drag-pan ──────────────────────────────
+  const MIN_VISIBLE = 15; // smallest zoom window in data points
+
+  // Wheel zoom: keep the point under the cursor fixed while zooming in/out.
+  useEffect(() => {
+    const el = drawLayerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (drawMode || allData.length <= MIN_VISIBLE) return;
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const frac = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+      const start = zoomDomain ? zoomDomain[0] : 0;
+      const end = zoomDomain ? zoomDomain[1] : allData.length - 1;
+      const range = end - start;
+      const factor = e.deltaY > 0 ? 1.2 : 1 / 1.2; // out / in (~20% per notch)
+      const newRange = Math.round(
+        Math.min(allData.length - 1, Math.max(MIN_VISIBLE, range * factor))
+      );
+      const pivot = start + frac * range;
+      let newStart = Math.round(pivot - frac * newRange);
+      newStart = Math.max(0, Math.min(newStart, allData.length - 1 - newRange));
+      const newEnd = newStart + newRange;
+      if (newStart <= 0 && newEnd >= allData.length - 1) setZoomDomain(null);
+      else setZoomDomain([newStart, newEnd]);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [allData.length, zoomDomain, drawMode]);
+
+  // Drag-pan: 1:1 with the cursor (only meaningful while zoomed in).
+  const handlePanDown = (e: React.MouseEvent) => {
+    if (drawMode || !zoomDomain) return;
+    setIsPanning(true);
+    panAnchorRef.current = { startX: e.clientX, domain: zoomDomain };
+  };
+  const handlePanMove = (e: React.MouseEvent) => {
+    const anchor = panAnchorRef.current;
+    if (!anchor || !drawLayerRef.current) return;
+    const width = drawLayerRef.current.offsetWidth || 1;
+    const [s, en] = anchor.domain;
+    const range = en - s;
+    const pointsPerPx = (range + 1) / width;
+    const shift = Math.round(-(e.clientX - anchor.startX) * pointsPerPx);
+    const newStart = Math.max(0, Math.min(anchor.domain[0] + shift, allData.length - 1 - range));
+    const newEnd = newStart + range;
     setZoomDomain([newStart, newEnd]);
-    setDragStartX(e.clientX);
   };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-    setDragStartX(null);
-  };
-
-  const handleMouseLeave = () => {
-    setIsDragging(false);
-    setDragStartX(null);
+  const endPan = () => {
+    setIsPanning(false);
+    panAnchorRef.current = null;
   };
 
   const { currentPrice, priceChange, priceChangePercent, isPositive } = useMemo(() => {
@@ -509,8 +590,8 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
   const chartConfig = {
     price: {
       label: "Price",
-      color: chartType === "line" 
-        ? (isPositive ? "hsl(158, 74%, 43%)" : "hsl(0, 100%, 57%)")
+      color: chartType === "line"
+        ? (isPositive ? "hsl(var(--primary))" : "hsl(0, 84%, 60%)")
         : "hsl(220, 13%, 50%)",
     },
     volume: {
@@ -614,6 +695,24 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                       </span>
                       <span>({Math.abs(priceChangePercent).toFixed(2)}%)</span>
                     </div>
+
+                    {/* After-hours / pre-market chip (market closed) - distinct from the
+                        regular green/red change so it's obvious what is extended-hours. */}
+                    {afterHours && !showReturns && (
+                      <div className="flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-xs font-medium text-[hsl(var(--accent-purple-text))]">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--accent-purple-text))]" aria-hidden />
+                        <span className="uppercase tracking-wide">
+                          {afterHours.session === "pre" ? "Pre-Market" : "After Hours"}
+                        </span>
+                        <span className="text-foreground">${afterHours.price.toFixed(2)}</span>
+                        {afterHours.changePercent !== null && (
+                          <span>
+                            {afterHours.changePercent >= 0 ? "+" : ""}
+                            {afterHours.changePercent.toFixed(2)}%
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -714,21 +813,74 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
 
             <div className="h-4 w-px bg-secondary" />
 
-            {/* Returns Toggle */}
+            {/* Statistics Toggle */}
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-muted-foreground">
-                Returns
+                Statistics
               </label>
               <Switch checked={showReturns} onCheckedChange={setShowReturns} />
             </div>
 
-            {/* Zoom Indicator */}
+            <div className="h-4 w-px bg-secondary" />
+
+            {/* Drawing tools */}
+            <button
+              onClick={() =>
+                setDrawMode((d) => {
+                  if (d) commitTextDraft();
+                  return !d;
+                })
+              }
+              className={cn(
+                "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                drawMode
+                  ? "bg-secondary text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Draw
+            </button>
+            {drawMode && (
+              <div className="flex gap-0.5 rounded-lg bg-muted p-0.5">
+                {([
+                  ["free", Pencil, "Freehand"],
+                  ["line", Slash, "Straight line"],
+                  ["text", Type, "Text"],
+                ] as const).map(([tool, Icon, title]) => (
+                  <button
+                    key={tool}
+                    onClick={() => {
+                      if (tool !== "text") commitTextDraft();
+                      setDrawTool(tool);
+                    }}
+                    title={title}
+                    className={cn(
+                      "rounded-md p-1.5 transition-colors",
+                      drawTool === tool
+                        ? "bg-secondary text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                  </button>
+                ))}
+              </div>
+            )}
+            {hasDrawings && (
+              <button
+                onClick={clearDrawings}
+                className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-all"
+              >
+                Clear
+              </button>
+            )}
+
             {zoomDomain && (
               <>
                 <div className="h-4 w-px bg-secondary" />
                 <button
                   onClick={() => setZoomDomain(null)}
-                  className="px-3 py-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 transition-all"
+                  className="px-3 py-1.5 text-xs font-medium text-[hsl(var(--accent-blue-text))] hover:opacity-80 transition-all"
                 >
                   Reset Zoom
                 </button>
@@ -738,14 +890,16 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
         </div>
 
         {/* Chart */}
-        <div 
-          ref={chartAreaRef}
-          className={cn("p-5", isDragging ? "cursor-grabbing" : "cursor-grab")}
-          title="Scroll to zoom, drag to pan"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
+        <div
+          ref={drawLayerRef}
+          className={cn(
+            "relative p-5 select-none",
+            drawMode ? "" : zoomDomain ? (isPanning ? "cursor-grabbing" : "cursor-grab") : ""
+          )}
+          onMouseDown={handlePanDown}
+          onMouseMove={handlePanMove}
+          onMouseUp={endPan}
+          onMouseLeave={endPan}
         >
           {error ? (
             <div className="h-[400px] flex items-center justify-center">
@@ -768,18 +922,29 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
               No data available for this time range
             </div>
           ) : (
-            <ChartContainer 
-              config={chartConfig} 
+            <div
+              className="rounded-xl border border-border/70 p-3 transition-all duration-300"
+              style={{
+                backgroundColor: "hsl(var(--card))",
+                backgroundImage:
+                  "radial-gradient(hsl(var(--border)) 1px, transparent 1px)",
+                backgroundSize: "18px 18px",
+                backgroundPosition: "-9px -9px",
+              }}
+            >
+            <ChartContainer
+              config={chartConfig}
               className={cn(
                 "w-full transition-all duration-300",
                 isFullscreen ? "h-[calc(100vh-400px)]" : "h-[400px]"
               )}
             >
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                <ComposedChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                   <CartesianGrid
                     strokeDasharray="3 3"
-                    stroke="hsl(0, 0%, 20%)"
+                    stroke="hsl(var(--border))"
+                    strokeOpacity={0.5}
                     vertical={false}
                   />
                   <XAxis
@@ -790,7 +955,7 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                     tickLine={false}
                     axisLine={false}
                     xAxisId="0"
-                    interval={getTickInterval(data.length, timeRange)}
+                    interval={getTickInterval(chartData.length, timeRange)}
                     minTickGap={30}
                   />
                   <XAxis dataKey="timestamp" xAxisId="1" hide />
@@ -862,10 +1027,29 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                     <Bar
                       yAxisId="price"
                       xAxisId="0"
-                      dataKey="open"
+                      // Range bar [low, high] so recharts positions the bar over the
+                      // full candle range; the Candlestick shape then draws the wick
+                      // and the open/close body correctly.
+                      dataKey={(d: StockDataPoint) => [d.low, d.high]}
                       fill="#8884d8"
                       shape={<Candlestick />}
-                      animationDuration={300}
+                      isAnimationActive={false}
+                    />
+                  )}
+
+                  {/* After-hours segment (1D, market closed): dashed, distinct color */}
+                  {timeRange === "1D" && afterHours && !showReturns && chartType === "line" && (
+                    <Line
+                      yAxisId="price"
+                      xAxisId="0"
+                      type="monotone"
+                      dataKey="extendedClose"
+                      stroke="hsl(var(--accent-purple-text))"
+                      strokeWidth={2}
+                      strokeDasharray="4 4"
+                      dot={false}
+                      connectNulls={false}
+                      isAnimationActive={false}
                     />
                   )}
 
@@ -883,10 +1067,91 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                       animationDuration={500}
                     />
                   )}
+
                 </ComposedChart>
               </ResponsiveContainer>
             </ChartContainer>
+            </div>
           )}
+
+          {/* Annotation layer (toggle "Draw"; tools: freehand / line / text). The DIV
+              captures pointer events across the whole area when active — an empty <svg>
+              only registers clicks on painted pixels. When off it's click-through so the
+              chart tooltip / scroll-zoom / pan work normally. */}
+          <div
+            className={cn(
+              "absolute inset-0 z-20",
+              drawMode ? "cursor-crosshair" : "pointer-events-none"
+            )}
+            onPointerDown={handleDrawPointerDown}
+            onPointerMove={handleDrawPointerMove}
+            onPointerUp={handleDrawPointerUp}
+          >
+            <svg className="pointer-events-none h-full w-full">
+              {[...shapes, ...(draft ? [draft] : [])].map((shape, i) => {
+                if (shape.type === "free") {
+                  return shape.points.length > 1 ? (
+                    <polyline
+                      key={i}
+                      points={pointsToStr(shape.points)}
+                      fill="none"
+                      stroke="hsl(var(--accent-purple-text))"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  ) : null;
+                }
+                if (shape.type === "line") {
+                  return (
+                    <line
+                      key={i}
+                      x1={shape.x1}
+                      y1={shape.y1}
+                      x2={shape.x2}
+                      y2={shape.y2}
+                      stroke="hsl(var(--accent-purple-text))"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                    />
+                  );
+                }
+                return (
+                  <text
+                    key={i}
+                    x={shape.x}
+                    y={shape.y}
+                    fill="hsl(var(--accent-purple-text))"
+                    fontSize={13}
+                    fontWeight={600}
+                    dominantBaseline="hanging"
+                  >
+                    {shape.text}
+                  </text>
+                );
+              })}
+            </svg>
+
+            {/* Inline text input while placing a text annotation */}
+            {textDraft && (
+              <input
+                autoFocus
+                value={textDraft.value}
+                onChange={(e) =>
+                  setTextDraft((prev) => (prev ? { ...prev, value: e.target.value } : prev))
+                }
+                onPointerDown={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitTextDraft();
+                  if (e.key === "Escape") setTextDraft(null);
+                }}
+                onBlur={commitTextDraft}
+                placeholder="Type…"
+                style={{ left: textDraft.x, top: textDraft.y }}
+                className="absolute z-30 w-40 -translate-y-1 border-b border-[hsl(var(--accent-purple-text))] bg-transparent text-sm font-semibold text-[hsl(var(--accent-purple-text))] outline-none placeholder:text-dim"
+              />
+            )}
+          </div>
         </div>
 
         {/* Footer Stats - Enhanced with merged Key Metrics */}
@@ -958,76 +1223,84 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
               </div>
             </div>
           ) : (
-            /* Returns Mode: Statistical metrics + Technical Indicators */
+            /* Returns Mode: Statistical metrics + Technical Indicators (staggered).
+               Row 1 (4 items) sits offset; Row 2 (5 items incl. Beta) interlocks
+               beneath it, with Beta at the far right: _-_-_-_-_ */
             <div className="space-y-3">
-              {/* Row 1: Return Statistics */}
-              <div className="grid grid-cols-4 gap-4">
-                <div className="space-y-1">
+              {/* Row 1: Return Statistics (inset / offset by half a column) */}
+              <div className="grid grid-cols-10 gap-x-4">
+                <div className="col-start-2 col-span-2 space-y-1 text-center">
                   <div className="text-xs text-dim">Average</div>
                   <div className="text-sm font-medium text-foreground">
-                    {rawData.length > 0 && rawData[0].close 
-                      ? ((footerMetrics.avg - rawData[0].close) / rawData[0].close * 100).toFixed(2) 
+                    {rawData.length > 0 && rawData[0].close
+                      ? ((footerMetrics.avg - rawData[0].close) / rawData[0].close * 100).toFixed(2)
                       : "0.00"}%
                   </div>
                 </div>
-                <div className="space-y-1">
+                <div className="col-start-4 col-span-2 space-y-1 text-center">
                   <div className="text-xs text-dim">Median</div>
                   <div className="text-sm font-medium text-foreground">
-                    {rawData.length > 0 && rawData[0].close 
-                      ? ((footerMetrics.median - rawData[0].close) / rawData[0].close * 100).toFixed(2) 
+                    {rawData.length > 0 && rawData[0].close
+                      ? ((footerMetrics.median - rawData[0].close) / rawData[0].close * 100).toFixed(2)
                       : "0.00"}%
                   </div>
                 </div>
-                <div className="space-y-1">
+                <div className="col-start-6 col-span-2 space-y-1 text-center">
                   <div className="text-xs text-dim">Period High</div>
                   <div className="text-sm font-medium text-positive">
-                    {rawData.length > 0 && rawData[0].close 
-                      ? ((footerMetrics.high - rawData[0].close) / rawData[0].close * 100).toFixed(2) 
+                    {rawData.length > 0 && rawData[0].close
+                      ? ((footerMetrics.high - rawData[0].close) / rawData[0].close * 100).toFixed(2)
                       : "0.00"}%
                   </div>
                 </div>
-                <div className="space-y-1">
+                <div className="col-start-8 col-span-2 space-y-1 text-center">
                   <div className="text-xs text-dim">Period Low</div>
                   <div className="text-sm font-medium text-negative">
-                    {rawData.length > 0 && rawData[0].close 
-                      ? ((footerMetrics.low - rawData[0].close) / rawData[0].close * 100).toFixed(2) 
+                    {rawData.length > 0 && rawData[0].close
+                      ? ((footerMetrics.low - rawData[0].close) / rawData[0].close * 100).toFixed(2)
                       : "0.00"}%
                   </div>
                 </div>
               </div>
 
-              {/* Row 2: Technical Indicators */}
-              <div className="grid grid-cols-4 gap-4 pt-3 border-t border-border">
-                <div className="text-center">
+              {/* Row 2: Technical Indicators + Beta (Beta at the rightmost) */}
+              <div className="grid grid-cols-10 gap-x-4 pt-3 border-t border-border">
+                <div className="col-start-1 col-span-2 text-center">
                   <div className="text-xs text-dim mb-1">RSI (14)</div>
                   <div className={cn(
                     "text-sm font-semibold",
-                    (footerMetrics.rsi ?? 50) > 70 ? "text-negative" : 
+                    (footerMetrics.rsi ?? 50) > 70 ? "text-negative" :
                     (footerMetrics.rsi ?? 50) < 30 ? "text-positive" : "text-foreground"
                   )}>
                     {(footerMetrics.rsi ?? 50).toFixed(1)}
                   </div>
                 </div>
-                <div className="text-center">
+                <div className="col-start-3 col-span-2 text-center">
                   <div className="text-xs text-dim mb-1">ADX</div>
                   <div className="text-sm font-semibold text-foreground">
                     {(footerMetrics.adx ?? 25).toFixed(1)}
                   </div>
                 </div>
-                <div className="text-center">
+                <div className="col-start-5 col-span-2 text-center">
                   <div className="text-xs text-dim mb-1">StdDev</div>
                   <div className="text-sm font-semibold text-foreground">
                     {(footerMetrics.stddev ?? 0).toFixed(2)}
                   </div>
                 </div>
-                <div className="text-center">
+                <div className="col-start-7 col-span-2 text-center">
                   <div className="text-xs text-dim mb-1">Williams %R</div>
                   <div className={cn(
                     "text-sm font-semibold",
-                    (footerMetrics.williams ?? -50) > -20 ? "text-negative" : 
+                    (footerMetrics.williams ?? -50) > -20 ? "text-negative" :
                     (footerMetrics.williams ?? -50) < -80 ? "text-positive" : "text-foreground"
                   )}>
                     {(footerMetrics.williams ?? -50).toFixed(1)}
+                  </div>
+                </div>
+                <div className="col-start-9 col-span-2 text-center">
+                  <div className="text-xs text-dim mb-1">Beta</div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {metrics?.beta !== undefined ? metrics.beta.toFixed(2) : "N/A"}
                   </div>
                 </div>
               </div>

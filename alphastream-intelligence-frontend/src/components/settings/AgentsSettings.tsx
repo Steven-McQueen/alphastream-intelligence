@@ -225,7 +225,7 @@ export function AgentsSettings() {
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs">Process notes (shown in Atlas)</Label>
+                <Label className="text-xs">Process notes (shown in the agent map)</Label>
                 <Textarea
                   value={agent.process_doc}
                   onChange={(e) => update(idx, { process_doc: e.target.value })}
