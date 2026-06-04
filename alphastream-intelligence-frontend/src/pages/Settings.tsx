@@ -38,7 +38,6 @@ import { useIntegrationsStore } from '@/hooks/useIntegrationsStore';
 import { useTimezone } from '@/hooks/useTimezone';
 import { TIMEZONE_OPTIONS, resolveTimezone } from '@/config/timezone';
 import { AiModelsSettings } from '@/components/settings/AiModelsSettings';
-import { AgentsSettings } from '@/components/settings/AgentsSettings';
 
 const SETTINGS_SECTIONS = [
   { id: 'overview', label: 'Overview & Onboarding', icon: BookOpen },
@@ -570,19 +569,6 @@ export default function Settings() {
           </div>
 
           <AiModelsSettings />
-        </section>
-
-        {/* Section: Agents */}
-        <section id="agents" className="space-y-6">
-          <div>
-            <h2 className="text-xl font-semibold text-foreground mb-2">Agents</h2>
-            <p className="text-muted-foreground">
-              Define agent profiles (persona + tools + grounding mode). Each runs on
-              the model you select in chat. See the system map in Atlas.
-            </p>
-          </div>
-
-          <AgentsSettings />
         </section>
 
         {/* Section 5: API & Integrations */}

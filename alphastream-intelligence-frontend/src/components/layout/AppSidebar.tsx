@@ -11,7 +11,6 @@ import {
   Sun,
   Moon,
   Hexagon,
-  Network,
 } from 'lucide-react';
 import { useWatchlist } from '@/contexts/WatchlistContext';
 import { useMarket } from '@/contexts/MarketContext';
@@ -201,19 +200,6 @@ export function AppSidebar() {
       </div>
 
       <div className="mt-auto border-t border-sidebar-border px-3 py-3 space-y-2">
-        <Link
-          to="/atlas"
-          className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-100',
-            isActive('/atlas')
-              ? 'bg-muted text-foreground'
-              : 'text-muted-foreground hover:bg-muted hover:text-sidebar-foreground'
-          )}
-        >
-          <Network className="h-4 w-4" />
-          <span>Atlas</span>
-        </Link>
-
         <Link
           to="/settings"
           className={cn(

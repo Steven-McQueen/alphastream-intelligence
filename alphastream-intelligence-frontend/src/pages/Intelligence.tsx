@@ -9,14 +9,16 @@ import {
   generateThreadTitle,
 } from "@/contexts/ChatHistoryContext";
 import { cn } from "@/lib/utils";
-import { Brain, Database, BookOpen } from "lucide-react";
+import { Brain, Database, Network } from "lucide-react";
+import { SchemaView } from "@/components/atlas/SchemaView";
+import { AgentsView } from "@/components/atlas/AgentsView";
 
-type TabKey = "agent" | "database" | "explanation";
+type TabKey = "agent" | "database" | "agents";
 
 const TABS: { key: TabKey; label: string; icon: typeof Brain }[] = [
   { key: "agent", label: "Assistant", icon: Brain },
   { key: "database", label: "Database Overview", icon: Database },
-  { key: "explanation", label: "Explanation", icon: BookOpen },
+  { key: "agents", label: "Agents", icon: Network },
 ];
 
 const AGENT_PROMPTS = [
@@ -174,25 +176,9 @@ export default function Intelligence() {
           </div>
         )}
 
-        {activeTab === "database" && (
-          <div className="flex flex-col items-center justify-center h-full">
-            <Database className="h-16 w-16 text-dim mb-4" />
-            <h2 className="text-xl font-semibold text-muted-foreground mb-2">
-              Database Overview
-            </h2>
-            <p className="text-sm text-dim">Coming soon...</p>
-          </div>
-        )}
+        {activeTab === "database" && <SchemaView />}
 
-        {activeTab === "explanation" && (
-          <div className="flex flex-col items-center justify-center h-full">
-            <BookOpen className="h-16 w-16 text-dim mb-4" />
-            <h2 className="text-xl font-semibold text-muted-foreground mb-2">
-              Model Explanation
-            </h2>
-            <p className="text-sm text-dim">Coming soon...</p>
-          </div>
-        )}
+        {activeTab === "agents" && <AgentsView />}
       </div>
     </div>
   );
