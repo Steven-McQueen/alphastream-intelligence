@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, Iterable, List, Optional
 
 from services.chat import market_data
 from services.fmp_client import fmp_client
@@ -208,12 +208,18 @@ _SPECS: List[ToolSpec] = [
 _REGISTRY: Dict[str, ToolSpec] = {spec.name: spec for spec in _SPECS}
 
 
-def get_specs() -> List[ToolSpec]:
-    return list(_SPECS)
+def get_specs(names: Optional[Iterable[str]] = None) -> List[ToolSpec]:
+    """All tool specs, or just the named subset (preserving registry order)."""
+    if names is None:
+        return list(_SPECS)
+    wanted = set(names)
+    return [s for s in _SPECS if s.name in wanted]
 
 
-def has_tools() -> bool:
-    return bool(_REGISTRY)
+def has_tools(names: Optional[Iterable[str]] = None) -> bool:
+    if names is None:
+        return bool(_REGISTRY)
+    return any(n in _REGISTRY for n in names)
 
 
 def execute_tool(name: str, arguments: Dict[str, Any]) -> str:
@@ -245,7 +251,7 @@ def execute_tool(name: str, arguments: Dict[str, Any]) -> str:
 # Per-provider exporters
 # --------------------------------------------------------------------------- #
 
-def to_openai_tools() -> List[Dict[str, Any]]:
+def to_openai_tools(names: Optional[Iterable[str]] = None) -> List[Dict[str, Any]]:
     """OpenAI / Moonshot / DeepSeek function-tool format."""
     return [
         {
@@ -256,21 +262,21 @@ def to_openai_tools() -> List[Dict[str, Any]]:
                 "parameters": s.parameters,
             },
         }
-        for s in _SPECS
+        for s in get_specs(names)
     ]
 
 
-def to_anthropic_tools() -> List[Dict[str, Any]]:
+def to_anthropic_tools(names: Optional[Iterable[str]] = None) -> List[Dict[str, Any]]:
     """Anthropic tool format (input_schema instead of parameters)."""
     return [
         {"name": s.name, "description": s.description, "input_schema": s.parameters}
-        for s in _SPECS
+        for s in get_specs(names)
     ]
 
 
-def to_gemini_declarations() -> List[Dict[str, Any]]:
+def to_gemini_declarations(names: Optional[Iterable[str]] = None) -> List[Dict[str, Any]]:
     """Gemini function-declaration dicts (OpenAPI-subset schema)."""
     return [
         {"name": s.name, "description": s.description, "parameters": s.parameters}
-        for s in _SPECS
+        for s in get_specs(names)
     ]

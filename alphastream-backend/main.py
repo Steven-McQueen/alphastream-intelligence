@@ -19,6 +19,7 @@ from routes.universe import router as universe_router
 from routes.stock import router as stock_router
 from routes.market import router as market_router
 from routes.earnings import router as earnings_router
+from routes.calendar import router as calendar_router
 from routes.watchlist import router as watchlist_router
 from routes.news import router as news_router
 from routes.congress import router as congress_router
@@ -32,6 +33,8 @@ from routes.chat import router as chat_router
 from routes.chat_threads import router as chat_threads_router
 from routes.ai_models import router as ai_models_router
 from routes.ai_config import router as ai_config_router
+from routes.agents import router as agents_router
+from routes.atlas import router as atlas_router
 
 # ── App creation ─────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -60,6 +63,7 @@ app.include_router(universe_router)
 app.include_router(stock_router)
 app.include_router(market_router)
 app.include_router(earnings_router)
+app.include_router(calendar_router)
 app.include_router(watchlist_router)
 app.include_router(news_router)
 app.include_router(congress_router)
@@ -73,6 +77,8 @@ app.include_router(chat_router)
 app.include_router(chat_threads_router)
 app.include_router(ai_models_router)
 app.include_router(ai_config_router)
+app.include_router(agents_router)
+app.include_router(atlas_router)
 
 
 # ── Startup ──────────────────────────────────────────────────────────────────

@@ -35,6 +35,10 @@ MOONSHOT_BASE_URL = os.getenv("MOONSHOT_BASE_URL", "https://api.moonshot.ai/v1")
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY") or os.getenv("DEEP_SEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
 
+# Agentic chat: when enabled, the copilot can call FMP tools on demand
+# (see services/chat/agent_loop.py). Falls back to Phase-1 context injection.
+CHAT_AGENTIC_ENABLED = os.getenv("CHAT_AGENTIC_ENABLED", "true").lower() == "true"
+
 # ============================================================================
 # SUPABASE AUTH (JWT validation for user-scoped endpoints)
 # ============================================================================

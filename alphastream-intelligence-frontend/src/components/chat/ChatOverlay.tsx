@@ -3,8 +3,11 @@ import { cn } from '@/lib/utils';
 import { X, ArrowUp, AlertTriangle, Copy, Check, Download, RefreshCw, Plug, ChevronDown } from 'lucide-react';
 import { useChatStream } from '@/hooks/useChatStream';
 import { ModelSelector } from '@/components/chat/ModelSelector';
+import { AgentSelector } from '@/components/chat/AgentSelector';
 import { useComposerChatModels } from '@/hooks/useComposerChatModels';
+import { useComposerAgents } from '@/hooks/useComposerAgents';
 import { getStoredModelId, setStoredModelId } from '@/config/chatModels';
+import { getStoredAgentId, setStoredAgentId } from '@/config/chatAgents';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,6 +86,22 @@ function TypingDots() {
           }}
         />
       ))}
+    </div>
+  );
+}
+
+/** Shown while the agent is calling FMP tools, before the answer streams. */
+function ToolActivityIndicator({ label }: { label: string }) {
+  return (
+    <div
+      className="flex items-center gap-2 py-[0.2rem] text-[0.8125rem]"
+      style={{ color: 'var(--chat-muted)' }}
+    >
+      <span
+        className="w-[0.875rem] h-[0.875rem] rounded-full border-2 border-current border-t-transparent animate-spin"
+        aria-hidden
+      />
+      <span>{label}…</span>
     </div>
   );
 }
@@ -286,6 +305,8 @@ function Composer({
   disabled,
   modelId,
   onModelIdChange,
+  agentId,
+  onAgentIdChange,
   connectors,
   onToggleConnector,
 }: {
@@ -293,6 +314,8 @@ function Composer({
   disabled: boolean;
   modelId: string;
   onModelIdChange: (modelId: string) => void;
+  agentId: string;
+  onAgentIdChange: (agentId: string) => void;
   connectors: ConnectorState;
   onToggleConnector: (key: ChatMode) => void;
 }) {
@@ -358,6 +381,11 @@ function Composer({
 
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0 flex-wrap">
+              <AgentSelector
+                activeAgentId={agentId}
+                onChange={onAgentIdChange}
+                className="min-w-0"
+              />
               <ModelSelector
                 activeModelId={modelId}
                 onChange={onModelIdChange}
@@ -525,6 +553,8 @@ export function ChatOverlay({
     Internet: false,
   });
   const [internalModelId, setInternalModelId] = useState<string>(() => getStoredModelId());
+  const [agentId, setAgentId] = useState<string>(() => getStoredAgentId());
+  const { agents } = useComposerAgents();
 
   const toggleConnector = (key: ChatMode) =>
     setConnectors((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -549,10 +579,12 @@ export function ChatOverlay({
     contextLabel: contextLabel,
     chatMode: chatModeValue,
     modelId: activeModelId,
+    agent: agentId,
   });
 
   const messages = isControlled ? externalMessages! : hook.messages;
   const isGenerating = isControlled ? (externalGenerating ?? false) : hook.isGenerating;
+  const toolActivity = isControlled ? null : hook.toolActivity;
   const displayError = externalError ?? hook.error;
   const handleRegenerate = onRegenerate ?? hook.regenerate;
 
@@ -570,6 +602,11 @@ export function ChatOverlay({
       setInternalModelId(id);
       setStoredModelId(id);
     }
+  };
+
+  const handleAgentIdChange = (id: string) => {
+    setAgentId(id);
+    setStoredAgentId(id);
   };
 
   // Auto-scroll
@@ -595,6 +632,17 @@ export function ChatOverlay({
     if (onSendMessage) {
       onSendMessage(text);
       return;
+    }
+    // Slash accelerator: a leading "/slug" routes this one message to that
+    // agent (e.g. "/financial_advisor what's AAPL's P/E"), regardless of the
+    // composer's selected agent.
+    const slash = text.match(/^\/([a-z0-9_-]+)\s+([\s\S]+)$/i);
+    if (slash) {
+      const slug = slash[1].toLowerCase();
+      if (agents.some((a) => a.slug === slug)) {
+        hook.sendMessage(slash[2].trim(), slug);
+        return;
+      }
     }
     hook.sendMessage(text);
   };
@@ -701,7 +749,8 @@ export function ChatOverlay({
                 />
               );
             })}
-            {isGenerating && lastAssistantIdx >= 0 && messages[lastAssistantIdx].content === '' && <TypingDots />}
+            {isGenerating && lastAssistantIdx >= 0 && messages[lastAssistantIdx].content === '' &&
+              (toolActivity ? <ToolActivityIndicator label={toolActivity} /> : <TypingDots />)}
           </div>
         )}
       </div>
@@ -738,6 +787,8 @@ export function ChatOverlay({
         disabled={isGenerating}
         modelId={activeModelId}
         onModelIdChange={handleModelIdChange}
+        agentId={agentId}
+        onAgentIdChange={handleAgentIdChange}
         connectors={connectors}
         onToggleConnector={toggleConnector}
       />

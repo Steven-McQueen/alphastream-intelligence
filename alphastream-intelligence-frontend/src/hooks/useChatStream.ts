@@ -11,15 +11,19 @@ interface UseChatStreamOptions {
   contextLabel?: string;
   chatMode?: string;
   modelId?: string;
+  /** Selected agent slug, or "auto" for backend heuristic routing. */
+  agent?: string;
   onStreamComplete?: (userContent: string, assistantContent: string) => void;
 }
 
 interface UseChatStreamReturn {
   messages: ChatMessage[];
-  sendMessage: (text: string) => void;
+  sendMessage: (text: string, agentOverride?: string) => void;
   /** Re-run the most recent user turn, overwriting the last assistant answer. */
   regenerate: () => void;
   isGenerating: boolean;
+  /** Live label while the agent is calling FMP tools (null when idle/answering). */
+  toolActivity: string | null;
   error: string | null;
   clearMessages: () => void;
   setInitialMessages: (msgs: ChatMessage[]) => void;
@@ -30,14 +34,33 @@ interface OutgoingMessage {
   content: string;
 }
 
+/** Human-readable label for each agent tool, shown while it runs. */
+const TOOL_LABELS: Record<string, string> = {
+  search_symbol: "Searching symbols",
+  get_company_snapshot: "Fetching quote & profile",
+  get_fundamentals: "Fetching fundamentals",
+  get_analyst_view: "Fetching analyst view",
+  get_recent_news: "Fetching latest news",
+  get_peers: "Finding peer companies",
+  get_financial_statement: "Fetching financial statements",
+};
+
+function toolActivityLabel(name: string, args?: Record<string, unknown>): string {
+  const base = TOOL_LABELS[name] ?? "Retrieving data";
+  const symbol = args?.symbol ?? args?.query;
+  return symbol ? `${base} (${String(symbol).toUpperCase()})` : base;
+}
+
 export function useChatStream({
   contextLabel,
   chatMode,
   modelId,
+  agent,
   onStreamComplete,
 }: UseChatStreamOptions = {}): UseChatStreamReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [toolActivity, setToolActivity] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const onCompleteRef = useRef(onStreamComplete);
@@ -47,6 +70,7 @@ export function useChatStream({
     abortRef.current?.abort();
     setMessages(msgs);
     setIsGenerating(false);
+    setToolActivity(null);
     setError(null);
   }, []);
 
@@ -60,6 +84,7 @@ export function useChatStream({
       outgoing: OutgoingMessage[],
       assistantId: string,
       userContent: string | null,
+      agentOverride?: string,
     ) => {
       setIsGenerating(true);
       setError(null);
@@ -79,6 +104,7 @@ export function useChatStream({
               contextLabel: contextLabel || null,
               chatMode: chatMode || null,
               model_id: modelId || null,
+              agent: agentOverride ?? agent ?? null,
             }),
             signal: controller.signal,
           });
@@ -109,7 +135,15 @@ export function useChatStream({
               try {
                 const event = JSON.parse(jsonStr);
 
+                if (event.tool_call) {
+                  setToolActivity(
+                    toolActivityLabel(event.tool_call.name, event.tool_call.arguments),
+                  );
+                }
+
                 if (event.token) {
+                  // First answer token means tool fetching is done.
+                  setToolActivity(null);
                   finalAssistantContent += event.token;
                   setMessages((prev) =>
                     prev.map((m) =>
@@ -122,6 +156,7 @@ export function useChatStream({
 
                 if (event.done) {
                   setIsGenerating(false);
+                  setToolActivity(null);
                   if (userContent !== null) {
                     onCompleteRef.current?.(userContent, finalAssistantContent);
                   }
@@ -134,6 +169,7 @@ export function useChatStream({
                     prev.filter((m) => m.id !== assistantId),
                   );
                   setIsGenerating(false);
+                  setToolActivity(null);
                   return;
                 }
               } catch {
@@ -153,14 +189,15 @@ export function useChatStream({
           setError(message);
           setMessages((prev) => prev.filter((m) => m.id !== assistantId));
           setIsGenerating(false);
+          setToolActivity(null);
         }
       })();
     },
-    [contextLabel, chatMode, modelId],
+    [contextLabel, chatMode, modelId, agent],
   );
 
   const sendMessage = useCallback(
-    (text: string) => {
+    (text: string, agentOverride?: string) => {
       const trimmed = text.trim();
       if (!trimmed || isGenerating) return;
 
@@ -183,7 +220,7 @@ export function useChatStream({
         content,
       }));
 
-      runStream(outgoing, assistantId, trimmed);
+      runStream(outgoing, assistantId, trimmed, agentOverride);
     },
     [messages, isGenerating, runStream],
   );
@@ -217,6 +254,7 @@ export function useChatStream({
     abortRef.current?.abort();
     setMessages([]);
     setIsGenerating(false);
+    setToolActivity(null);
     setError(null);
   }, []);
 
@@ -225,6 +263,7 @@ export function useChatStream({
     sendMessage,
     regenerate,
     isGenerating,
+    toolActivity,
     error,
     clearMessages,
     setInitialMessages,

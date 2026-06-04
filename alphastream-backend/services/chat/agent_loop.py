@@ -22,7 +22,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import Any, AsyncIterator, Dict, List
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 from services.chat import tools
 
@@ -30,6 +30,9 @@ logger = logging.getLogger(__name__)
 
 # Safety bound on tool round-trips before we force a final answer.
 MAX_ITERATIONS = 5
+
+# Providers whose SDK is OpenAI-compatible and share one runner.
+_OPENAI_FAMILY = {"openai", "moonshot", "deepseek"}
 
 
 def _chunk(text: str, size: int = 48) -> List[str]:
@@ -66,10 +69,11 @@ async def run_openai_agent(
     system_prompt: str,
     history: List[Dict[str, str]],
     api_model_name: str,
+    tool_names: Optional[List[str]] = None,
 ) -> AsyncIterator[Dict[str, Any]]:
     msgs: List[Dict[str, Any]] = [{"role": "system", "content": system_prompt}]
     msgs.extend({"role": m["role"], "content": m["content"]} for m in history)
-    openai_tools = tools.to_openai_tools()
+    openai_tools = tools.to_openai_tools(tool_names)
 
     for _ in range(MAX_ITERATIONS):
         resp = await client.chat.completions.create(
@@ -124,11 +128,12 @@ async def run_gemini_agent(
     system_prompt: str,
     history: List[Dict[str, str]],
     api_model_name: str,
+    tool_names: Optional[List[str]] = None,
 ) -> AsyncIterator[Dict[str, Any]]:
     from google.genai import types
 
     loop = asyncio.get_running_loop()
-    gem_tools = [types.Tool(function_declarations=tools.to_gemini_declarations())]
+    gem_tools = [types.Tool(function_declarations=tools.to_gemini_declarations(tool_names))]
     config = types.GenerateContentConfig(
         system_instruction=system_prompt,
         tools=gem_tools,
@@ -188,8 +193,9 @@ async def run_anthropic_agent(
     system_prompt: str,
     history: List[Dict[str, str]],
     api_model_name: str,
+    tool_names: Optional[List[str]] = None,
 ) -> AsyncIterator[Dict[str, Any]]:
-    anthro_tools = tools.to_anthropic_tools()
+    anthro_tools = tools.to_anthropic_tools(tool_names)
     msgs: List[Dict[str, Any]] = [
         {"role": m["role"], "content": m["content"]} for m in history
     ]
@@ -228,3 +234,46 @@ async def run_anthropic_agent(
         msgs.append({"role": "user", "content": tool_results})
 
     yield {"error": "Agent stopped after too many tool calls."}
+
+
+# --------------------------------------------------------------------------- #
+# Dispatch
+# --------------------------------------------------------------------------- #
+
+def _client_for(provider: str) -> Any:
+    """Reuse each provider module's existing client factory."""
+    if provider == "openai":
+        from services.chat.openai_provider import _get_client
+    elif provider == "moonshot":
+        from services.chat.moonshot_provider import _get_client
+    elif provider == "deepseek":
+        from services.chat.deepseek_provider import _get_client
+    elif provider == "gemini":
+        from services.chat.gemini_provider import _get_client
+    elif provider == "anthropic":
+        from services.chat.anthropic_provider import _get_client
+    else:
+        raise ValueError(f"No agent client for provider: {provider}")
+    return _get_client()
+
+
+async def run_agent(
+    provider: str,
+    api_model_name: str,
+    system_prompt: str,
+    history: List[Dict[str, str]],
+    tool_names: Optional[List[str]] = None,
+) -> AsyncIterator[Dict[str, Any]]:
+    """Dispatch to the correct provider runner and relay its event stream."""
+    client = _client_for(provider)
+    if provider in _OPENAI_FAMILY:
+        runner = run_openai_agent
+    elif provider == "gemini":
+        runner = run_gemini_agent
+    elif provider == "anthropic":
+        runner = run_anthropic_agent
+    else:
+        raise ValueError(f"No agent runner for provider: {provider}")
+
+    async for event in runner(client, system_prompt, history, api_model_name, tool_names):
+        yield event

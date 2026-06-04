@@ -21,6 +21,7 @@ import Optimizer from "./pages/Optimizer";
 import Notebook from "./pages/Notebook";
 import Simulation from "./pages/Simulation";
 import Settings from "./pages/Settings";
+import Atlas from "./pages/Atlas";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import News from "./pages/News";
@@ -211,7 +212,17 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
-                
+                <Route
+                  path="/atlas"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Atlas />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
                 {/* 404 */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
