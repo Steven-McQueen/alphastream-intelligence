@@ -369,18 +369,19 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
                   {/* NEWS SECTION */}
                   <StockNews ticker={currentStock.ticker} />
 
-                  {/* AI CHAT SECTION */}
+                  {/* AI CHAT — input bar sticks to the bottom of the panel,
+                      messages flow in the page (Perplexity-style). */}
                   <ChatOverlay
                     mode="embedded"
+                    inline
+                    showHeader={false}
                     contextLabel={currentStock.ticker}
-                    floatingEmptyState
                     suggestedPrompts={[
                       `What's the outlook for ${currentStock.ticker}?`,
                       `Analyze ${currentStock.ticker}'s valuation`,
                       `Key risks for ${currentStock.ticker}?`,
                       `Compare to sector peers`,
                     ]}
-                    className="h-[500px]"
                   />
                 </>
               )}

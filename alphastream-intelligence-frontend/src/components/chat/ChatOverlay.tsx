@@ -48,6 +48,10 @@ export interface ChatOverlayProps {
   /** Perplexity-style empty state: a centered free-floating input with prompts
    *  that rise on focus. Off by default (docked input + suggestion list). */
   floatingEmptyState?: boolean;
+  /** In-page mode: no box, no inner scroll. Messages flow in the page and the
+   *  composer is sticky to the bottom of the surrounding scroll container
+   *  (Perplexity-style). Used inside the stock detail sheet. */
+  inline?: boolean;
   /** Additional CSS classes */
   className?: string;
   /** External message list (controlled) — if provided, overlay won't manage its own */
@@ -575,6 +579,7 @@ export function ChatOverlay({
   contextLabel,
   suggestedPrompts = [],
   floatingEmptyState = false,
+  inline = false,
   className,
   messages: externalMessages,
   onSendMessage,
@@ -701,14 +706,19 @@ export function ChatOverlay({
     <div
       ref={overlayRef}
       className={cn(
-        'flex flex-col overflow-hidden',
+        'flex flex-col',
+        !inline && 'overflow-hidden',
         mode === 'popup' && 'absolute bottom-full left-0 right-0 mb-2 z-50 max-h-[500px] animate-search-dialog-in',
         className,
       )}
       style={{
-        background: seamless ? 'transparent' : 'var(--chat-surface)',
-        border: seamless ? 'none' : '1px solid var(--chat-border)',
-        borderRadius: seamless ? '0' : '1.25rem',
+        // `display: contents` so the sticky composer's containing block is the
+        // surrounding page (tall scroll content), letting it pin to the panel
+        // bottom across all of it — not just the short chat section.
+        display: inline ? 'contents' : undefined,
+        background: seamless || inline ? 'transparent' : 'var(--chat-surface)',
+        border: seamless || inline ? 'none' : '1px solid var(--chat-border)',
+        borderRadius: seamless || inline ? '0' : '1.25rem',
         boxShadow: mode === 'popup' ? '0 24px 64px oklch(0 0 0 / 0.45)' : 'none',
       }}
     >
@@ -758,7 +768,60 @@ export function ChatOverlay({
         </div>
       )}
 
-      {floatingEmptyState && messages.length === 0 && !isGenerating ? (
+      {inline ? (
+        /* In-page mode: messages flow in the page; composer sticks to bottom. */
+        <>
+          {messages.length > 0 && (
+            <div className={cn(CHAT_COLUMN, 'flex flex-col gap-6 pt-2 pb-4')}>
+              {messages.map((msg, idx) => {
+                const isLastAssistant = idx === lastAssistantIdx;
+                const isStreamingThis = isLastAssistant && isGenerating;
+                return (
+                  <MessageBubble
+                    key={msg.id}
+                    message={msg}
+                    modelLabel={activeModelLabel}
+                    showActions={msg.role === 'assistant' && !isStreamingThis}
+                    canRegenerate={isLastAssistant && !isGenerating}
+                    onRegenerate={handleRegenerate}
+                  />
+                );
+              })}
+              {isGenerating && lastAssistantIdx >= 0 && messages[lastAssistantIdx].content === '' &&
+                (toolActivity ? <ToolActivityIndicator label={toolActivity} /> : <TypingDots />)}
+            </div>
+          )}
+
+          {/* Composer pinned to the bottom of the surrounding scroll container. */}
+          <div
+            className="sticky bottom-0 z-10 pt-4 pb-3"
+            style={{ background: 'linear-gradient(to top, hsl(var(--background)) 72%, transparent)' }}
+          >
+            {displayError && (
+              <div
+                className={cn(CHAT_COLUMN, 'flex items-start gap-2 pb-2 text-[0.8rem]')}
+                style={{ color: 'var(--chat-muted)', fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)' }}
+                role="alert"
+              >
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: 'var(--chat-accent)' }} />
+                <span>{displayError}</span>
+              </div>
+            )}
+            <Composer
+              floating
+              suggestedPrompts={messages.length === 0 ? suggestedPrompts : []}
+              onSend={handleSend}
+              disabled={isGenerating}
+              modelId={activeModelId}
+              onModelIdChange={handleModelIdChange}
+              agentId={agentId}
+              onAgentIdChange={handleAgentIdChange}
+              connectors={connectors}
+              onToggleConnector={toggleConnector}
+            />
+          </div>
+        </>
+      ) : floatingEmptyState && messages.length === 0 && !isGenerating ? (
         /* Free-floating landing: centered input; prompts rise on focus. */
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6 animate-chat-empty-in">
           <div className={cn(CHAT_COLUMN, 'w-full')}>
