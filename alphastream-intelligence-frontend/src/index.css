@@ -421,6 +421,29 @@
   40%            { transform: translateY(-5px); opacity: 1; }
 }
 
+/* ── Assistant landing → conversation transition ───────────────────── */
+/* Centered empty-state input settling in. */
+@keyframes chat-empty-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.99); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-chat-empty-in { animation: chat-empty-in 0.34s var(--chat-ease) both; }
+
+/* Conversation view entering after the first send (fast, premium). */
+@keyframes chat-conv-enter {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-chat-conv-enter { animation: chat-conv-enter 0.3s var(--chat-ease) both; }
+
+/* Suggested prompts rising above the input on focus (Perplexity-style). */
+@keyframes chat-prompts-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-chat-prompts { animation: chat-prompts-rise 0.22s var(--chat-ease) both; }
+.chat-prompt-item { animation: chat-prompts-rise 0.26s var(--chat-ease) both; }
+
 /* ── Chat model selector ───────────────────────────────────────────── */
 .chat-model-label {
   color: var(--chat-faint);

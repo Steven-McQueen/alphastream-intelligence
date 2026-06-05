@@ -314,6 +314,8 @@ function Composer({
   onAgentIdChange,
   connectors,
   onToggleConnector,
+  floating = false,
+  suggestedPrompts = [],
 }: {
   onSend: (text: string) => void;
   disabled: boolean;
@@ -323,10 +325,15 @@ function Composer({
   onAgentIdChange: (agentId: string) => void;
   connectors: ConnectorState;
   onToggleConnector: (key: ChatMode) => void;
+  /** Free-floating landing mode: prompts rise above the input on focus. */
+  floating?: boolean;
+  suggestedPrompts?: string[];
 }) {
   const [text, setText] = useState('');
+  const [focused, setFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const canSend = text.trim().length > 0 && !disabled;
+  const showPrompts = floating && focused && suggestedPrompts.length > 0;
 
   const autoResize = () => {
     const el = textareaRef.current;
@@ -345,13 +352,39 @@ function Composer({
   };
 
   return (
-    <div style={{ padding: '0.5rem 1.25rem 1.25rem' }}>
+    <div style={floating ? undefined : { padding: '0.5rem 1.25rem 1.25rem' }}>
       <div className={CHAT_COLUMN}>
+        {showPrompts && (
+          <div className="mb-2.5 flex flex-col gap-1.5 animate-chat-prompts">
+            {suggestedPrompts.map((prompt, i) => (
+              <button
+                key={prompt}
+                type="button"
+                // mouseDown fires before the textarea blur, so the panel
+                // doesn't vanish before the click registers.
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onSend(prompt);
+                }}
+                className="chat-suggest-row chat-prompt-item group flex items-center justify-between gap-3 text-left text-[0.875rem] rounded-xl px-4 py-2.5 cursor-pointer"
+                style={{ animationDelay: `${i * 40}ms`, fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)' }}
+              >
+                <span>{prompt}</span>
+                <ArrowUp
+                  className="w-3.5 h-3.5 shrink-0 rotate-45 opacity-0 transition-opacity duration-150 group-hover:opacity-60"
+                  strokeWidth={2}
+                />
+              </button>
+            ))}
+          </div>
+        )}
         <div className="chat-composer flex flex-col gap-2.5 px-4 pt-3.5 pb-2.5">
           <div className="relative">
             <textarea
               ref={textareaRef}
               value={text}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
               onChange={(e) => {
                 setText(e.target.value);
                 autoResize();
@@ -416,61 +449,6 @@ function Composer({
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Suggestion chips (shown before first message)                      */
-/* ------------------------------------------------------------------ */
-function SuggestionChips({
-  prompts,
-  onSelect,
-  contextLabel,
-}: {
-  prompts: string[];
-  onSelect: (text: string) => void;
-  contextLabel?: string;
-}) {
-  // Treat the generic "Assistant" context as a plain greeting.
-  const isGeneric = !contextLabel || contextLabel === 'Assistant';
-  const heading = isGeneric ? 'How can I help?' : `Ask about ${contextLabel}`;
-  return (
-    <div className="flex flex-col items-center text-center gap-7 px-2">
-      <div className="flex flex-col items-center gap-2.5">
-        <h2
-          className="text-[1.6rem] leading-tight"
-          style={{ color: 'var(--chat-text)', fontFamily: 'var(--font-serif)' }}
-        >
-          {heading}
-        </h2>
-        <p
-          className="text-sm"
-          style={{ color: 'var(--chat-faint)', fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)' }}
-        >
-          AI-powered market analysis and insights
-        </p>
-      </div>
-
-      {prompts.length > 0 && (
-        <div className="flex flex-col gap-2 w-full max-w-[26rem]">
-          {prompts.map((prompt) => (
-            <button
-              key={prompt}
-              type="button"
-              onClick={() => onSelect(prompt)}
-              className="chat-suggest-row group flex items-center justify-between gap-3 text-left text-[0.875rem] rounded-xl px-4 py-3 cursor-pointer"
-              style={{ fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)' }}
-            >
-              <span>{prompt}</span>
-              <ArrowUp
-                className="w-3.5 h-3.5 shrink-0 rotate-45 opacity-0 transition-opacity duration-150 group-hover:opacity-60"
-                strokeWidth={2}
-              />
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -722,81 +700,103 @@ export function ChatOverlay({
         </div>
       )}
 
-      {/* Messages area */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto px-6 py-6 overscroll-contain scrollbar-slim"
-        style={{ minHeight: mode === 'embedded' ? '200px' : undefined }}
-      >
-        {messages.length === 0 && !isGenerating ? (
-          <div className="flex min-h-full items-center justify-center">
-            <div className={CHAT_COLUMN}>
-              <SuggestionChips
-                prompts={suggestedPrompts}
-                onSelect={handleSend}
-                contextLabel={contextLabel}
-              />
+      {messages.length === 0 && !isGenerating ? (
+        /* Free-floating landing: centered input; prompts rise on focus. */
+        <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6 animate-chat-empty-in">
+          <div className={cn(CHAT_COLUMN, 'w-full')}>
+            <div className="text-center mb-7 flex flex-col items-center gap-2">
+              <h2
+                className="text-[1.7rem] leading-tight"
+                style={{ color: 'var(--chat-text)', fontFamily: 'var(--font-serif)' }}
+              >
+                {!contextLabel || contextLabel === 'Assistant'
+                  ? 'How can I help?'
+                  : `Ask about ${contextLabel}`}
+              </h2>
+              <p
+                className="text-sm"
+                style={{ color: 'var(--chat-faint)', fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)' }}
+              >
+                AI-powered market analysis and insights
+              </p>
             </div>
-          </div>
-        ) : (
-          <div className={cn(CHAT_COLUMN, 'flex flex-col gap-6')}>
-            {messages.map((msg, idx) => {
-              const isLastAssistant = idx === lastAssistantIdx;
-              const isStreamingThis = isLastAssistant && isGenerating;
-              return (
-                <MessageBubble
-                  key={msg.id}
-                  message={msg}
-                  modelLabel={activeModelLabel}
-                  showActions={msg.role === 'assistant' && !isStreamingThis}
-                  canRegenerate={isLastAssistant && !isGenerating}
-                  onRegenerate={handleRegenerate}
-                />
-              );
-            })}
-            {isGenerating && lastAssistantIdx >= 0 && messages[lastAssistantIdx].content === '' &&
-              (toolActivity ? <ToolActivityIndicator label={toolActivity} /> : <TypingDots />)}
-          </div>
-        )}
-      </div>
-
-      {/* Error banner */}
-      {displayError && (
-        <div
-          className="border-t"
-          style={{
-            borderColor: 'var(--chat-border)',
-            background: 'var(--chat-surface-up)',
-          }}
-          role="alert"
-        >
-          <div
-            className={cn(CHAT_COLUMN, 'flex items-start gap-2 py-2.5 text-[0.8rem]')}
-            style={{
-              color: 'var(--chat-muted)',
-              fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)',
-            }}
-          >
-            <AlertTriangle
-              className="w-3.5 h-3.5 shrink-0 mt-0.5"
-              style={{ color: 'var(--chat-accent)' }}
+            {displayError && (
+              <p className="text-center text-[0.8rem] mb-3" style={{ color: 'var(--chat-accent)' }}>
+                {displayError}
+              </p>
+            )}
+            <Composer
+              floating
+              suggestedPrompts={suggestedPrompts}
+              onSend={handleSend}
+              disabled={isGenerating}
+              modelId={activeModelId}
+              onModelIdChange={handleModelIdChange}
+              agentId={agentId}
+              onAgentIdChange={handleAgentIdChange}
+              connectors={connectors}
+              onToggleConnector={toggleConnector}
             />
-            <span>{displayError}</span>
           </div>
         </div>
-      )}
+      ) : (
+        <>
+          {/* Messages area */}
+          <div
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto px-6 py-6 overscroll-contain scrollbar-slim animate-chat-conv-enter"
+            style={{ minHeight: mode === 'embedded' ? '200px' : undefined }}
+          >
+            <div className={cn(CHAT_COLUMN, 'flex flex-col gap-6')}>
+              {messages.map((msg, idx) => {
+                const isLastAssistant = idx === lastAssistantIdx;
+                const isStreamingThis = isLastAssistant && isGenerating;
+                return (
+                  <MessageBubble
+                    key={msg.id}
+                    message={msg}
+                    modelLabel={activeModelLabel}
+                    showActions={msg.role === 'assistant' && !isStreamingThis}
+                    canRegenerate={isLastAssistant && !isGenerating}
+                    onRegenerate={handleRegenerate}
+                  />
+                );
+              })}
+              {isGenerating && lastAssistantIdx >= 0 && messages[lastAssistantIdx].content === '' &&
+                (toolActivity ? <ToolActivityIndicator label={toolActivity} /> : <TypingDots />)}
+            </div>
+          </div>
 
-      {/* Composer */}
-      <Composer
-        onSend={handleSend}
-        disabled={isGenerating}
-        modelId={activeModelId}
-        onModelIdChange={handleModelIdChange}
-        agentId={agentId}
-        onAgentIdChange={handleAgentIdChange}
-        connectors={connectors}
-        onToggleConnector={toggleConnector}
-      />
+          {/* Error banner */}
+          {displayError && (
+            <div
+              className="border-t"
+              style={{ borderColor: 'var(--chat-border)', background: 'var(--chat-surface-up)' }}
+              role="alert"
+            >
+              <div
+                className={cn(CHAT_COLUMN, 'flex items-start gap-2 py-2.5 text-[0.8rem]')}
+                style={{ color: 'var(--chat-muted)', fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)' }}
+              >
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: 'var(--chat-accent)' }} />
+                <span>{displayError}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Composer (docked) */}
+          <Composer
+            onSend={handleSend}
+            disabled={isGenerating}
+            modelId={activeModelId}
+            onModelIdChange={handleModelIdChange}
+            agentId={agentId}
+            onAgentIdChange={handleAgentIdChange}
+            connectors={connectors}
+            onToggleConnector={toggleConnector}
+          />
+        </>
+      )}
     </div>
   );
 }
