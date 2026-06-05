@@ -16,6 +16,7 @@ import { HistoricalData } from "@/components/screener/HistoricalData"
 import { StockNotes } from "@/components/screener/StockNotes"
 import { ValuationMetrics } from "@/components/screener/ValuationMetrics"
 import { SimilarCompanies } from "@/components/screener/SimilarCompanies"
+import { AnalystConsensus } from "@/components/screener/AnalystConsensus"
 import { InsiderTrades } from "@/components/screener/InsiderTrades"
 import { EarningsHistory } from "@/components/screener/EarningsHistory"
 import { OverviewSection } from "@/components/screener/OverviewSection"
@@ -452,6 +453,9 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
                     {profile?.website && <InfoRow label="Website" value={profile.website} isLink />}
                   </div>
                 </OverviewSection>
+
+                {/* Analyst Consensus module */}
+                <AnalystConsensus ticker={currentStock.ticker} currentPrice={currentStock.price} />
 
                 {/* Similar Companies module (compact peers) */}
                 <SimilarCompanies ticker={currentStock.ticker} compact />
