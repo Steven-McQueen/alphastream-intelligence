@@ -772,7 +772,7 @@ export function ChatOverlay({
         /* In-page mode: messages flow in the page; composer sticks to bottom. */
         <>
           {messages.length > 0 && (
-            <div className={cn(CHAT_COLUMN, 'flex flex-col gap-6 pt-2 pb-4')}>
+            <div className={cn(CHAT_COLUMN, 'flex flex-col gap-6 pt-2 pb-4 mt-auto')}>
               {messages.map((msg, idx) => {
                 const isLastAssistant = idx === lastAssistantIdx;
                 const isStreamingThis = isLastAssistant && isGenerating;
@@ -792,9 +792,14 @@ export function ChatOverlay({
             </div>
           )}
 
-          {/* Composer pinned to the bottom of the surrounding scroll container. */}
+          {/* Composer pinned to the bottom of the surrounding scroll container.
+              mt-auto pushes it to the panel bottom on short tabs so its position
+              is consistent across every tab. */}
           <div
-            className="sticky bottom-0 z-10 pt-4 pb-3"
+            className={cn(
+              'sticky bottom-0 z-10 pt-4 pb-3',
+              messages.length === 0 && 'mt-auto',
+            )}
             style={{ background: 'linear-gradient(to top, hsl(var(--background)) 72%, transparent)' }}
           >
             {displayError && (
