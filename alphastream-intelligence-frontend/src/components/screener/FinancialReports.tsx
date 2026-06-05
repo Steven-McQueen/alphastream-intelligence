@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, ChevronDown, ChevronUp, Loader2, TrendingUp, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AnnualReports } from "@/components/screener/AnnualReports";
 
 import { API_BASE_URL } from "@/config/api";
 
@@ -98,14 +99,18 @@ function StatementRow({
   
   return (
     <tr className={cn(
-      "border-b border-border/50 hover:bg-muted/30 transition-colors",
-      isHeader && "bg-muted/50",
+      "group border-b border-border/40 transition-colors hover:bg-muted/40",
+      isHeader && "bg-muted/40",
       isBold && "font-semibold"
     )}>
-      <td 
+      <td
         className={cn(
-          "py-2.5 px-4 text-sm text-soft sticky left-0 bg-card",
-          isHeader && "bg-muted/50 font-semibold text-foreground",
+          // Sticky metric column with a hairline divider so it reads cleanly
+          // against the scrolling values — Yahoo/Koyfin-style.
+          "sticky left-0 z-10 bg-card py-2.5 pr-4 text-sm text-soft",
+          "after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-border/60",
+          "group-hover:bg-muted/40",
+          isHeader && "bg-muted/40 font-semibold text-foreground",
           isBold && "font-semibold text-foreground"
         )}
         style={{ paddingLeft: `${16 + indent * 16}px` }}
@@ -115,11 +120,11 @@ function StatementRow({
       {values.map((v, i) => {
         const isEstimate = estimateIndices.includes(i);
         return (
-          <td 
-            key={i} 
+          <td
+            key={i}
             className={cn(
-              "py-2.5 px-4 text-sm text-right font-mono",
-              v && v < 0 ? "text-negative" : "text-soft",
+              "py-2.5 px-4 text-right text-sm font-mono tabular-nums",
+              v != null && v < 0 ? "text-negative" : "text-soft",
               isHeader && "font-semibold text-foreground",
               isBold && "font-semibold text-foreground",
               isEstimate && "italic text-cyan-400/80" // Estimates in italics and different color
@@ -136,10 +141,10 @@ function StatementRow({
 // Section header row
 function SectionHeader({ label, colCount }: { label: string; colCount: number }) {
   return (
-    <tr className="bg-muted">
-      <td 
-        colSpan={colCount + 1} 
-        className="py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wider"
+    <tr>
+      <td
+        colSpan={colCount + 1}
+        className="border-t border-border bg-muted/40 py-2 px-4 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground"
       >
         {label}
       </td>
@@ -830,6 +835,9 @@ export function FinancialReports({ ticker }: FinancialReportsProps) {
         {activeStatement === "balance" && renderBalanceSheet()}
         {activeStatement === "cashflow" && renderCashFlow()}
       </div>
+
+      {/* Annual reports (SEC 10-K) at the very bottom of the table */}
+      <AnnualReports ticker={ticker} />
     </div>
   );
 }
