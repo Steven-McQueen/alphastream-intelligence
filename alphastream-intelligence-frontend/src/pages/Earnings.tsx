@@ -1,247 +1,261 @@
-import { useMemo, useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Search, Calendar, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import type { Stock } from '@/types';
 import { cn } from '@/lib/utils';
-import { Input } from '@/components/ui/input';
-import { API_BASE_URL } from '@/config/api';
+import { useStockDetail } from '@/contexts/StockDetailContext';
+import { EarningsSpotlight } from '@/components/finance/EarningsSpotlight';
+import { CalendarFeed, type CalendarColumn, type CalendarRow } from '@/components/calendar/CalendarFeed';
+import { IpoDetail } from '@/components/calendar/IpoDetail';
 
-interface EarningsItem {
-  symbol: string;
-  date: string;
-  company_name: string;
+type Tab = 'earnings' | 'ipos' | 'dividends' | 'splits';
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'earnings', label: 'Earnings' },
+  { id: 'ipos', label: 'IPOs' },
+  { id: 'dividends', label: 'Dividends' },
+  { id: 'splits', label: 'Splits' },
+];
+
+// ---- formatting helpers ---------------------------------------------------
+function fmtEps(v: unknown) {
+  return typeof v === 'number' ? `$${v.toFixed(2)}` : '-';
+}
+function fmtMoney(v: unknown) {
+  if (typeof v !== 'number') return '-';
+  if (Math.abs(v) >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
+  if (Math.abs(v) >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;
+  return `$${v.toLocaleString()}`;
+}
+function fmtShares(v: unknown) {
+  if (typeof v !== 'number') return '-';
+  if (v >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
+  if (v >= 1e3) return `${(v / 1e3).toFixed(0)}K`;
+  return v.toLocaleString();
+}
+function fmtYield(v: unknown) {
+  return typeof v === 'number' ? `${v.toFixed(2)}%` : '-';
+}
+function fmtDividend(v: unknown) {
+  return typeof v === 'number' ? `$${v.toFixed(4)}` : '-';
+}
+function todayKey() {
+  return new Date().toISOString().split('T')[0];
+}
+function weekCutoffKey() {
+  return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+}
+
+// ---- row types ------------------------------------------------------------
+interface EarningsRow extends CalendarRow {
   eps_estimated: number | null;
-  eps_actual: number | null;
   revenue_estimated: number | null;
-  revenue_actual: number | null;
+}
+interface IpoRow extends CalendarRow {
+  exchange?: string;
+  actions?: string;
+  shares?: number;
+  price_range?: string;
+  market_cap?: number;
+}
+interface DividendRow extends CalendarRow {
+  payment_date?: string;
+  dividend?: number;
+  yield?: number;
+  frequency?: string;
+}
+interface SplitRow extends CalendarRow {
+  numerator?: number;
+  denominator?: number;
+  split_type?: string;
 }
 
-function generateCalendarDays(startDate: Date, days: number = 30) {
-  const result = [];
-  for (let i = 0; i < days; i++) {
-    const date = new Date(startDate);
-    date.setDate(date.getDate() + i);
-    result.push({
-      date: date.toISOString().split('T')[0],
-      dayOfWeek: date.toLocaleDateString('en-US', { weekday: 'short' }),
-      dayOfMonth: date.getDate(),
-      month: date.toLocaleDateString('en-US', { month: 'short' }),
-      isToday: date.toDateString() === new Date().toDateString(),
-    });
-  }
-  return result;
-}
+const symbolCell = (r: CalendarRow) => (
+  <span className="font-mono font-semibold text-foreground">{r.symbol}</span>
+);
+const companyCell = (r: CalendarRow) => (
+  <span className="text-sm text-muted-foreground">{r.company_name}</span>
+);
 
 export default function Earnings() {
-  const [earnings, setEarnings] = useState<EarningsItem[]>([]);
-  const [earningsLoading, setEarningsLoading] = useState(true);
-  const [earningsSearch, setEarningsSearch] = useState('');
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [calendarStartOffset, setCalendarStartOffset] = useState(0);
+  const { openStockDetail } = useStockDetail();
+  const [tab, setTab] = useState<Tab>('earnings');
 
-  useEffect(() => {
-    const fetchEarnings = async () => {
-      try {
-        setEarningsLoading(true);
-        const today = new Date();
-        const fromDate = today.toISOString().split('T')[0];
-        const toDate = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const openStock = (r: CalendarRow) =>
+    openStockDetail({ ticker: r.symbol, name: r.company_name || r.symbol } as unknown as Stock);
 
-        const res = await fetch(`${API_BASE_URL}/api/earnings/calendar?from_date=${fromDate}&to_date=${toDate}&limit=500`);
-        if (res.ok) {
-          const data = await res.json();
-          setEarnings(data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch earnings:', err);
-      } finally {
-        setEarningsLoading(false);
-      }
-    };
-    fetchEarnings();
-  }, []);
+  // ---- per-tab column configs ----
+  const earningsColumns: CalendarColumn<EarningsRow>[] = [
+    { header: 'Symbol', render: symbolCell },
+    { header: 'Company', render: companyCell, className: 'max-w-[280px] truncate' },
+    { header: 'Est. EPS', align: 'right', render: (r) => <span className="font-mono text-sm text-soft">{fmtEps(r.eps_estimated)}</span> },
+    { header: 'Est. Revenue', align: 'right', render: (r) => <span className="font-mono text-sm text-soft">{fmtMoney(r.revenue_estimated)}</span> },
+  ];
 
-  const calendarDays = useMemo(() => {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() + calendarStartOffset);
-    return generateCalendarDays(startDate, 14);
-  }, [calendarStartOffset]);
+  const ipoColumns: CalendarColumn<IpoRow>[] = [
+    { header: 'Symbol', render: symbolCell },
+    { header: 'Company', render: companyCell, className: 'max-w-[240px] truncate' },
+    { header: 'Exchange', render: (r) => <span className="text-sm text-muted-foreground">{r.exchange || '-'}</span> },
+    { header: 'Price Range', render: (r) => <span className="font-mono text-sm text-soft">{r.price_range || '-'}</span> },
+    { header: 'Shares', align: 'right', render: (r) => <span className="font-mono text-sm text-soft">{fmtShares(r.shares)}</span> },
+    { header: 'Market Cap', align: 'right', render: (r) => <span className="font-mono text-sm text-soft">{fmtMoney(r.market_cap)}</span> },
+    {
+      header: 'Status',
+      render: (r) => (
+        <span className="rounded-full bg-muted px-2 py-1 text-xs text-sub">{r.actions || '-'}</span>
+      ),
+    },
+  ];
 
-  const earningsByDate = useMemo(() => {
-    const map: Record<string, EarningsItem[]> = {};
-    earnings.forEach(e => {
-      if (!map[e.date]) map[e.date] = [];
-      map[e.date].push(e);
-    });
-    return map;
-  }, [earnings]);
+  const dividendColumns: CalendarColumn<DividendRow>[] = [
+    { header: 'Symbol', render: symbolCell },
+    { header: 'Company', render: companyCell, className: 'max-w-[240px] truncate' },
+    { header: 'Ex-Date', render: (r) => <span className="text-sm text-muted-foreground">{r.date}</span> },
+    { header: 'Pay Date', render: (r) => <span className="text-sm text-muted-foreground">{r.payment_date || '-'}</span> },
+    { header: 'Dividend', align: 'right', render: (r) => <span className="font-mono text-sm text-soft">{fmtDividend(r.dividend)}</span> },
+    { header: 'Yield', align: 'right', render: (r) => <span className="font-mono text-sm text-positive">{fmtYield(r.yield)}</span> },
+    { header: 'Frequency', render: (r) => <span className="text-xs text-sub">{r.frequency || '-'}</span> },
+  ];
 
-  const filteredEarnings = useMemo(() => {
-    let result = earnings;
-
-    if (earningsSearch) {
-      const searchLower = earningsSearch.toLowerCase();
-      result = result.filter(e =>
-        e.symbol.toLowerCase().includes(searchLower) ||
-        e.company_name.toLowerCase().includes(searchLower)
-      );
-    } else if (selectedDate) {
-      result = result.filter(e => e.date === selectedDate);
-    }
-
-    return result.slice(0, 50);
-  }, [earnings, earningsSearch, selectedDate]);
+  const splitColumns: CalendarColumn<SplitRow>[] = [
+    { header: 'Symbol', render: symbolCell },
+    { header: 'Company', render: companyCell, className: 'max-w-[280px] truncate' },
+    {
+      header: 'Ratio',
+      render: (r) => (
+        <span className="font-mono text-sm text-foreground">
+          {r.numerator ?? '?'}:{r.denominator ?? '?'}
+        </span>
+      ),
+    },
+    {
+      header: 'Type',
+      render: (r) => {
+        const fwd = (r.numerator ?? 0) >= (r.denominator ?? 0);
+        return (
+          <span className={cn('rounded-full px-2 py-1 text-xs', fwd ? 'bg-positive/20 text-positive' : 'bg-negative/20 text-negative')}>
+            {fwd ? 'Forward' : 'Reverse'}
+          </span>
+        );
+      },
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="px-6 pt-6 pb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground" style={{ fontFamily: 'var(--font-serif)' }}>Earnings Calendar</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Track upcoming and recent earnings reports
-          </p>
-        </div>
-      </div>
-
-      <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
-        {/* Header with search */}
-        <div className="flex items-center justify-between">
-          <div className="text-lg font-semibold text-foreground">Upcoming Earnings</div>
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-dim" />
-              <Input
-                placeholder="Search company..."
-                value={earningsSearch}
-                onChange={(e) => {
-                  setEarningsSearch(e.target.value);
-                  setSelectedDate(null);
-                }}
-                className="pl-9 w-48 h-9 bg-card border-border text-foreground placeholder:text-dim"
-              />
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setCalendarStartOffset(prev => Math.max(prev - 7, -7))}
-                className="p-2 rounded-md bg-card border border-border hover:bg-muted"
-              >
-                <ChevronLeft className="h-4 w-4 text-muted-foreground" />
-              </button>
-              <button
-                onClick={() => setCalendarStartOffset(0)}
-                className="px-3 py-2 rounded-md bg-card border border-border hover:bg-muted text-xs text-muted-foreground"
-              >
-                Today
-              </button>
-              <button
-                onClick={() => setCalendarStartOffset(prev => prev + 7)}
-                className="p-2 rounded-md bg-card border border-border hover:bg-muted"
-              >
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </button>
-            </div>
+      <div className="space-y-5 py-6">
+        {/* Masthead */}
+        <header className="space-y-4">
+          <div className="border-b border-border pb-4">
+            <h1
+              className="text-[34px] font-semibold leading-none text-foreground"
+              style={{ fontFamily: 'var(--font-page-heading)' }}
+            >
+              Markets Calendar
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Earnings, IPOs, dividends and stock splits — grouped by day
+            </p>
           </div>
-        </div>
 
-        {/* Calendar Grid */}
-        {earningsLoading ? (
-          <div className="flex items-center justify-center h-32 text-dim">
-            <Loader2 className="w-6 h-6 animate-spin mr-2" />
-            Loading earnings calendar...
+          {/* Tab bar */}
+          <div className="flex flex-wrap gap-1">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={cn(
+                  'rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors',
+                  tab === t.id
+                    ? 'bg-muted text-foreground'
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                )}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
-        ) : (
+        </header>
+
+        {tab === 'earnings' && (
           <>
-            <div className="grid grid-cols-7 gap-2">
-              {calendarDays.map((day) => {
-                const dayEarnings = earningsByDate[day.date] || [];
-                const hasEarnings = dayEarnings.length > 0;
-                const isSelected = selectedDate === day.date;
-
-                return (
-                  <div
-                    key={day.date}
-                    onClick={() => {
-                      setSelectedDate(isSelected ? null : day.date);
-                      setEarningsSearch('');
-                    }}
-                    className={cn(
-                      'rounded-xl border p-3 bg-card border-border space-y-1 cursor-pointer transition-all hover:border-secondary',
-                      hasEarnings && 'border-positive/50 bg-positive/5',
-                      isSelected && 'ring-2 ring-positive border-positive',
-                      day.isToday && 'ring-1 ring-blue-500'
-                    )}
-                  >
-                    <div className="text-[10px] text-dim">{day.dayOfWeek}</div>
-                    <div className="text-sm font-semibold text-foreground">
-                      {day.month} {day.dayOfMonth}
-                    </div>
-                    {hasEarnings ? (
-                      <div className="text-xs text-positive flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {dayEarnings.length} {dayEarnings.length === 1 ? 'Report' : 'Reports'}
-                      </div>
-                    ) : (
-                      <div className="text-[10px] text-dim">No Reports</div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Selected Date Details or Search Results */}
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                <div className="text-sm font-semibold text-foreground">
-                  {earningsSearch
-                    ? `Search Results for "${earningsSearch}"`
-                    : selectedDate
-                      ? `Earnings on ${new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`
-                      : 'All Upcoming Earnings'}
-                </div>
-                <div className="text-xs text-dim">{filteredEarnings.length} companies</div>
-              </div>
-
-              {filteredEarnings.length === 0 ? (
-                <div className="text-sm text-dim text-center py-10">No earnings found</div>
-              ) : (
-                <div className="max-h-[400px] overflow-y-auto">
-                  <table className="w-full">
-                    <thead className="bg-muted/50 sticky top-0">
-                      <tr className="text-xs text-dim">
-                        <th className="text-left px-4 py-2 font-medium">Symbol</th>
-                        <th className="text-left px-4 py-2 font-medium">Company</th>
-                        <th className="text-left px-4 py-2 font-medium">Date</th>
-                        <th className="text-right px-4 py-2 font-medium">Est. EPS</th>
-                        <th className="text-right px-4 py-2 font-medium">Est. Revenue</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredEarnings.map((item, idx) => (
-                        <tr key={`${item.symbol}-${item.date}-${idx}`} className="border-b border-border/50 hover:bg-muted/30">
-                          <td className="px-4 py-3">
-                            <span className="font-mono font-semibold text-foreground">{item.symbol}</span>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-muted-foreground max-w-[200px] truncate">
-                            {item.company_name}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-muted-foreground">
-                            {new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono text-sm text-soft">
-                            {item.eps_estimated !== null ? `$${item.eps_estimated.toFixed(2)}` : '-'}
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono text-sm text-soft">
-                            {item.revenue_estimated !== null
-                              ? `$${(item.revenue_estimated / 1e9).toFixed(2)}B`
-                              : '-'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+            <EarningsSpotlight />
+            <CalendarFeed<EarningsRow>
+              endpoint="/api/earnings/calendar"
+              columns={earningsColumns}
+              onRowClick={openStock}
+              emptyLabel="No earnings found in this period"
+              searchPlaceholder="Search company or ticker..."
+              stats={(rows) => {
+                const tk = todayKey();
+                const wk = weekCutoffKey();
+                return [
+                  { label: 'Reports In View', value: String(rows.length) },
+                  { label: 'This Week', value: String(rows.filter((r) => r.date >= tk && r.date <= wk).length) },
+                  { label: 'Reporting Today', value: String(rows.filter((r) => r.date === tk).length) },
+                  { label: 'Companies', value: String(new Set(rows.map((r) => r.symbol)).size) },
+                ];
+              }}
+            />
           </>
+        )}
+
+        {tab === 'ipos' && (
+          <CalendarFeed<IpoRow>
+            endpoint="/api/calendar/ipos"
+            columns={ipoColumns}
+            renderExpanded={(r) => <IpoDetail symbol={r.symbol} />}
+            emptyLabel="No IPOs found in this period"
+            searchPlaceholder="Search company or ticker..."
+            stats={(rows) => {
+              const priced = rows.filter((r) => (r.actions || '').toLowerCase().includes('priced')).length;
+              return [
+                { label: 'IPOs In View', value: String(rows.length) },
+                { label: 'Priced', value: String(priced) },
+                { label: 'Expected', value: String(rows.length - priced) },
+                { label: 'Exchanges', value: String(new Set(rows.map((r) => r.exchange).filter(Boolean)).size) },
+              ];
+            }}
+          />
+        )}
+
+        {tab === 'dividends' && (
+          <CalendarFeed<DividendRow>
+            endpoint="/api/calendar/dividends"
+            columns={dividendColumns}
+            onRowClick={openStock}
+            emptyLabel="No dividends found in this period"
+            searchPlaceholder="Search company or ticker..."
+            stats={(rows) => {
+              const yields = rows.map((r) => r.yield).filter((y): y is number => typeof y === 'number' && y > 0);
+              const avg = yields.length ? yields.reduce((a, b) => a + b, 0) / yields.length : 0;
+              const tk = todayKey();
+              const wk = weekCutoffKey();
+              return [
+                { label: 'Ex-Dates In View', value: String(rows.length) },
+                { label: 'Avg Yield', value: `${avg.toFixed(2)}%` },
+                { label: 'This Week', value: String(rows.filter((r) => r.date >= tk && r.date <= wk).length) },
+                { label: 'Companies', value: String(new Set(rows.map((r) => r.symbol)).size) },
+              ];
+            }}
+          />
+        )}
+
+        {tab === 'splits' && (
+          <CalendarFeed<SplitRow>
+            endpoint="/api/calendar/splits"
+            columns={splitColumns}
+            onRowClick={openStock}
+            emptyLabel="No splits found in this period"
+            searchPlaceholder="Search company or ticker..."
+            stats={(rows) => {
+              const fwd = rows.filter((r) => (r.numerator ?? 0) >= (r.denominator ?? 0)).length;
+              return [
+                { label: 'Splits In View', value: String(rows.length) },
+                { label: 'Forward', value: String(fwd) },
+                { label: 'Reverse', value: String(rows.length - fwd) },
+                { label: 'Companies', value: String(new Set(rows.map((r) => r.symbol)).size) },
+              ];
+            }}
+          />
         )}
       </div>
     </div>

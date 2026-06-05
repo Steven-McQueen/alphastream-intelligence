@@ -45,7 +45,7 @@ export default function News() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-[1500px] space-y-5 px-6 py-6">
+      <div className="space-y-5 py-6">
         {/* Masthead */}
         <header className="space-y-4">
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
