@@ -17,6 +17,7 @@ import { StockNotes } from "@/components/screener/StockNotes"
 import { ValuationMetrics } from "@/components/screener/ValuationMetrics"
 import { SimilarCompanies } from "@/components/screener/SimilarCompanies"
 import { AnalystConsensus } from "@/components/screener/AnalystConsensus"
+import { RevenueEarningsChart } from "@/components/screener/RevenueEarningsChart"
 import { InsiderTrades } from "@/components/screener/InsiderTrades"
 import { EarningsHistory } from "@/components/screener/EarningsHistory"
 import { OverviewSection } from "@/components/screener/OverviewSection"
@@ -378,6 +379,7 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
                   <div className="flex-1 min-w-0 space-y-6">
                     <FinancialReports ticker={currentStock.ticker} />
                     <EarningsHistory ticker={currentStock.ticker} />
+                    <RevenueEarningsChart ticker={currentStock.ticker} />
                   </div>
                   
                   {/* Analyst Ratings - Fixed Right Side */}
