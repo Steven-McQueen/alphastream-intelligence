@@ -368,21 +368,6 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
 
                   {/* NEWS SECTION */}
                   <StockNews ticker={currentStock.ticker} />
-
-                  {/* AI CHAT — input bar sticks to the bottom of the panel,
-                      messages flow in the page (Perplexity-style). */}
-                  <ChatOverlay
-                    mode="embedded"
-                    inline
-                    showHeader={false}
-                    contextLabel={currentStock.ticker}
-                    suggestedPrompts={[
-                      `What's the outlook for ${currentStock.ticker}?`,
-                      `Analyze ${currentStock.ticker}'s valuation`,
-                      `Key risks for ${currentStock.ticker}?`,
-                      `Compare to sector peers`,
-                    ]}
-                  />
                 </>
               )}
 
@@ -429,6 +414,21 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
               {activeTab === "News" && (
                 <StockNews ticker={currentStock.ticker} />
               )}
+
+              {/* AI CHAT — persists across all tabs; the input bar sticks to
+                  the bottom of the panel while the page scrolls (Perplexity). */}
+              <ChatOverlay
+                mode="embedded"
+                inline
+                showHeader={false}
+                contextLabel={currentStock.ticker}
+                suggestedPrompts={[
+                  `What's the outlook for ${currentStock.ticker}?`,
+                  `Analyze ${currentStock.ticker}'s valuation`,
+                  `Key risks for ${currentStock.ticker}?`,
+                  `Compare to sector peers`,
+                ]}
+              />
 
             </div>
           </div>
