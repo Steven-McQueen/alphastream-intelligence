@@ -59,9 +59,12 @@ export function AppLayout({ children }: AppLayoutProps) {
         {/* Secondary Navigation */}
         <SecondaryNav />
 
-        {/* Page Content */}
+        {/* Page Content — constrained to a consistent max width (like News),
+            centered. Pages that already cap at max-w-[1500px] are unaffected. */}
         <main className="flex-1 overflow-auto scrollbar-thin">
-          {children}
+          <div className="mx-auto w-full max-w-[1500px] h-full">
+            {children}
+          </div>
         </main>
       </div>
 
