@@ -373,6 +373,7 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
                   <ChatOverlay
                     mode="embedded"
                     contextLabel={currentStock.ticker}
+                    floatingEmptyState
                     suggestedPrompts={[
                       `What's the outlook for ${currentStock.ticker}?`,
                       `Analyze ${currentStock.ticker}'s valuation`,

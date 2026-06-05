@@ -45,6 +45,9 @@ export interface ChatOverlayProps {
   contextLabel?: string;
   /** Suggested prompt chips shown when no messages exist */
   suggestedPrompts?: string[];
+  /** Perplexity-style empty state: a centered free-floating input with prompts
+   *  that rise on focus. Off by default (docked input + suggestion list). */
+  floatingEmptyState?: boolean;
   /** Additional CSS classes */
   className?: string;
   /** External message list (controlled) — if provided, overlay won't manage its own */
@@ -102,6 +105,60 @@ function ToolActivityIndicator({ label }: { label: string }) {
         aria-hidden
       />
       <span>{label}…</span>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Suggestion chips (docked empty state — shown before first message) */
+/* ------------------------------------------------------------------ */
+function SuggestionChips({
+  prompts,
+  onSelect,
+  contextLabel,
+}: {
+  prompts: string[];
+  onSelect: (text: string) => void;
+  contextLabel?: string;
+}) {
+  const isGeneric = !contextLabel || contextLabel === 'Assistant';
+  const heading = isGeneric ? 'How can I help?' : `Ask about ${contextLabel}`;
+  return (
+    <div className="flex flex-col items-center text-center gap-7 px-2">
+      <div className="flex flex-col items-center gap-2.5">
+        <h2
+          className="text-[1.6rem] leading-tight"
+          style={{ color: 'var(--chat-text)', fontFamily: 'var(--font-serif)' }}
+        >
+          {heading}
+        </h2>
+        <p
+          className="text-sm"
+          style={{ color: 'var(--chat-faint)', fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)' }}
+        >
+          AI-powered market analysis and insights
+        </p>
+      </div>
+
+      {prompts.length > 0 && (
+        <div className="flex flex-col gap-2 w-full max-w-[26rem]">
+          {prompts.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              onClick={() => onSelect(prompt)}
+              className="chat-suggest-row group flex items-center justify-between gap-3 text-left text-[0.875rem] rounded-xl px-4 py-3 cursor-pointer"
+              style={{ fontFamily: 'var(--font-sans, Inter, system-ui, sans-serif)' }}
+            >
+              <span>{prompt}</span>
+              <ArrowUp
+                className="w-3.5 h-3.5 shrink-0 rotate-45 opacity-0 transition-opacity duration-150 group-hover:opacity-60"
+                strokeWidth={2}
+              />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -517,6 +574,7 @@ export function ChatOverlay({
   onClose,
   contextLabel,
   suggestedPrompts = [],
+  floatingEmptyState = false,
   className,
   messages: externalMessages,
   onSendMessage,
@@ -700,7 +758,7 @@ export function ChatOverlay({
         </div>
       )}
 
-      {messages.length === 0 && !isGenerating ? (
+      {floatingEmptyState && messages.length === 0 && !isGenerating ? (
         /* Free-floating landing: centered input; prompts rise on focus. */
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6 animate-chat-empty-in">
           <div className={cn(CHAT_COLUMN, 'w-full')}>
@@ -744,27 +802,43 @@ export function ChatOverlay({
           {/* Messages area */}
           <div
             ref={scrollRef}
-            className="flex-1 overflow-y-auto px-6 py-6 overscroll-contain scrollbar-slim animate-chat-conv-enter"
+            className={cn(
+              'flex-1 overflow-y-auto px-6 py-6 overscroll-contain scrollbar-slim',
+              floatingEmptyState && 'animate-chat-conv-enter',
+            )}
             style={{ minHeight: mode === 'embedded' ? '200px' : undefined }}
           >
-            <div className={cn(CHAT_COLUMN, 'flex flex-col gap-6')}>
-              {messages.map((msg, idx) => {
-                const isLastAssistant = idx === lastAssistantIdx;
-                const isStreamingThis = isLastAssistant && isGenerating;
-                return (
-                  <MessageBubble
-                    key={msg.id}
-                    message={msg}
-                    modelLabel={activeModelLabel}
-                    showActions={msg.role === 'assistant' && !isStreamingThis}
-                    canRegenerate={isLastAssistant && !isGenerating}
-                    onRegenerate={handleRegenerate}
+            {messages.length === 0 && !isGenerating ? (
+              /* Docked empty state (default): heading + suggestion list. */
+              <div className="flex min-h-full items-center justify-center">
+                <div className={CHAT_COLUMN}>
+                  <SuggestionChips
+                    prompts={suggestedPrompts}
+                    onSelect={handleSend}
+                    contextLabel={contextLabel}
                   />
-                );
-              })}
-              {isGenerating && lastAssistantIdx >= 0 && messages[lastAssistantIdx].content === '' &&
-                (toolActivity ? <ToolActivityIndicator label={toolActivity} /> : <TypingDots />)}
-            </div>
+                </div>
+              </div>
+            ) : (
+              <div className={cn(CHAT_COLUMN, 'flex flex-col gap-6')}>
+                {messages.map((msg, idx) => {
+                  const isLastAssistant = idx === lastAssistantIdx;
+                  const isStreamingThis = isLastAssistant && isGenerating;
+                  return (
+                    <MessageBubble
+                      key={msg.id}
+                      message={msg}
+                      modelLabel={activeModelLabel}
+                      showActions={msg.role === 'assistant' && !isStreamingThis}
+                      canRegenerate={isLastAssistant && !isGenerating}
+                      onRegenerate={handleRegenerate}
+                    />
+                  );
+                })}
+                {isGenerating && lastAssistantIdx >= 0 && messages[lastAssistantIdx].content === '' &&
+                  (toolActivity ? <ToolActivityIndicator label={toolActivity} /> : <TypingDots />)}
+              </div>
+            )}
           </div>
 
           {/* Error banner */}
