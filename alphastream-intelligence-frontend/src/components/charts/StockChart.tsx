@@ -25,7 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import html2canvas from "html2canvas";
 import { useStockChart, TimeRange, StockDataPoint } from "@/hooks/useStockChart";
-import { Loader2, RefreshCw, Camera, Maximize2, Minimize2, Pencil, Slash, Type } from "lucide-react";
+import { Loader2, RefreshCw, Camera, Maximize2, Minimize2, Pencil, Slash, Type, Plus, Minus, Scan } from "lucide-react";
 
 type ChartType = "line" | "candle";
 type MovingAverage = "none" | "sma" | "ema" | "wma" | "dema" | "tema";
@@ -477,6 +477,10 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       if (drawMode || allData.length <= MIN_VISIBLE) return;
+      // Only zoom on an intentional gesture (trackpad pinch sends ctrlKey,
+      // or hold ⌘/Ctrl). Plain scroll passes through so the page scrolls
+      // normally instead of the chart hijacking the wheel.
+      if (!e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
       const rect = el.getBoundingClientRect();
       const frac = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
@@ -520,6 +524,26 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
     setIsPanning(false);
     panAnchorRef.current = null;
   };
+
+  // ── React-Flow-style zoom controls (–/＋/fit) ──────────────────────────────
+  const zoomByFactor = (factor: number) => {
+    if (allData.length <= MIN_VISIBLE) return;
+    const start = zoomDomain ? zoomDomain[0] : 0;
+    const end = zoomDomain ? zoomDomain[1] : allData.length - 1;
+    const range = end - start;
+    const center = (start + end) / 2;
+    const newRange = Math.round(
+      Math.min(allData.length - 1, Math.max(MIN_VISIBLE, range * factor))
+    );
+    let newStart = Math.round(center - newRange / 2);
+    newStart = Math.max(0, Math.min(newStart, allData.length - 1 - newRange));
+    const newEnd = newStart + newRange;
+    if (newStart <= 0 && newEnd >= allData.length - 1) setZoomDomain(null);
+    else setZoomDomain([newStart, newEnd]);
+  };
+  const zoomIn = () => zoomByFactor(1 / 1.4);
+  const zoomOut = () => zoomByFactor(1.4);
+  const fitView = () => setZoomDomain(null);
 
   const { currentPrice, priceChange, priceChangePercent, isPositive } = useMemo(() => {
     if (data.length === 0) {
@@ -923,7 +947,7 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
             </div>
           ) : (
             <div
-              className="rounded-xl border border-border/70 p-3 transition-all duration-300"
+              className="relative rounded-xl border border-border/70 p-3 transition-all duration-300"
               style={{
                 backgroundColor: "hsl(var(--card))",
                 backgroundImage:
@@ -1071,6 +1095,31 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                 </ComposedChart>
               </ResponsiveContainer>
             </ChartContainer>
+
+            {/* Zoom controls (React Flow-style): drag to pan, these to zoom. */}
+            <div className="absolute bottom-4 left-4 flex flex-col overflow-hidden rounded-lg border border-border bg-card/90 backdrop-blur-sm">
+              {[
+                { icon: Plus, label: "Zoom in", onClick: zoomIn, disabled: false },
+                { icon: Minus, label: "Zoom out", onClick: zoomOut, disabled: !zoomDomain },
+                { icon: Scan, label: "Fit", onClick: fitView, disabled: !zoomDomain },
+              ].map(({ icon: Icon, label, onClick, disabled }, i) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={onClick}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  disabled={disabled}
+                  title={label}
+                  aria-label={label}
+                  className={cn(
+                    "flex h-7 w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent",
+                    i > 0 && "border-t border-border"
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                </button>
+              ))}
+            </div>
             </div>
           )}
 
