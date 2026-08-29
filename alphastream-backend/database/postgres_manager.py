@@ -9,7 +9,16 @@ from sqlalchemy.pool import QueuePool
 from contextlib import contextmanager
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
+import math
 import os
+
+
+def _finite_or_none(value):
+    """Coerce NaN/inf (e.g. from yfinance weekend gaps) to None so stored
+    values stay JSON-serializable when read back."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    return value
 
 
 class PostgresDatabaseManager:
@@ -496,9 +505,9 @@ class PostgresDatabaseManager:
                 {
                     "symbol": symbol,
                     "name": name,
-                    "value": value,
-                    "change": change,
-                    "change_pct": change_pct
+                    "value": _finite_or_none(value),
+                    "change": _finite_or_none(change),
+                    "change_pct": _finite_or_none(change_pct)
                 }
             )
 
@@ -983,9 +992,9 @@ class PostgresDatabaseManager:
                     "symbol": symbol,
                     "name": name,
                     "asset_type": asset_type,
-                    "value": value,
-                    "change": change,
-                    "change_percent": change_percent,
+                    "value": _finite_or_none(value),
+                    "change": _finite_or_none(change),
+                    "change_percent": _finite_or_none(change_percent),
                     "fetch_error": fetch_error
                 }
             )

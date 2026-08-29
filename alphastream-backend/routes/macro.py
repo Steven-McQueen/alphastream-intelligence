@@ -1,5 +1,6 @@
 """Macro data endpoints (/api/macro/*)."""
 
+import math
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
@@ -8,6 +9,18 @@ from database.db_manager import db
 from services.response_cache import ttl_cache
 
 router = APIRouter(prefix="/api/macro")
+
+
+def _json_safe(value):
+    """Replace non-finite floats (NaN/inf written by upstream feeds during
+    market gaps) with None; json.dumps rejects them and the endpoint would 500."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(v) for v in value]
+    return value
 
 # TTLs: the underlying tables only change when the refresh scheduler writes
 # (every 5-15 min during market hours), so short in-memory caches collapse the
@@ -74,7 +87,7 @@ async def get_latest_macro_snapshot():
             "VIX": {"value": vix_value, "change_percent": vix_change},
             "last_updated": datetime.now().isoformat(),
         }
-        return snapshot
+        return _json_safe(snapshot)
     except HTTPException:
         raise
     except Exception as e:
@@ -90,7 +103,7 @@ def get_market_indices():
         indices = db.get_all_indices()
         if not indices:
             raise HTTPException(status_code=503, detail="Data not available")
-        return indices
+        return _json_safe(indices)
     except HTTPException:
         raise
     except Exception as e:
@@ -106,7 +119,7 @@ def get_macro_indicators():
         indicators = db.get_all_indicators()
         if not indicators:
             raise HTTPException(status_code=503, detail="Data not available")
-        return indicators
+        return _json_safe(indicators)
     except HTTPException:
         raise
     except Exception as e:
@@ -196,7 +209,7 @@ async def get_alternative_assets():
             for asset in failed:
                 print(f"  - {asset['symbol']}: {asset.get('fetch_error')}")
 
-        return assets
+        return _json_safe(assets)
     except HTTPException:
         raise
     except Exception as e:
@@ -292,7 +305,7 @@ async def get_ticker_all():
         )
         print(f"[DATA] Ticker endpoint: {total} items ({failed} with errors or nulls)")
 
-        return ticker_items
+        return _json_safe(ticker_items)
     except HTTPException:
         raise
     except Exception as e:

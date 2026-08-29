@@ -16,6 +16,7 @@ from services.market_summary_generator import (
 )
 from services.sector_importer import get_sector_performance_summary
 from services.response_cache import ttl_cache
+from routes.macro import _json_safe
 
 router = APIRouter(prefix="/api/market")
 
@@ -234,7 +235,9 @@ def get_todays_market_insight():
 
         text = _build_insight_text(status, market_tone, spx_change, leaders, laggards)
 
-        return {
+        # NaN/inf from upstream feeds (yfinance market-gap artifacts) survive
+        # the math above but json.dumps rejects them; sanitize the response.
+        return _json_safe({
             "status": status,
             "marketTone": market_tone,
             "leaders": leaders,
@@ -242,7 +245,7 @@ def get_todays_market_insight():
             "spxChange": spx_change,
             "text": text,
             "last_updated": datetime.now().isoformat(),
-        }
+        })
     except Exception as exc:
         print(f"Error in get_todays_market_insight: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
