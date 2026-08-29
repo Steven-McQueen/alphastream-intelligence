@@ -1,14 +1,18 @@
 """Universe / stock-list endpoints (/api/universe/*)."""
 
+import json
 import threading
 from typing import Dict, List
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import Response
 
 from database.db_manager import db
 from dto.stock import stock_to_list_item
 from middleware.auth import require_admin
 from services.fmp_client import fmp_client
+from services.response_cache import ttl_cache
 from services.universe_importer import (
     fetch_and_import_full_universe,
     fetch_and_set_sp500_flags,
@@ -28,14 +32,32 @@ _population_status: Dict = {"running": False, "progress": 0, "total": 0, "comple
 
 # ── Read endpoints ──────────────────────────────────────────────────────────
 
+@ttl_cache(seconds=30)
+def _universe_core_json() -> str:
+    """Pre-serialized universe list; encoding ~24k rows dominates this endpoint,
+    so the cache stores the final JSON string, not the Python objects."""
+    # Column-trimmed query: the list DTO only needs ~25 of the 40+ columns,
+    # and the full table is large enough that transfer time dominates.
+    stocks = db.get_stock_list_rows()
+    if not stocks:
+        raise HTTPException(status_code=503, detail="Data not available")
+    items = [stock_to_list_item(s) for s in stocks]
+    # Mirror FastAPI's default JSONResponse serialization options so the
+    # payload bytes are identical to the uncached implementation.
+    return json.dumps(
+        jsonable_encoder(items),
+        ensure_ascii=False,
+        allow_nan=False,
+        indent=None,
+        separators=(",", ":"),
+    )
+
+
 @router.get("/core")
 def get_universe_core():
     """Get all S&P 500 stocks from database."""
     try:
-        stocks = db.get_all_stocks(order_by="market_cap DESC")
-        if not stocks:
-            raise HTTPException(status_code=503, detail="Data not available")
-        return [stock_to_list_item(s) for s in stocks]
+        return Response(content=_universe_core_json(), media_type="application/json")
     except HTTPException:
         raise
     except Exception as e:
@@ -59,6 +81,7 @@ def search_universe(q: str = Query(..., min_length=1)):
 
 
 @router.get("/symbols/count")
+@ttl_cache(seconds=300)
 def get_symbols_count():
     """Get count of symbols by category."""
     try:

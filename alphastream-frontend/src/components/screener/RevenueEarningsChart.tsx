@@ -80,7 +80,7 @@ export function RevenueEarningsChart({ ticker }: { ticker: string }) {
       try {
         const limit = period === 'annual' ? 6 : 8;
         const res = await fetch(
-          `${API_BASE_URL}/api/${ticker}/financials/income?period=${period}&limit=${limit}`,
+          `${API_BASE_URL}/api/stock/${ticker}/financials/income?period=${period}&limit=${limit}`,
         );
         const data = res.ok ? await res.json() : [];
         if (!cancelled) setRows(Array.isArray(data) ? data : []);

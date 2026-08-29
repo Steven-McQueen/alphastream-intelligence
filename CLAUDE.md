@@ -1,4 +1,4 @@
-# CLAUDE.md
+# [CLAUDE.md](http://CLAUDE.md)
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -10,10 +10,14 @@ AlphaStream Intelligence is a financial intelligence terminal with a Python Fast
 
 ```
 alphastream-backend/         # FastAPI backend (port 8000)
-alphastream-intelligence-frontend/  # React + Vite frontend (port 8080)
+alphastream-frontend/        # React + Vite frontend (port 8080)
 ```
 
+
+
 ## Development Commands
+
+For refrence, the user is uauslly running the kernels in the background trough the conda prompt, utilizing the BAN405 kernel. This is to be run for both the backend, frontend and the notebook secion 
 
 ### Backend
 
@@ -28,7 +32,7 @@ Backend requires a `.env` file in `alphastream-backend/` with API keys (FMP_API_
 ### Frontend
 
 ```bash
-cd alphastream-intelligence-frontend
+cd alphastream-frontend
 npm install
 npm run dev       # Vite dev server on port 8080
 npm run build     # Production build
@@ -40,6 +44,8 @@ Frontend requires `.env` with `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KE
 
 ## Architecture
 
+
+
 ### Backend
 
 - **Entry point**: `main.py` creates the FastAPI app, registers CORS middleware, includes all routers, and runs a startup event that bootstraps S&P 500 data if the database is empty, then starts the background refresh scheduler.
@@ -49,6 +55,8 @@ Frontend requires `.env` with `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KE
 - **DTOs** (`dto/`): Response transformation and formatting.
 - **Models** (`models.py`): Pydantic models for Stock, MarketIndex, MacroIndicator, Portfolio, etc.
 - **Config** (`config.py`): All environment variables and constants loaded here. Import from this module, not `os.getenv` directly.
+
+
 
 ### Frontend
 
@@ -60,6 +68,8 @@ Frontend requires `.env` with `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KE
 - **UI components**: shadcn/ui primitives in `components/ui/`. Domain components organized by feature: `screener/`, `finance/`, `market/`, `charts/`, `layout/`, `auth/`, `intelligence/`, `portfolio/`, `holdings/`, `optimizer/`, `simulation/`, `chat/`.
 - **Path alias**: `@` maps to `src/` (configured in vite.config.ts and tsconfig.json).
 - **Design tokens**: All colors, fonts, and design tokens are defined in `src/index.css`. This is the single source of truth for the visual design system. Never hardcode color values or font families in components — always reference CSS custom properties from `index.css`.
+
+
 
 ### Data Flow
 
@@ -73,8 +83,9 @@ Backend polls financial APIs on a schedule and caches results in PostgreSQL. Fro
 
 The in-app **Notebook** page (`/notebook`) connects to a **local Jupyter Server** each developer runs on their machine (not hosted by the app). Setup: `alphastream-notebooks/SETUP.md`. Do not hardcode personal conda env names in repo scripts or docs.
 
+### Rules
 
-### Rules 
-* Never hardcode colors or fonts directly into the components. Always refer to the index.css file, with clear comments that refers to the type.
-* Be consistient with the coding and file placement, maintain a coherent coding structure 
-* No emojis in the code
+- Never hardcode colors or fonts directly into the components. Always refer to the index.css file, with clear comments that refers to the type.
+- Be consistient with the coding and file placement, maintain a coherent coding structure 
+- No emojis in the code
+

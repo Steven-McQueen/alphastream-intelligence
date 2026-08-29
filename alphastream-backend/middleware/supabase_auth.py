@@ -14,6 +14,7 @@ Usage as a FastAPI dependency::
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
 
@@ -28,9 +29,15 @@ _http_session: aiohttp.ClientSession | None = None
 
 # Short-lived in-memory cache of validated tokens.  The Supabase Auth API
 # remains the source of truth; this only avoids re-validating the same bearer
-# token on every request within a small window.  Maps token -> (user_id, expiry).
-_TOKEN_CACHE_TTL_SECONDS = 90
+# token on every request within a small window.  Keyed by a SHA-256 digest so
+# raw tokens never sit in memory longer than the request. Maps digest ->
+# (user_id, expiry).
+_TOKEN_CACHE_TTL_SECONDS = 300
 _token_cache: dict[str, tuple[str, float]] = {}
+
+
+def _token_key(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 async def _get_http_session() -> aiohttp.ClientSession:
@@ -50,18 +57,19 @@ def _extract_bearer(request: Request) -> str:
 
 
 def _cache_get(token: str) -> str | None:
-    entry = _token_cache.get(token)
+    key = _token_key(token)
+    entry = _token_cache.get(key)
     if entry is None:
         return None
     user_id, expiry = entry
     if expiry < time.monotonic():
-        _token_cache.pop(token, None)
+        _token_cache.pop(key, None)
         return None
     return user_id
 
 
 def _cache_put(token: str, user_id: str) -> None:
-    _token_cache[token] = (user_id, time.monotonic() + _TOKEN_CACHE_TTL_SECONDS)
+    _token_cache[_token_key(token)] = (user_id, time.monotonic() + _TOKEN_CACHE_TTL_SECONDS)
 
 
 async def _verify_via_supabase_api(token: str) -> str:

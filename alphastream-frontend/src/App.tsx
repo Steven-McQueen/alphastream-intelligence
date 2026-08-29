@@ -31,7 +31,17 @@ import { StockDetailProvider, useStockDetail } from "./contexts/StockDetailConte
 import { ChatHistoryProvider } from "./contexts/ChatHistoryContext";
 import { StockDetailSheet } from "./components/screener/StockDetailSheet";
 
-const queryClient = new QueryClient();
+// Live data freshness is driven by per-query refetchInterval polling, so focus
+// refetches only add redundant request bursts; the 30s default staleTime dedupes
+// refetches when components remount without making polled data any staler.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      staleTime: 30_000,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

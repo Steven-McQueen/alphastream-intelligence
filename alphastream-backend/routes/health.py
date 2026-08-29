@@ -65,7 +65,7 @@ def get_data_status():
             "data_age_minutes": round(age_minutes, 2) if age_minutes else None,
             "last_refresh": refresh_history if refresh_history else None,
             "recent_refreshes": refresh_history,
-            "total_stocks": len(db.get_all_stocks()),
+            "total_stocks": db.count_stocks(),
         }
     except HTTPException:
         raise

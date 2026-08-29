@@ -34,8 +34,23 @@ class PostgresDatabaseManager:
             pool_size=5,
             max_overflow=10,
             pool_timeout=30,
-            pool_recycle=1800,  # Recycle connections after 30 minutes
-            echo=False  # Set to True for SQL debugging
+            # Recycle before the pooler's idle timeout instead of pre-pinging:
+            # pool_pre_ping costs a full network round-trip (~50-80ms to the
+            # Supabase pooler) on EVERY session checkout, which dominated
+            # per-request latency for this single-user local setup.
+            pool_recycle=280,
+            pool_pre_ping=False,
+            echo=False,  # Set to True for SQL debugging
+            connect_args={
+                # Belt-and-suspenders against leaked/stuck sessions on the
+                # session-mode pooler. The DB roles also set
+                # idle_in_transaction_session_timeout server-side.
+                "keepalives": 1,
+                "keepalives_idle": 30,
+                "keepalives_interval": 10,
+                "keepalives_count": 5,
+                "options": "-c idle_in_transaction_session_timeout=300000",
+            },
         )
 
         # Create session factory
@@ -206,6 +221,42 @@ class PostgresDatabaseManager:
             result = session.execute(text(f"SELECT * FROM stocks ORDER BY {safe_order}"))
             return self._rows_to_dicts(result.fetchall())
 
+    # Columns needed by dto.stock.stock_to_list_item; avoids shipping the full
+    # 40+ column rows for the whole table on list endpoints.
+    _LIST_ITEM_COLUMNS = (
+        "ticker, name, sector, industry, price, change_1d, change_1w, change_1m, "
+        "change_1y, volume, pe_ratio, eps, dividend_yield, market_cap, "
+        "shares_outstanding, net_profit_margin, gross_margin, roe, revenue_ttm, "
+        "beta, debt_to_equity, institutional_ownership, year_founded, website, "
+        "last_updated"
+    )
+
+    def get_stock_list_rows(self) -> List[dict]:
+        """Get all stocks with only the columns the list DTO needs."""
+        with self.get_session() as session:
+            result = session.execute(text(
+                f"SELECT {self._LIST_ITEM_COLUMNS} FROM stocks "
+                "ORDER BY market_cap DESC NULLS LAST"
+            ))
+            return self._rows_to_dicts(result.fetchall())
+
+    def count_stocks(self) -> int:
+        """Count rows in the stocks table without transferring them."""
+        with self.get_session() as session:
+            result = session.execute(text("SELECT COUNT(*) AS n FROM stocks"))
+            row = result.fetchone()
+            return int(row.n) if row else 0
+
+    def get_ticker_name_map(self) -> Dict[str, str]:
+        """Map of upper-cased ticker -> company name for the whole stocks table."""
+        with self.get_session() as session:
+            result = session.execute(text("SELECT ticker, name FROM stocks"))
+            return {
+                row.ticker.upper(): (row.name or row.ticker)
+                for row in result.fetchall()
+                if row.ticker
+            }
+
     def search_stocks(self, query: str) -> List[dict]:
         """Search stocks by ticker or name."""
         with self.get_session() as session:
@@ -313,7 +364,9 @@ class PostgresDatabaseManager:
         with self.get_session() as session:
             session.execute(text("""
                 INSERT INTO company_profiles (symbol, data, last_updated)
-                VALUES (:symbol, :data::jsonb, NOW())
+                -- CAST(...) instead of :data::jsonb - SQLAlchemy's text() does
+                -- not bind params immediately followed by a :: cast.
+                VALUES (:symbol, CAST(:data AS jsonb), NOW())
                 ON CONFLICT (symbol) DO UPDATE SET
                     data = EXCLUDED.data,
                     last_updated = NOW()
@@ -1288,6 +1341,23 @@ class PostgresDatabaseManager:
                 """)
             )
             return [row.symbol for row in result.fetchall()]
+
+    def get_sp500_constituent_rows(self) -> List[dict]:
+        """
+        S&P 500 constituents (ticker/name/sector/industry) from the symbols
+        table. Used as a local fallback when the external constituent source
+        is unavailable.
+        """
+        with self.get_session() as session:
+            result = session.execute(
+                text("""
+                    SELECT symbol AS ticker, name, sector, industry
+                    FROM symbols
+                    WHERE is_sp500 = TRUE AND is_active = TRUE
+                    ORDER BY symbol
+                """)
+            )
+            return [dict(row._mapping) for row in result.fetchall()]
 
     def search_symbols(self, query: str, limit: int = 20) -> List[dict]:
         """

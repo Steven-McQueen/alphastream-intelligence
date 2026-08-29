@@ -1,9 +1,11 @@
 """Live-quote endpoints (/api/live/*)."""
 
+import asyncio
 from datetime import datetime
 from typing import Dict
 
 from fastapi import APIRouter, HTTPException, Query
+from starlette.concurrency import run_in_threadpool
 
 from database.db_manager import db
 from services.fmp_client import fmp_client
@@ -73,24 +75,29 @@ async def get_live_batch(symbols: str = Query(..., description="Comma-separated 
         if len(symbol_list) > 50:
             raise HTTPException(status_code=400, detail="Maximum 50 symbols per batch")
 
-        results = []
-        for symbol in symbol_list:
+        def _fetch_one(symbol: str) -> Dict:
             try:
                 quote = _live_quote(symbol)
-                results.append({
+                return {
                     "symbol": quote.get("symbol", symbol),
                     "value": quote.get("price", 0),
                     "changePercent": quote.get("changePercent", 0),
                     "price": quote.get("price", 0),
                     "change": quote.get("change", 0),
-                })
+                }
             except Exception as e:
-                results.append({
+                return {
                     "symbol": symbol,
                     "value": None,
                     "changePercent": None,
                     "error": str(e),
-                })
+                }
+
+        # One FMP call per symbol; fan out to the threadpool instead of
+        # fetching sequentially (order is preserved by gather).
+        results = list(await asyncio.gather(
+            *[run_in_threadpool(_fetch_one, symbol) for symbol in symbol_list]
+        ))
 
         return results
     except HTTPException:

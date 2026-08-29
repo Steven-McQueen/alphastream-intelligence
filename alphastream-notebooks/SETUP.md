@@ -69,7 +69,7 @@ The script creates `~/alphastream-notebooks` (or `%USERPROFILE%\alphastream-note
 From the repo root:
 
 ```bash
-cd alphastream-intelligence-frontend
+cd alphastream-frontend
 npm install
 ```
 

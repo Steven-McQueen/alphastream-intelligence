@@ -139,27 +139,6 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
     }
   };
 
-  // Signal coordinator when sheet opens/closes for priority handling
-  useEffect(() => {
-    if (!open || !stock?.ticker) return;
-
-    // Signal that this stock is now active (gets priority)
-    fetch(`${API_BASE_URL}/api/coordinator/active-stock`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ticker: stock.ticker }),
-    }).catch(() => {
-      // Silently fail - coordinator is optional optimization
-    });
-
-    return () => {
-      // Clear active stock when sheet closes
-      fetch(`${API_BASE_URL}/api/coordinator/active-stock`, {
-        method: 'DELETE',
-      }).catch(() => {});
-    };
-  }, [open, stock?.ticker]);
-
   // Parallel fetch: Load stock detail and profile simultaneously for instant load
   useEffect(() => {
     if (!stock?.ticker) return;
@@ -208,7 +187,7 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
         // ignore single errors
       }
     };
-    const id = setInterval(poll, 10000); // 10s polling - active stock sheet is priority
+    const id = setInterval(poll, 30000); // 30s polling - active stock sheet (was 10s)
     return () => {
       cancelled = true;
       clearInterval(id);

@@ -62,7 +62,7 @@ export function AnalystConsensus({
     (async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE_URL}/api/${ticker}/analyst/ratings`);
+        const res = await fetch(`${API_BASE_URL}/api/stock/${ticker}/analyst/ratings`);
         const j = res.ok ? await res.json() : null;
         if (!cancelled) setData(j);
       } catch {

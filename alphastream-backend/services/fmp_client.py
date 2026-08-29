@@ -23,6 +23,9 @@ class FMPClient:
     BASE_URL = "https://financialmodelingprep.com/api/v3"
 
     def __init__(self) -> None:
+        # Reuse one HTTP session (keep-alive) - avoids a fresh TLS handshake per
+        # call, which dominates latency on large sequential quote batches.
+        self._session = requests.Session()
         self.api_key = os.getenv("FMP_API_KEY")
         # Debug: Show if API key is loaded (masked for security)
         if self.api_key:
@@ -48,7 +51,7 @@ class FMPClient:
             url = f"{self.BASE_URL}{endpoint}"
 
         try:
-            response = requests.get(url, params=params, timeout=10)
+            response = self._session.get(url, params=params, timeout=10)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as exc:
@@ -125,7 +128,20 @@ class FMPClient:
 
         for i, symbol in enumerate(symbols):
             try:
-                data = self._make_request("/stable/quote", params={"symbol": symbol})
+                data = None
+                for attempt in range(3):
+                    try:
+                        data = self._make_request("/stable/quote", params={"symbol": symbol})
+                        break
+                    except requests.exceptions.HTTPError as http_err:
+                        resp = getattr(http_err, "response", None)
+                        # Back off and retry on per-minute rate limits so the
+                        # tail of large batches is not silently dropped.
+                        if resp is not None and resp.status_code == 429 and attempt < 2:
+                            print(f"[FMP] Rate limited at {symbol}, backing off 20s...")
+                            time.sleep(20)
+                            continue
+                        raise
 
                 # Handle successful response (list with one quote)
                 if isinstance(data, list) and len(data) > 0:

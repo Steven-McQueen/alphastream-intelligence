@@ -2,7 +2,7 @@
 
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
 from database.db_manager import db
 from services.fmp_client import fmp_client
@@ -36,6 +36,7 @@ def _cache_screener_to_db(results: List[Dict]):
 
 @router.get("/api/screener")
 async def screener(
+    background_tasks: BackgroundTasks,
     sector: Optional[str] = None,
     industry: Optional[str] = None,
     marketCapMoreThan: Optional[float] = None,
@@ -93,10 +94,9 @@ async def screener(
         end_idx = start_idx + limit
         paginated = items[start_idx:end_idx] if page > 0 else items[:limit]
 
-        try:
-            _cache_screener_to_db(results)
-        except Exception as cache_err:
-            print(f"[SCREENER] Cache warning: {cache_err}")
+        # Row-by-row upserts over the pooler are slow; run after the response
+        # is sent instead of blocking it.
+        background_tasks.add_task(_cache_screener_to_db, results)
 
         return {"items": paginated, "total": len(items), "page": page}
     except HTTPException:

@@ -68,6 +68,31 @@ def fetch_sp500_list_from_sp500live() -> List[Dict]:
         return []
 
 
+def fetch_sp500_list_from_db() -> List[Dict]:
+    """
+    Fallback constituent source: the symbols table already carries is_sp500
+    flags plus name/sector/industry, so quote refreshes keep working even when
+    the external list provider is down (sp500live.co is offline as of 2026).
+    """
+    try:
+        rows = db.get_sp500_constituent_rows()
+        constituents = [
+            {
+                "ticker": (r.get("ticker") or "").strip(),
+                "name": (r.get("name") or "").strip(),
+                "sector": (r.get("sector") or "").strip(),
+                "industry": (r.get("industry") or "").strip(),
+            }
+            for r in rows
+            if (r.get("ticker") or "").strip()
+        ]
+        print(f"  [OK] Loaded {len(constituents)} constituents from local symbols table")
+        return constituents
+    except Exception as e:
+        print(f"  [ERROR] Failed to load constituents from DB: {e}")
+        return []
+
+
 def _to_float(val, default=0.0) -> float:
     try:
         return float(val)
@@ -100,6 +125,9 @@ def fetch_and_import_sp500_hybrid() -> int:
     try:
         print("Fetching S&P 500 list from SP500Live.co...")
         constituents = fetch_sp500_list_from_sp500live()
+        if not constituents:
+            print("[WARN] SP500Live unavailable, falling back to DB constituent list...")
+            constituents = fetch_sp500_list_from_db()
         if not constituents:
             print("[ERROR] Failed to fetch S&P 500 list")
             return 0
@@ -170,7 +198,7 @@ def fetch_and_import_sp500_hybrid() -> int:
                     "weight": 0.0,
                     "last_updated": datetime.now().isoformat(),
                     "data_source": "hybrid_sp500live_fmp",
-                    "is_sp500": 1,
+                    "is_sp500": True,
                 }
             )
 

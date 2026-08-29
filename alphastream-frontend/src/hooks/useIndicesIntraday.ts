@@ -66,7 +66,7 @@ export function useIndicesIntraday(symbols: string[], interval: string = '5min')
       }
     };
     fetchData();
-    const id = setInterval(fetchData, 10_000); // 10s polling to match live feel
+    const id = setInterval(fetchData, 60_000); // 60s polling (intraday bars update at most every 5min upstream)
     return () => {
       cancelled = true;
       clearInterval(id);

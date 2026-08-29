@@ -173,6 +173,50 @@ class SQLiteDatabaseManager:
     finally:
       self.close()
 
+  def get_stock_list_rows(self) -> List[dict]:
+    """Get all stocks with only the columns the list DTO needs."""
+    columns = (
+      "ticker, name, sector, industry, price, change_1d, change_1w, change_1m, "
+      "change_1y, volume, pe_ratio, eps, dividend_yield, market_cap, "
+      "shares_outstanding, net_profit_margin, gross_margin, roe, revenue_ttm, "
+      "beta, debt_to_equity, institutional_ownership, year_founded, website, "
+      "last_updated"
+    )
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      cursor.execute(f"SELECT {columns} FROM stocks ORDER BY market_cap DESC")
+      rows = cursor.fetchall()
+      return [dict(row) for row in rows]
+    finally:
+      self.close()
+
+  def count_stocks(self) -> int:
+    """Count rows in the stocks table without transferring them."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      cursor.execute("SELECT COUNT(*) AS n FROM stocks")
+      row = cursor.fetchone()
+      return int(row["n"]) if row else 0
+    finally:
+      self.close()
+
+  def get_ticker_name_map(self) -> dict:
+    """Map of upper-cased ticker -> company name for the whole stocks table."""
+    conn = self.connect()
+    cursor = conn.cursor()
+    try:
+      cursor.execute("SELECT ticker, name FROM stocks")
+      rows = cursor.fetchall()
+      return {
+        row["ticker"].upper(): (row["name"] or row["ticker"])
+        for row in rows
+        if row["ticker"]
+      }
+    finally:
+      self.close()
+
   def search_stocks(self, query: str) -> List[dict]:
     """Search stocks by ticker or name"""
     conn = self.connect()
@@ -254,6 +298,10 @@ class SQLiteDatabaseManager:
   def set_cached_profile(self, symbol: str, data: dict) -> None:
     """Cache company profile (SQLite stub - no-op)."""
     pass
+
+  def get_sp500_constituent_rows(self) -> list:
+    """S&P 500 constituents from symbols table (SQLite stub - returns empty)."""
+    return []
 
   def get_stock_with_age(self, ticker: str) -> tuple:
     """Get stock with age in seconds since last update."""

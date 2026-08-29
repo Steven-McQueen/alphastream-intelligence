@@ -134,14 +134,15 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
       }
     };
     fetchStatus();
-    const id = setInterval(fetchStatus, 20_000);
+    // Open/closed only flips twice a day; 60s detection lag is invisible.
+    const id = setInterval(fetchStatus, 60_000);
     return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
     loadMarketData();
-    // Polling: 15s during market hours for fast updates, 60s off-market
-    const pollInterval = marketOpen ? 15_000 : 60_000;
+    // Polling: 30s during market hours, 60s off-market (server cache refreshes on its own schedule)
+    const pollInterval = marketOpen ? 30_000 : 60_000;
     const interval = setInterval(loadMarketData, pollInterval);
     return () => clearInterval(interval);
   }, [loadMarketData, marketOpen]);

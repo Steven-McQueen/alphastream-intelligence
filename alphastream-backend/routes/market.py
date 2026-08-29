@@ -15,6 +15,7 @@ from services.market_summary_generator import (
     test_gemini_connection,
 )
 from services.sector_importer import get_sector_performance_summary
+from services.response_cache import ttl_cache
 
 router = APIRouter(prefix="/api/market")
 
@@ -44,6 +45,7 @@ def _session_status_et() -> str:
 
 
 @router.get("/sectors")
+@ttl_cache(seconds=60)
 def get_sector_performance():
     """Calculate sector performance by aggregating stocks in database."""
     try:
@@ -157,6 +159,7 @@ def _build_insight_text(
 
 
 @router.get("/market-summary")
+@ttl_cache(seconds=30)
 def get_market_summary():
     """Return the latest Gemini-generated market summary (cached; no live generation)."""
     try:
@@ -208,6 +211,7 @@ def refresh_market_summary():
 
 
 @router.get("/todays-insight")
+@ttl_cache(seconds=60)
 def get_todays_market_insight():
     """Provide a short narrative and key facts for the front page."""
     try:
@@ -245,6 +249,7 @@ def get_todays_market_insight():
 
 
 @router.get("/top-movers")
+@ttl_cache(seconds=30)
 def get_top_movers(limit: int = 10):
     """Get top gaining and losing stocks today."""
     try:
@@ -291,6 +296,7 @@ def get_top_movers(limit: int = 10):
 
 
 @router.get("/standouts")
+@ttl_cache(seconds=30)
 def get_standouts(limit: int = 10):
     """Return standout movers from cached market_movers."""
     try:

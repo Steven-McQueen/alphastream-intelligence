@@ -86,8 +86,8 @@ app.include_router(atlas_router)
 async def startup_event():
     """Start background tasks on app startup."""
     try:
-        stocks = db.get_all_stocks()
-        if not stocks or len(stocks) < 100:
+        stock_count = db.count_stocks()
+        if stock_count < 100:
             print("[STARTUP] Stocks table is empty or has few records, bootstrapping S&P 500...")
 
             def bootstrap_thread():
@@ -100,7 +100,7 @@ async def startup_event():
             thread = threading.Thread(target=bootstrap_thread, daemon=True)
             thread.start()
         else:
-            print(f"[STARTUP] Stocks table has {len(stocks)} records, skipping bootstrap")
+            print(f"[STARTUP] Stocks table has {stock_count} records, skipping bootstrap")
     except Exception as e:
         print(f"[STARTUP] Error checking stocks table: {e}")
 

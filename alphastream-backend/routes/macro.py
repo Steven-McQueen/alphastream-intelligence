@@ -5,11 +5,17 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 
 from database.db_manager import db
+from services.response_cache import ttl_cache
 
 router = APIRouter(prefix="/api/macro")
 
+# TTLs: the underlying tables only change when the refresh scheduler writes
+# (every 5-15 min during market hours), so short in-memory caches collapse the
+# frontend's ~30s polling into one DB round-trip per window.
+
 
 @router.get("/latest")
+@ttl_cache(seconds=30)
 async def get_latest_macro_snapshot():
     """Get latest values for Today's Snapshot."""
     try:
@@ -77,6 +83,7 @@ async def get_latest_macro_snapshot():
 
 
 @router.get("/indices")
+@ttl_cache(seconds=30)
 def get_market_indices():
     """Get current market indices (SPX, NDX, DJI, RUT, VIX)."""
     try:
@@ -92,6 +99,7 @@ def get_market_indices():
 
 
 @router.get("/indicators")
+@ttl_cache(seconds=60)
 def get_macro_indicators():
     """Get current macro indicators (yields, CPI, GDP, unemployment, DXY)."""
     try:
@@ -107,6 +115,7 @@ def get_macro_indicators():
 
 
 @router.get("/treasury-history")
+@ttl_cache(seconds=300)
 def get_treasury_history(days: int = 365):
     """Get 12 months of US 10Y and 2Y treasury yield history."""
     try:
@@ -122,6 +131,7 @@ def get_treasury_history(days: int = 365):
 
 
 @router.get("/cpi-history")
+@ttl_cache(seconds=600)
 def get_cpi_history(months: int = 12):
     """Get 12 months of CPI history."""
     try:
@@ -145,6 +155,7 @@ def get_cpi_history(months: int = 12):
 
 
 @router.get("/vix-history")
+@ttl_cache(seconds=300)
 def get_vix_history(days: int = 365):
     """Get 12 months of VIX history."""
     try:
@@ -168,6 +179,7 @@ def get_vix_history(days: int = 365):
 
 
 @router.get("/alternative-assets")
+@ttl_cache(seconds=60)
 async def get_alternative_assets():
     """Get all alternative assets (crypto, commodities, currencies)."""
     try:
@@ -193,6 +205,7 @@ async def get_alternative_assets():
 
 
 @router.get("/ticker-all")
+@ttl_cache(seconds=30)
 async def get_ticker_all():
     """Get combined ticker data for global ticker."""
     try:
