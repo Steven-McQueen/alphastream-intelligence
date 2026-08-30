@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from database.db_manager import db
 from services.refresh_scheduler import start_scheduler_background, stop_scheduler
-from services.universe_importer import bootstrap_sp500_stocks
+from services.universe_importer import bootstrap_sp500_stocks, ensure_full_symbol_directory
 
 # ── Route modules ────────────────────────────────────────────────────────────
 from routes.health import router as health_router
@@ -103,6 +103,18 @@ async def startup_event():
             print(f"[STARTUP] Stocks table has {stock_count} records, skipping bootstrap")
     except Exception as e:
         print(f"[STARTUP] Error checking stocks table: {e}")
+
+    try:
+        def universe_thread():
+            try:
+                ensure_full_symbol_directory()
+            except Exception as e:
+                print(f"[STARTUP] Universe directory import failed: {e}")
+
+        thread = threading.Thread(target=universe_thread, daemon=True)
+        thread.start()
+    except Exception as e:
+        print(f"[STARTUP] Error starting universe import: {e}")
 
     try:
         from database.ai_model_store import bootstrap_if_empty

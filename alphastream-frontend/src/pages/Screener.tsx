@@ -28,7 +28,6 @@ import { useStockDetail } from '@/contexts/StockDetailContext';
 import { useWatchlist } from '@/contexts/WatchlistContext';
 import { API_BASE_URL } from '@/config/api';
 
-// Symbol search result from backend
 interface SymbolResult {
   ticker: string;
   name: string;
@@ -36,6 +35,29 @@ interface SymbolResult {
   industry: string | null;
   is_sp500: boolean;
   exchange: string | null;
+}
+
+interface DirectoryEntry {
+  ticker: string;
+  name: string;
+}
+
+function toDirectoryStub(entry: DirectoryEntry): Stock {
+  return {
+    ticker: entry.ticker,
+    name: entry.name,
+    sector: '' as Sector,
+    industry: '',
+    price: 0,
+    change1D: 0,
+    change1W: 0,
+    change1M: 0,
+    change1Y: 0,
+    volume: 0,
+    peRatio: null,
+    marketCap: 0,
+    dataSource: 'directory',
+  };
 }
 
 type SortOption = 'ticker' |  'marketCap' |  'price' | 'dividendYield' | 'beta';
@@ -60,7 +82,12 @@ function formatCompact(value: number | null | undefined): string {
   return value.toLocaleString();
 }
 
-// Format ratio
+// NaN ?? 0 is still NaN, so never call toFixed on a raw price.
+function formatPrice(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "-";
+  return `$${value.toFixed(2)}`;
+}
+
 function formatRatio(value: number | null | undefined, decimals = 1): string {
   if (value === null || value === undefined || isNaN(value)) return "-";
   return value.toFixed(decimals);
@@ -132,6 +159,7 @@ export default function Screener() {
   const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('marketCap');
   const [stocks, setStocks] = useState<Stock[]>([]);
+  const [directory, setDirectory] = useState<DirectoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
@@ -158,7 +186,7 @@ export default function Screener() {
     }
     setSearchingSymbols(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/universe/search-symbols?q=${encodeURIComponent(query)}&limit=10`);
+      const res = await fetch(`${API_BASE_URL}/api/universe/search-symbols?q=${encodeURIComponent(query)}&limit=15`);
       if (res.ok) {
         const data: SymbolResult[] = await res.json();
         setSymbolResults(data);
@@ -219,10 +247,20 @@ export default function Screener() {
   const loadInitialData = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/universe/core`);
-      if (!response.ok) throw new Error('Failed to load stocks');
-      const data = await response.json();
-      setStocks(data);
+      const [coreRes, dirRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/universe/core`),
+        fetch(`${API_BASE_URL}/api/universe/directory`),
+      ]);
+      if (!coreRes.ok) throw new Error('Failed to load stocks');
+      const data = await coreRes.json();
+      const rows = Array.isArray(data) ? data : [];
+      setStocks(rows.slice(0, 600));
+
+      if (dirRes.ok) {
+        const dir = await dirRes.json();
+        const items: DirectoryEntry[] = Array.isArray(dir?.items) ? dir.items : [];
+        setDirectory(items);
+      }
     } catch (err) {
       console.error('Error loading initial data:', err);
       setError('Could not connect to backend. Make sure it is running on port 8000.');
@@ -274,6 +312,7 @@ export default function Screener() {
 
       const data = await response.json();
       setStocks(data.items || []);
+      setDirectory([]);
       setPage(0);
       toast({
         title: 'Filters Applied',
@@ -295,6 +334,32 @@ export default function Screener() {
   useEffect(() => {
     loadInitialData();
   }, [loadInitialData]);
+
+  // Directory import runs in the background on startup; pick it up when it lands.
+  useEffect(() => {
+    if (directory.length >= 5000) return;
+    let attempts = 0;
+    const id = window.setInterval(async () => {
+      attempts += 1;
+      if (attempts > 24) {
+        window.clearInterval(id);
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/universe/directory`);
+        if (!res.ok) return;
+        const dir = await res.json();
+        const items: DirectoryEntry[] = Array.isArray(dir?.items) ? dir.items : [];
+        if (items.length > 0) {
+          setDirectory(items);
+          if (items.length >= 5000) window.clearInterval(id);
+        }
+      } catch {
+        // keep polling
+      }
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, [directory.length]);
 
   // Subscribe to stock updates from StockDetailSheet
   // When user closes the detail sheet, update that stock's price in our list
@@ -357,15 +422,16 @@ export default function Screener() {
   }, [searchParams, setSearchParams]);
 
   const sectors = useMemo(() => {
-    const unique = new Set<Sector>();
-    stocks.forEach((s) => unique.add(s.sector));
-    return Array.from(unique).sort();
+    const unique = new Set<string>();
+    stocks.forEach((s) => {
+      if (s.sector && String(s.sector).trim()) unique.add(s.sector);
+    });
+    return Array.from(unique).sort() as Sector[];
   }, [stocks]);
 
   const industries = useMemo(() => {
     const unique = new Set<string>();
     stocks.forEach((s) => {
-      // Only add non-empty, non-null industries
       if (s.industry && s.industry.trim() !== '') {
         unique.add(s.industry);
       }
@@ -389,8 +455,8 @@ export default function Screener() {
       const searchLower = search.toLowerCase();
       result = result.filter(
         (s) =>
-          s.ticker.toLowerCase().includes(searchLower) ||
-          s.name.toLowerCase().includes(searchLower)
+          (s.ticker || '').toLowerCase().includes(searchLower) ||
+          (s.name || '').toLowerCase().includes(searchLower)
       );
     }
 
@@ -427,6 +493,34 @@ export default function Screener() {
     return result;
   }, [stocks, search, selectedSectors, selectedIndustry, sortBy, ratioFilters]);
 
+  const coreTickers = useMemo(
+    () => new Set(stocks.map((s) => (s.ticker || '').toUpperCase())),
+    [stocks]
+  );
+
+  const numericFiltersActive =
+    selectedSectors.length > 0 ||
+    !!selectedIndustry ||
+    ratioFilters.some((f) => f.enabled && f.value !== null);
+
+  // Names not in the S&P snapshot. Hidden when ratio/sector filters are on
+  // because those rows have no fundamentals yet.
+  const filteredDirectory = useMemo(() => {
+    if (filtersApplied || numericFiltersActive) return [];
+    let rows = directory.filter((d) => !coreTickers.has((d.ticker || '').toUpperCase()));
+    if (search) {
+      const q = search.toLowerCase();
+      rows = rows.filter(
+        (d) =>
+          (d.ticker || '').toLowerCase().includes(q) ||
+          (d.name || '').toLowerCase().includes(q)
+      );
+    }
+    return rows;
+  }, [directory, coreTickers, search, filtersApplied, numericFiltersActive]);
+
+  const totalFilteredCount = filteredStocks.length + filteredDirectory.length;
+
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
@@ -434,10 +528,18 @@ export default function Screener() {
 
   const paginatedStocks = useMemo(() => {
     const start = page * pageSize;
-    return filteredStocks.slice(start, start + pageSize);
-  }, [filteredStocks, page]);
+    const end = start + pageSize;
+    const fromCore = filteredStocks.slice(start, Math.min(end, filteredStocks.length));
+    if (fromCore.length >= pageSize || end <= filteredStocks.length) {
+      return fromCore;
+    }
+    const dirStart = Math.max(0, start - filteredStocks.length);
+    const need = pageSize - fromCore.length;
+    const stubs = filteredDirectory.slice(dirStart, dirStart + need).map(toDirectoryStub);
+    return [...fromCore, ...stubs];
+  }, [filteredStocks, filteredDirectory, page, pageSize]);
 
-  const totalPages = Math.ceil(filteredStocks.length / pageSize);
+  const totalPages = Math.ceil(totalFilteredCount / pageSize);
 
   const handleRowClick = (stock: Stock) => {
     openStockDetail(stock);
@@ -679,7 +781,7 @@ export default function Screener() {
 
           {/* Count */}
           <span className="text-xs text-dim">
-            {filteredStocks.length} stocks{filtersApplied && ' (filtered)'}
+            {totalFilteredCount.toLocaleString()} stocks{filtersApplied && ' (filtered)'}
           </span>
         </div>
 
@@ -768,6 +870,7 @@ export default function Screener() {
               <tbody>
                 {paginatedStocks.map((stock) => {
                   const isWatched = watchlist.includes(stock.ticker);
+                  const isStub = stock.dataSource === 'directory';
 
                   return (
                     <tr
@@ -804,16 +907,16 @@ export default function Screener() {
                         {stock.industry || '-'}
                       </td>
                       <td className="px-2 py-1 text-right font-mono text-foreground">
-                        ${(stock.price ?? 0).toFixed(2)}
+                        {isStub ? '-' : formatPrice(stock.price)}
                       </td>
                       <td className="px-2 py-1 text-right font-mono text-soft">
-                        {stock.volume ? formatCompact(stock.volume) : '-'}
+                        {isStub || !stock.volume ? '-' : formatCompact(stock.volume)}
                       </td>
                       <td className="px-2 py-1 text-right font-mono text-soft">
-                        ${formatCompact(stock.marketCap ?? 0)}
+                        {isStub || !stock.marketCap ? '-' : `$${formatCompact(stock.marketCap)}`}
                       </td>
                       <td className="px-2 py-1 text-right font-mono text-soft">
-                        {formatRatio(stock.beta, 2)}
+                        {isStub ? '-' : formatRatio(stock.beta, 2)}
                       </td>
                       <td className="px-2 py-1 text-right font-mono text-soft">
                         {stock.dividendYield ? `${formatRatio((stock.dividendYield ?? 0) * 100)}%` : '-'}
@@ -832,7 +935,7 @@ export default function Screener() {
         <div className="px-4 pb-4">
           <div className="flex items-center justify-between">
             <span className="text-xs text-dim">
-              {page * pageSize + 1}-{Math.min((page + 1) * pageSize, filteredStocks.length)} of {filteredStocks.length}
+              {page * pageSize + 1}-{Math.min((page + 1) * pageSize, totalFilteredCount)} of {totalFilteredCount.toLocaleString()}
             </span>
             <div className="flex items-center gap-1">
               <Button

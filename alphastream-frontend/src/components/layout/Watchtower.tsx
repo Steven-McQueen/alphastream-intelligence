@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useMarket } from '@/contexts/MarketContext';
+import { useStockDetail } from '@/contexts/StockDetailContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { 
@@ -44,8 +44,8 @@ export function Watchtower() {
     isLoading,
     scrollY 
   } = useMarket();
+  const { openIndexDetail } = useStockDetail();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
 
   // Sync scroll with main content
   useEffect(() => {
@@ -143,7 +143,7 @@ export function Watchtower() {
                 <div 
                   key={index.symbol} 
                   className="flex items-center justify-between p-2.5 bg-card/50 rounded-lg border border-border/50 hover:border-secondary transition-colors cursor-pointer"
-                  onClick={() => navigate(`/market/${encodeURIComponent(index.symbol)}`)}
+                  onClick={() => openIndexDetail({ symbol: index.symbol, name: index.name })}
                 >
                   <div>
                     <span className="text-xs font-medium text-foreground">{index.symbol}</span>

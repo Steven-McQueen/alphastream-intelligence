@@ -65,6 +65,20 @@ def get_universe_core():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/directory")
+def get_universe_directory():
+    """Compact ticker+name directory of the full universe (no quotes).
+
+    Screener uses this to paginate/search ~24k names while /core stays S&P 500.
+    """
+    try:
+        items = db.get_symbol_directory()
+        return {"items": items, "total": len(items)}
+    except Exception as e:
+        print(f"Error in get_universe_directory: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/search")
 def search_universe(q: str = Query(..., min_length=1)):
     """Search stocks by ticker or name."""

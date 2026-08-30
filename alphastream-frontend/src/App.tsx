@@ -237,12 +237,13 @@ const App = () => (
 );
 
 function StockDetailPortal() {
-  const { selectedStock, closeStockDetail } = useStockDetail();
-  if (!selectedStock) return null;
+  const { selectedStock, selectedIndex, closeStockDetail } = useStockDetail();
+  if (!selectedStock && !selectedIndex) return null;
   return (
     <StockDetailSheet
       stock={selectedStock}
-      open={!!selectedStock}
+      index={selectedIndex}
+      open={!!selectedStock || !!selectedIndex}
       onOpenChange={(open) => {
         if (!open) closeStockDetail();
       }}

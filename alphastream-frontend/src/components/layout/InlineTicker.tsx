@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMarket } from '@/contexts/MarketContext';
 import { useStockDetail } from '@/contexts/StockDetailContext';
+import { getIndexDisplayName, isIndexSymbol } from '@/lib/indexMeta';
 import { API_BASE_URL } from '@/config/api';
 
 interface TickerItem {
@@ -16,7 +17,7 @@ export function InlineTicker() {
   const [symbols, setSymbols] = useState<string[]>([]);
   const navigate = useNavigate();
   const { isMarketOpen } = useMarket();
-  const { openStockDetail } = useStockDetail();
+  const { openStockDetail, openIndexDetail } = useStockDetail();
   const idxRef = useRef(0);
 
   useEffect(() => {
@@ -127,18 +128,13 @@ export function InlineTicker() {
   );
 
   const handleClick = (symbol: string) => {
-    // Check if symbol is an index (starts with ^) or a macro indicator
-    const isIndex = symbol.startsWith('^');
     const isMacro = ['US10Y', 'US2Y', 'DXY', 'GOLD', 'WTI', 'BTC-USD', 'ETH-USD'].includes(symbol);
-    
-    if (isIndex) {
-      // Navigate to index detail page
-      navigate(`/market/${encodeURIComponent(symbol)}`);
+
+    if (isIndexSymbol(symbol)) {
+      openIndexDetail({ symbol, name: getIndexDisplayName(symbol) });
     } else if (isMacro) {
-      // For macro indicators, navigate to market page
       navigate('/market');
     } else {
-      // For stocks, open the stock detail sheet
       openStockDetail({ ticker: symbol, name: symbol } as any);
     }
   };

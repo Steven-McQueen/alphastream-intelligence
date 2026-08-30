@@ -14,12 +14,13 @@ import {
   Tooltip,
 } from "recharts";
 
-import { API_BASE_URL } from "@/config/api";
+import { eodBarCache, intradayBarCache, chartCacheKey, chartEndpoint } from "@/hooks/useStockChart";
 
 type Timeframe = "1D" | "5D" | "1M" | "6M" | "YTD" | "1Y" | "5Y";
 
 interface HistoricalDataProps {
   ticker: string;
+  isIndex?: boolean;
 }
 
 interface PriceBar {
@@ -56,9 +57,10 @@ function formatDate(dateStr: string, isIntraday: boolean): string {
 }
 
 // Format price
-function formatPrice(value: number | null | undefined): string {
+function formatPrice(value: number | null | undefined, asIndexLevel = false): string {
   if (value === null || value === undefined || isNaN(value)) return "-";
-  return `$${value.toFixed(2)}`;
+  const n = value.toFixed(2);
+  return asIndexLevel ? n : `$${n}`;
 }
 
 // Format volume
@@ -70,7 +72,56 @@ function formatVolume(value: number | null | undefined): string {
   return value.toLocaleString();
 }
 
-// Get interval description
+function eodLimitForTimeframe(timeframe: Timeframe): number {
+  switch (timeframe) {
+    case "1M":
+      return 45;
+    case "6M":
+      return 140;
+    case "YTD":
+      return 200;
+    case "1Y":
+      return 270;
+    case "5Y":
+    default:
+      return 1300;
+  }
+}
+
+function filterBarsByTimeframe(result: PriceBar[], timeframe: Timeframe): PriceBar[] {
+  const now = new Date();
+  let filtered = result;
+
+  if (timeframe === "1D") {
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    filtered = result.filter((bar) => new Date(bar.date) >= today);
+  } else if (timeframe === "5D") {
+    const fiveDaysAgo = new Date(now);
+    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+    filtered = result.filter((bar) => new Date(bar.date) >= fiveDaysAgo);
+  } else if (timeframe === "1M") {
+    const oneMonthAgo = new Date(now);
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    filtered = result.filter((bar) => new Date(bar.date) >= oneMonthAgo);
+  } else if (timeframe === "6M") {
+    const sixMonthsAgo = new Date(now);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    filtered = result.filter((bar) => new Date(bar.date) >= sixMonthsAgo);
+  } else if (timeframe === "YTD") {
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    filtered = result.filter((bar) => new Date(bar.date) >= startOfYear);
+  } else if (timeframe === "1Y") {
+    const oneYearAgo = new Date(now);
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    filtered = result.filter((bar) => new Date(bar.date) >= oneYearAgo);
+  }
+
+  filtered.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+  return filtered;
+}
+
 function getIntervalDescription(timeframe: Timeframe): string {
   if (timeframe === "1D" || timeframe === "5D") return "5 minute interval";
   return "Daily interval";
@@ -213,7 +264,7 @@ function MetricCard({
   );
 }
 
-export function HistoricalData({ ticker }: HistoricalDataProps) {
+export function HistoricalData({ ticker, isIndex = false }: HistoricalDataProps) {
   const [timeframe, setTimeframe] = useState<Timeframe>("1M");
   const [data, setData] = useState<PriceBar[]>([]);
   const [loading, setLoading] = useState(true);
@@ -223,56 +274,42 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
 
   const isIntraday = timeframe === "1D" || timeframe === "5D";
 
-  // Fetch data
+  // Fetch data — reuse bars the chart already loaded; otherwise request only
+  // as many daily bars as this timeframe needs.
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
       setPage(0);
-      
+
       try {
-        const interval = isIntraday ? "5min" : "1day";
-        const res = await fetch(
-          `${API_BASE_URL}/api/stock/${ticker}/chart?timeframe=${interval}`
-        );
-        if (!res.ok) throw new Error("Failed to fetch historical data");
-        const result = await res.json();
-        
-        // Filter based on timeframe
-        let filtered = result;
-        const now = new Date();
-        
-        if (timeframe === "1D") {
-          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          filtered = result.filter((bar: PriceBar) => new Date(bar.date) >= today);
-        } else if (timeframe === "5D") {
-          const fiveDaysAgo = new Date(now);
-          fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
-          filtered = result.filter((bar: PriceBar) => new Date(bar.date) >= fiveDaysAgo);
-        } else if (timeframe === "1M") {
-          const oneMonthAgo = new Date(now);
-          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-          filtered = result.filter((bar: PriceBar) => new Date(bar.date) >= oneMonthAgo);
-        } else if (timeframe === "6M") {
-          const sixMonthsAgo = new Date(now);
-          sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-          filtered = result.filter((bar: PriceBar) => new Date(bar.date) >= sixMonthsAgo);
-        } else if (timeframe === "YTD") {
-          const startOfYear = new Date(now.getFullYear(), 0, 1);
-          filtered = result.filter((bar: PriceBar) => new Date(bar.date) >= startOfYear);
-        } else if (timeframe === "1Y") {
-          const oneYearAgo = new Date(now);
-          oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-          filtered = result.filter((bar: PriceBar) => new Date(bar.date) >= oneYearAgo);
+        const key = chartCacheKey(ticker, isIndex);
+        let result: PriceBar[] | undefined;
+
+        if (isIntraday) {
+          result = intradayBarCache.get(key) as PriceBar[] | undefined;
+          if (!result || result.length === 0) {
+            const res = await fetch(chartEndpoint(ticker, isIndex, "5min", 400));
+            if (!res.ok) throw new Error("Failed to fetch historical data");
+            result = await res.json();
+            if (result) intradayBarCache.set(key, result);
+          }
+        } else {
+          const needed = eodLimitForTimeframe(timeframe);
+          const cached = eodBarCache.get(key);
+          if (cached && cached.length >= needed) {
+            result = cached as PriceBar[];
+          } else {
+            const res = await fetch(chartEndpoint(ticker, isIndex, "1day", needed));
+            if (!res.ok) throw new Error("Failed to fetch historical data");
+            result = await res.json();
+            if (result && result.length >= 1000) {
+              eodBarCache.set(key, result);
+            }
+          }
         }
-        // 5Y uses all data
-        
-        // Sort by date descending (newest first)
-        filtered.sort((a: PriceBar, b: PriceBar) => 
-          new Date(b.date).getTime() - new Date(a.date).getTime()
-        );
-        
-        setData(filtered);
+
+        setData(filterBarsByTimeframe(result || [], timeframe));
       } catch (err) {
         console.error("Error fetching historical data:", err);
         setError("Failed to load historical data");
@@ -280,9 +317,9 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
         setLoading(false);
       }
     };
-    
+
     fetchData();
-  }, [ticker, timeframe, isIntraday]);
+  }, [ticker, timeframe, isIntraday, isIndex]);
 
   // Paginated data
   const paginatedData = useMemo(() => {
@@ -647,16 +684,16 @@ export function HistoricalData({ ticker }: HistoricalDataProps) {
                       {formatDate(bar.date, isIntraday)}
                     </td>
                     <td className="py-3 px-4 text-sm text-right font-mono text-soft">
-                      {formatPrice(bar.open)}
+                      {formatPrice(bar.open, isIndex)}
                     </td>
                     <td className="py-3 px-4 text-sm text-right font-mono text-positive">
-                      {formatPrice(bar.high)}
+                      {formatPrice(bar.high, isIndex)}
                     </td>
                     <td className="py-3 px-4 text-sm text-right font-mono text-negative">
-                      {formatPrice(bar.low)}
+                      {formatPrice(bar.low, isIndex)}
                     </td>
                     <td className="py-3 px-4 text-sm text-right font-mono font-medium text-foreground">
-                      {formatPrice(bar.close)}
+                      {formatPrice(bar.close, isIndex)}
                     </td>
                     <td className="py-3 px-4 text-sm text-right font-mono text-muted-foreground">
                       {formatVolume(bar.volume)}

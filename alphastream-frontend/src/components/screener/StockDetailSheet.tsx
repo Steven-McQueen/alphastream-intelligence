@@ -25,15 +25,35 @@ import { DCFValuation } from "@/components/screener/DCFValuation"
 import { AnalystRatings } from "@/components/screener/AnalystRatings"
 import { PoliticianTrades } from "@/components/screener/PoliticianTrades"
 import { API_BASE_URL } from "@/config/api";
+import type { IndexInstrument } from "@/lib/indexMeta";
+import { getIndexAbout, getIndexDisplayName } from "@/lib/indexMeta";
 
 // Navigation tabs
-const NAV_TABS = ["Overview", "Financial Reports", "Historical Data", "DCF", "Politicians", "News"] as const;
-type NavTab = typeof NAV_TABS[number];
+const STOCK_NAV_TABS = ["Overview", "Financial Reports", "Historical Data", "DCF", "Politicians", "News"] as const;
+const INDEX_NAV_TABS = ["Overview", "Historical Data"] as const;
+type NavTab = typeof STOCK_NAV_TABS[number];
 
 interface StockDetailSheetProps {
   stock: Stock | null
+  index?: IndexInstrument | null
   open: boolean
   onOpenChange: (open: boolean) => void
+}
+
+interface IndexQuote {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  previousClose: number;
+  open: number;
+  dayHigh: number;
+  dayLow: number;
+  yearHigh: number;
+  yearLow: number;
+  volume: number;
+  avgVolume: number;
 }
 
 // Company profile interface
@@ -75,6 +95,19 @@ function formatEmployees(value: string | undefined): string {
   return num.toLocaleString();
 }
 
+function formatVolume(value: number | undefined | null): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "N/A";
+  if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`;
+  if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`;
+  if (value >= 1e3) return `${(value / 1e3).toFixed(2)}K`;
+  return value.toLocaleString();
+}
+
+function formatLevel(value: number | undefined | null): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "N/A";
+  return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 // Helper to format IPO date
 function formatIpoDate(dateStr: string | undefined): string {
   if (!dateStr) return "N/A";
@@ -108,15 +141,18 @@ function InfoRow({ label, value, isLink }: { label: string; value: string; isLin
   );
 }
 
-export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheetProps) {
+export function StockDetailSheet({ stock, index = null, open, onOpenChange }: StockDetailSheetProps) {
   const [stockData, setStockData] = useState<Stock | null>(null)
   const [loadingDetail, setLoadingDetail] = useState<boolean>(false)
   const [profile, setProfile] = useState<CompanyProfile | null>(null)
   const [loadingProfile, setLoadingProfile] = useState<boolean>(false)
+  const [indexQuote, setIndexQuote] = useState<IndexQuote | null>(null)
   const [activeTab, setActiveTab] = useState<NavTab>("Overview")
   const { toggleWatchlist, isInWatchlist } = useWatchlist();
   const { closeStockDetail } = useStockDetail();
   const { isMarketOpen } = useMarket();
+  const isIndex = Boolean(index?.symbol);
+  const navTabs = isIndex ? INDEX_NAV_TABS : STOCK_NAV_TABS;
 
   // Track the latest stock data for passing on close
   const latestStockDataRef = useRef<Stock | null>(null);
@@ -141,7 +177,13 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
 
   // Parallel fetch: Load stock detail and profile simultaneously for instant load
   useEffect(() => {
-    if (!stock?.ticker) return;
+    if (!stock?.ticker) {
+      setStockData(null);
+      setProfile(null);
+      setLoadingDetail(false);
+      setLoadingProfile(false);
+      return;
+    }
 
     const ticker = stock.ticker;
     setLoadingDetail(true);
@@ -194,13 +236,65 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
     };
   }, [open, stock?.ticker, isMarketOpen]);
 
-  // Reset active tab when stock changes
+  // Index quote (same cadence as the visible stock sheet)
+  useEffect(() => {
+    if (!index?.symbol) {
+      setIndexQuote(null);
+      return;
+    }
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/index/${encodeURIComponent(index.symbol)}/quote`);
+        if (!res.ok) return;
+        const data: IndexQuote = await res.json();
+        if (!cancelled) setIndexQuote(data);
+      } catch (err) {
+        console.error("Error fetching index quote", err);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [index?.symbol]);
+
+  useEffect(() => {
+    if (!open || !index?.symbol || !isMarketOpen) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/index/${encodeURIComponent(index.symbol)}/quote`);
+        if (!res.ok) return;
+        const data: IndexQuote = await res.json();
+        if (!cancelled) setIndexQuote(data);
+      } catch {
+        // ignore single errors
+      }
+    };
+    const id = setInterval(poll, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [open, index?.symbol, isMarketOpen]);
+
+  // Reset active tab when the instrument changes
   useEffect(() => {
     setActiveTab("Overview");
-  }, [stock?.ticker]);
+  }, [stock?.ticker, index?.symbol]);
 
-  if (!stock) return null
+  if (!stock && !index) return null
   const currentStock = stockData ?? stock
+  const displayName = isIndex
+    ? (indexQuote?.name || getIndexDisplayName(index!.symbol, index!.name))
+    : (profile?.companyName || currentStock?.name || "")
+  const displaySymbol = isIndex ? index!.symbol : (currentStock?.ticker || "")
+  const displayPrice = isIndex ? indexQuote?.price : currentStock?.price
+  const displayChangePct = isIndex ? (indexQuote?.changePercent ?? 0) : (currentStock?.change1D ?? 0)
+  const displayChangePts = isIndex ? (indexQuote?.change ?? 0) : 0
+  const pricePositive = displayChangePct >= 0
+  const indexAbout = isIndex ? getIndexAbout(index!.symbol) : undefined
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
@@ -215,10 +309,10 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
           <div className="flex items-center justify-between w-full max-w-[1500px] mx-auto px-8 py-4 border-b border-border">
             <div className="flex items-center gap-4">
               {/* Company Logo */}
-              {profile?.image && (
+              {!isIndex && profile?.image && (
                 <img 
                   src={profile.image} 
-                  alt={`${currentStock.ticker} logo`}
+                  alt={`${displaySymbol} logo`}
                   className="w-14 h-14 rounded-xl object-contain bg-white p-1.5"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
@@ -227,16 +321,16 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
               )}
               <div>
                 <div className="flex items-center gap-3 mb-1">
-                  <h2 className="text-2xl font-bold">{profile?.companyName || currentStock.name}</h2>
+                  <h2 className="text-2xl font-bold">{displayName}</h2>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span className="font-medium">{currentStock.ticker}</span>
+                  <span className="font-medium">{displaySymbol}</span>
                   <span>·</span>
-                  <span>{profile?.exchange || currentStock.sector}</span>
-                  {profile?.country && (
+                  <span>{isIndex ? "INDEX" : (profile?.exchange || currentStock?.sector)}</span>
+                  {!isIndex && profile?.country && (
                     <>
                       <span>·</span>
-                      <span className="text-lg">{profile.country === "US" ? "🇺🇸" : profile.country}</span>
+                      <span>{profile.country === "US" ? "United States" : profile.country}</span>
                     </>
                   )}
                 </div>
@@ -245,12 +339,17 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
             <div className="flex items-center gap-4">
               <div className="text-right mr-4">
                 <div className="text-3xl font-bold">
-                  ${typeof currentStock.price === 'number' ? currentStock.price.toFixed(2) : currentStock.price}
+                  {isIndex
+                    ? formatLevel(typeof displayPrice === "number" ? displayPrice : undefined)
+                    : `$${typeof displayPrice === "number" ? displayPrice.toFixed(2) : (displayPrice ?? "")}`}
                 </div>
-                <div className={`text-sm font-medium ${(currentStock.change1D ?? 0) >= 0 ? 'text-positive' : 'text-negative'}`}>
-                  {(currentStock.change1D ?? 0) >= 0 ? '+' : ''}{(currentStock.change1D ?? 0).toFixed(2)}%
+                <div className={`text-sm font-medium ${pricePositive ? "text-positive" : "text-negative"}`}>
+                  {isIndex
+                    ? `${displayChangePts >= 0 ? "+" : ""}${displayChangePts.toFixed(2)} (${pricePositive ? "+" : ""}${displayChangePct.toFixed(2)}%)`
+                    : `${pricePositive ? "+" : ""}${displayChangePct.toFixed(2)}%`}
                 </div>
               </div>
+              {!isIndex && currentStock && (
               <button
                 onClick={() => toggleWatchlist(currentStock.ticker)}
                 className={cn(
@@ -263,6 +362,7 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
                 <Star className={cn("w-4 h-4", isInWatchlist(currentStock.ticker) && "fill-current")} />
                 {isInWatchlist(currentStock.ticker) ? "Watching" : "Watch"}
               </button>
+              )}
               <Button 
                 variant="ghost" 
                 size="icon"
@@ -276,7 +376,7 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
           {/* Navigation Tabs */}
           <div className="border-b border-border bg-background w-full max-w-[1500px] mx-auto px-8">
             <nav className="flex gap-1">
-              {NAV_TABS.map((tab) => (
+              {navTabs.map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -307,64 +407,79 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
 
               {activeTab === "Overview" && (
                 <>
-                  {/* CHART SECTION */}
-                  <StockChart 
-                    symbol={currentStock.ticker} 
-                    companyName={currentStock.name}
-                    metrics={{
-                      yearHigh: currentStock.high1Y,
-                      yearLow: currentStock.low1Y,
-                      avgVolume: currentStock.avgVolume,
-                      marketCap: currentStock.marketCap,
-                      ytdReturn: currentStock.changeYTD,
-                      oneYearReturn: currentStock.change1Y,
-                      beta: currentStock.beta,
+                  <StockChart
+                    symbol={displaySymbol}
+                    companyName={displayName}
+                    isIndex={isIndex}
+                    metrics={isIndex ? {
+                      yearHigh: indexQuote?.yearHigh,
+                      yearLow: indexQuote?.yearLow,
+                      avgVolume: indexQuote?.avgVolume,
+                      previousClose: indexQuote?.previousClose,
+                    } : {
+                      yearHigh: currentStock?.high1Y,
+                      yearLow: currentStock?.low1Y,
+                      avgVolume: currentStock?.avgVolume,
+                      marketCap: currentStock?.marketCap,
+                      ytdReturn: currentStock?.changeYTD,
+                      oneYearReturn: currentStock?.change1Y,
+                      beta: currentStock?.beta,
                     }}
                   />
 
-                  {/* Valuation Metrics */}
-                  <div className="mt-6">
-                    <ValuationMetrics ticker={currentStock.ticker} />
-                  </div>
+                  {!isIndex && currentStock && (
+                    <div className="mt-6">
+                      <ValuationMetrics ticker={currentStock.ticker} />
+                    </div>
+                  )}
 
-                  {/* About Company */}
                   <div className="mt-6">
-                    <OverviewSection
-                      title={`About ${profile?.companyName || currentStock.name}`}
-                      kicker="Company Profile"
-                    >
-                      {loadingProfile ? (
-                        <div className="text-sm text-dim italic">Loading company information...</div>
-                      ) : (
+                    {isIndex ? (
+                      <OverviewSection title={`About ${displayName}`} kicker="Index Profile">
                         <p className="text-sm text-muted-foreground leading-relaxed">
-                          {profile?.description || (
-                            <span className="italic">
-                              Company description will be available soon.
-                            </span>
+                          {indexAbout || (
+                            <span className="italic">Index description will be available soon.</span>
                           )}
                         </p>
-                      )}
-                    </OverviewSection>
+                      </OverviewSection>
+                    ) : (
+                      <OverviewSection
+                        title={`About ${profile?.companyName || currentStock?.name}`}
+                        kicker="Company Profile"
+                      >
+                        {loadingProfile ? (
+                          <div className="text-sm text-dim italic">Loading company information...</div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {profile?.description || (
+                              <span className="italic">
+                                Company description will be available soon.
+                              </span>
+                            )}
+                          </p>
+                        )}
+                      </OverviewSection>
+                    )}
                   </div>
 
-                  {/* NEWS SECTION */}
-                  <StockNews ticker={currentStock.ticker} />
+                  {isIndex ? (
+                    <StockNews ticker={displaySymbol} feed="market" title="Market News" />
+                  ) : (
+                    currentStock && <StockNews ticker={currentStock.ticker} />
+                  )}
                 </>
               )}
 
-              {activeTab === "Financial Reports" && (
+              {!isIndex && currentStock && activeTab === "Financial Reports" && (
                 <div className="flex gap-6">
-                  {/* Financial Reports Table - Main Content (flexible width) */}
                   <div className="flex-1 min-w-0 space-y-6">
                     <FinancialReports ticker={currentStock.ticker} />
                     <EarningsHistory ticker={currentStock.ticker} />
                     <RevenueEarningsChart ticker={currentStock.ticker} />
                   </div>
-                  
-                  {/* Analyst Ratings - Fixed Right Side */}
                   <div className="w-[420px] flex-shrink-0">
-                    <AnalystRatings 
-                      ticker={currentStock.ticker} 
+                    <AnalystRatings
+                      ticker={currentStock.ticker}
                       currentPrice={currentStock.price}
                     />
                   </div>
@@ -372,42 +487,42 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
               )}
 
               {activeTab === "Historical Data" && (
-                <HistoricalData ticker={currentStock.ticker} />
+                <HistoricalData ticker={displaySymbol} isIndex={isIndex} />
               )}
 
-              {activeTab === "DCF" && (
+              {!isIndex && currentStock && activeTab === "DCF" && (
                 <DCFValuation ticker={currentStock.ticker} />
               )}
 
-              {activeTab === "Politicians" && (
+              {!isIndex && currentStock && activeTab === "Politicians" && (
                 <div className="flex gap-6">
-                  {/* Congressional trades - main content */}
                   <div className="flex-1 min-w-0">
                     <PoliticianTrades ticker={currentStock.ticker} />
                   </div>
-
-                  {/* Insider activity (execs / 10% owners) - fixed right side */}
                   <div className="w-[420px] flex-shrink-0">
                     <InsiderTrades ticker={currentStock.ticker} />
                   </div>
                 </div>
               )}
 
-              {activeTab === "News" && (
+              {!isIndex && currentStock && activeTab === "News" && (
                 <StockNews ticker={currentStock.ticker} />
               )}
 
-              {/* AI CHAT — persists across all tabs; the input bar sticks to
-                  the bottom of the panel while the page scrolls (Perplexity). */}
               <ChatOverlay
                 mode="embedded"
                 inline
                 showHeader={false}
-                contextLabel={currentStock.ticker}
-                suggestedPrompts={[
-                  `What's the outlook for ${currentStock.ticker}?`,
-                  `Analyze ${currentStock.ticker}'s valuation`,
-                  `Key risks for ${currentStock.ticker}?`,
+                contextLabel={displaySymbol}
+                suggestedPrompts={isIndex ? [
+                  `What's driving ${displayName} today?`,
+                  `Key factors affecting ${displaySymbol}`,
+                  `${displaySymbol} outlook for this week`,
+                  `Compare ${displaySymbol} to other indices`,
+                ] : [
+                  `What's the outlook for ${displaySymbol}?`,
+                  `Analyze ${displaySymbol}'s valuation`,
+                  `Key risks for ${displaySymbol}?`,
                   `Compare to sector peers`,
                 ]}
               />
@@ -415,36 +530,46 @@ export function StockDetailSheet({ stock, open, onOpenChange }: StockDetailSheet
             </div>
           </div>
 
-          {/* RIGHT COLUMN - MODULAR RAIL, floats with the single page scroll (Overview only) */}
           {activeTab === "Overview" && (
             <div className="w-[380px] flex-shrink-0">
               <div className="p-5 pl-0 space-y-5">
-                {/* Company Info module */}
-                <OverviewSection title="Company Info" dense flush>
-                  <div className="px-4 py-1">
-                    <InfoRow label="Symbol" value={currentStock.ticker} />
-                    <InfoRow label="Market Cap" value={formatMarketCap(profile?.marketCap || currentStock.marketCap)} />
-                    <InfoRow label="IPO Date" value={formatIpoDate(profile?.ipoDate)} />
-                    <InfoRow label="CEO" value={profile?.ceo || "N/A"} />
-                    <InfoRow label="Fulltime Employees" value={formatEmployees(profile?.fullTimeEmployees)} />
-                    <InfoRow label="Sector" value={profile?.sector || currentStock.sector || "N/A"} />
-                    <InfoRow label="Industry" value={profile?.industry || "N/A"} />
-                    <InfoRow label="Country" value={profile?.country === "US" ? "United States" : (profile?.country || "N/A")} />
-                    <InfoRow label="Exchange" value={profile?.exchangeFullName || profile?.exchange || "N/A"} />
-                    {profile?.website && <InfoRow label="Website" value={profile.website} isLink />}
-                  </div>
-                </OverviewSection>
-
-                {/* Analyst Consensus module */}
-                <AnalystConsensus ticker={currentStock.ticker} currentPrice={currentStock.price} />
-
-                {/* Similar Companies module (compact peers) */}
-                <SimilarCompanies ticker={currentStock.ticker} compact />
-
-                {/* Notes module */}
-                <OverviewSection title="Notes" dense>
-                  <StockNotes ticker={currentStock.ticker} />
-                </OverviewSection>
+                {isIndex ? (
+                  <OverviewSection title="Index Info" dense flush>
+                    <div className="px-4 py-1">
+                      <InfoRow label="Symbol" value={displaySymbol} />
+                      <InfoRow label="Previous Close" value={formatLevel(indexQuote?.previousClose)} />
+                      <InfoRow label="Open" value={formatLevel(indexQuote?.open)} />
+                      <InfoRow label="Day High" value={formatLevel(indexQuote?.dayHigh)} />
+                      <InfoRow label="Day Low" value={formatLevel(indexQuote?.dayLow)} />
+                      <InfoRow label="52W High" value={formatLevel(indexQuote?.yearHigh)} />
+                      <InfoRow label="52W Low" value={formatLevel(indexQuote?.yearLow)} />
+                      <InfoRow label="Volume" value={formatVolume(indexQuote?.volume)} />
+                      <InfoRow label="Avg Volume" value={formatVolume(indexQuote?.avgVolume)} />
+                    </div>
+                  </OverviewSection>
+                ) : currentStock ? (
+                  <>
+                    <OverviewSection title="Company Info" dense flush>
+                      <div className="px-4 py-1">
+                        <InfoRow label="Symbol" value={currentStock.ticker} />
+                        <InfoRow label="Market Cap" value={formatMarketCap(profile?.marketCap || currentStock.marketCap)} />
+                        <InfoRow label="IPO Date" value={formatIpoDate(profile?.ipoDate)} />
+                        <InfoRow label="CEO" value={profile?.ceo || "N/A"} />
+                        <InfoRow label="Fulltime Employees" value={formatEmployees(profile?.fullTimeEmployees)} />
+                        <InfoRow label="Sector" value={profile?.sector || currentStock.sector || "N/A"} />
+                        <InfoRow label="Industry" value={profile?.industry || "N/A"} />
+                        <InfoRow label="Country" value={profile?.country === "US" ? "United States" : (profile?.country || "N/A")} />
+                        <InfoRow label="Exchange" value={profile?.exchangeFullName || profile?.exchange || "N/A"} />
+                        {profile?.website && <InfoRow label="Website" value={profile.website} isLink />}
+                      </div>
+                    </OverviewSection>
+                    <AnalystConsensus ticker={currentStock.ticker} currentPrice={currentStock.price} />
+                    <SimilarCompanies ticker={currentStock.ticker} compact />
+                    <OverviewSection title="Notes" dense>
+                      <StockNotes ticker={currentStock.ticker} />
+                    </OverviewSection>
+                  </>
+                ) : null}
               </div>
             </div>
           )}

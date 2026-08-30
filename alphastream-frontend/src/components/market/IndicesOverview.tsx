@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { TrendingDown, TrendingUp } from 'lucide-react';
 import { useMarket } from '@/contexts/MarketContext';
+import { useStockDetail } from '@/contexts/StockDetailContext';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Area, AreaChart, ResponsiveContainer, YAxis } from 'recharts';
@@ -14,6 +14,12 @@ type FlashDir = 'up' | 'down' | null;
  * subtle slide that settles back to the foreground color — a clean, Perplexity-
  * style tick. Replays by remounting via an incrementing key.
  */
+function formatIndexNumber(value: number | null | undefined): string {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '—';
+  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function AnimatedPrice({ value }: { value: number }) {
   const prevRef = useRef(value);
   const dirRef = useRef<FlashDir>(null);
@@ -37,7 +43,7 @@ function AnimatedPrice({ value }: { value: number }) {
       )}
       style={{ fontFamily: 'var(--font-widget-heading)' }}
     >
-      {value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      {formatIndexNumber(value)}
     </span>
   );
 }
@@ -53,14 +59,16 @@ function IndexCard({ symbol, name, value, change, changePercent, flashDir, serie
   onClick: () => void;
 }) {
   const intradayData = useMemo(() => series || [], [series]);
-  const isPositive = changePercent >= 0;
+  const safeChange = Number.isFinite(change) ? change : 0;
+  const safeChangePercent = Number.isFinite(changePercent) ? changePercent : 0;
+  const isPositive = safeChangePercent >= 0;
   const flashClass =
     flashDir === 'up'
       ? 'bg-positive/10'
       : flashDir === 'down'
         ? 'bg-negative/10'
         : '';
-  
+
   const Trend = isPositive ? TrendingUp : TrendingDown;
 
   return (
@@ -94,7 +102,7 @@ function IndexCard({ symbol, name, value, change, changePercent, flashDir, serie
           )}
         >
           <Trend className="h-3 w-3" strokeWidth={2.5} />
-          {Math.abs(changePercent).toFixed(2)}%
+          {Math.abs(safeChangePercent).toFixed(2)}%
         </span>
       </div>
 
@@ -102,11 +110,18 @@ function IndexCard({ symbol, name, value, change, changePercent, flashDir, serie
       <div className="h-16 -mx-2 my-3">
         {intradayData.length > 0 ? (() => {
           // Calculate min/max for zoomed Y-axis
-          const values = intradayData.map(d => d.value);
+          const values = intradayData.map(d => d.value).filter((v) => Number.isFinite(v));
+          if (values.length === 0) {
+            return (
+              <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">
+                Loading...
+              </div>
+            );
+          }
           const min = Math.min(...values);
           const max = Math.max(...values);
           const range = max - min;
-          const padding = range > 0 ? range * 0.1 : max * 0.001;
+          const padding = range > 0 ? range * 0.1 : Math.abs(max) * 0.001 || 1;
           const yMin = min - padding;
           const yMax = max + padding;
 
@@ -151,7 +166,7 @@ function IndexCard({ symbol, name, value, change, changePercent, flashDir, serie
       <div className="mt-auto flex items-end justify-between gap-2">
         <AnimatedPrice value={value} />
         <span className="pb-0.5 text-xs font-medium tabular-nums text-dim">
-          {change >= 0 ? '+' : ''}{change.toFixed(2)}
+          {safeChange >= 0 ? '+' : ''}{safeChange.toFixed(2)}
         </span>
       </div>
     </Card>
@@ -160,7 +175,7 @@ function IndexCard({ symbol, name, value, change, changePercent, flashDir, serie
 
 export function IndicesOverview() {
   const { indices } = useMarket();
-  const navigate = useNavigate();
+  const { openIndexDetail } = useStockDetail();
   const [flashMap, setFlashMap] = useState<Record<string, FlashDir>>({});
   const prevValues = useRef<Record<string, number>>({});
   const symbols = useMemo(() => indices.map((i) => i.symbol), [indices]);
@@ -195,7 +210,7 @@ export function IndicesOverview() {
           changePercent={index.changePercent}
           series={intradayMap?.[index.symbol] ?? []}
           flashDir={flashMap[index.symbol] ?? null}
-          onClick={() => navigate(`/market/${index.symbol}`)}
+          onClick={() => openIndexDetail({ symbol: index.symbol, name: index.name })}
         />
       ))}
     </div>

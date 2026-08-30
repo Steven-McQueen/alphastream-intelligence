@@ -240,11 +240,16 @@ class PostgresDatabaseManager:
         "last_updated"
     )
 
-    def get_stock_list_rows(self) -> List[dict]:
-        """Get all stocks with only the columns the list DTO needs."""
+    def get_stock_list_rows(self, sp500_only: bool = True) -> List[dict]:
+        """Get stocks with only the columns the list DTO needs.
+
+        Defaults to S&P 500 constituents. The full 24k-row table is too large
+        to ship to the screener / heatmap on every page load.
+        """
+        where = "WHERE is_sp500 = TRUE" if sp500_only else ""
         with self.get_session() as session:
             result = session.execute(text(
-                f"SELECT {self._LIST_ITEM_COLUMNS} FROM stocks "
+                f"SELECT {self._LIST_ITEM_COLUMNS} FROM stocks {where} "
                 "ORDER BY market_cap DESC NULLS LAST"
             ))
             return self._rows_to_dicts(result.fetchall())
@@ -497,9 +502,9 @@ class PostgresDatabaseManager:
                     VALUES (:symbol, :name, :value, :change, :change_pct, NOW())
                     ON CONFLICT (symbol) DO UPDATE SET
                         name = EXCLUDED.name,
-                        value = EXCLUDED.value,
-                        change = EXCLUDED.change,
-                        change_pct = EXCLUDED.change_pct,
+                        value = COALESCE(EXCLUDED.value, market_indices.value),
+                        change = COALESCE(EXCLUDED.change, market_indices.change),
+                        change_pct = COALESCE(EXCLUDED.change_pct, market_indices.change_pct),
                         last_updated = NOW()
                 """),
                 {
@@ -848,52 +853,47 @@ class PostgresDatabaseManager:
     # ============================================================================
 
     def upsert_price_bars_bulk(self, bars: List[dict]) -> int:
-        """Insert or replace multiple price bars."""
+        """Insert or replace multiple price bars in one executemany per batch."""
         if not bars:
             return 0
 
+        stmt = text("""
+            INSERT INTO price_bars
+            (symbol, timeframe, bar_time, open, high, low, close, volume, source, last_updated)
+            VALUES (:symbol, :timeframe, :bar_time, :open, :high, :low, :close, :volume, :source, NOW())
+            ON CONFLICT (symbol, timeframe, bar_time) DO UPDATE SET
+                open = EXCLUDED.open,
+                high = EXCLUDED.high,
+                low = EXCLUDED.low,
+                close = EXCLUDED.close,
+                volume = EXCLUDED.volume,
+                source = EXCLUDED.source,
+                last_updated = NOW()
+        """)
+
         with self.get_session() as session:
             inserted = 0
-
-            # Process in batches
             batch_size = 500
             for i in range(0, len(bars), batch_size):
-                batch = bars[i:i + batch_size]
-
-                for bar in batch:
-                    try:
-                        session.execute(
-                            text("""
-                                INSERT INTO price_bars
-                                (symbol, timeframe, bar_time, open, high, low, close, volume, source, last_updated)
-                                VALUES (:symbol, :timeframe, :bar_time, :open, :high, :low, :close, :volume, :source, NOW())
-                                ON CONFLICT (symbol, timeframe, bar_time) DO UPDATE SET
-                                    open = EXCLUDED.open,
-                                    high = EXCLUDED.high,
-                                    low = EXCLUDED.low,
-                                    close = EXCLUDED.close,
-                                    volume = EXCLUDED.volume,
-                                    source = EXCLUDED.source,
-                                    last_updated = NOW()
-                            """),
-                            {
-                                "symbol": bar.get("symbol"),
-                                "timeframe": bar.get("timeframe"),
-                                "bar_time": bar.get("bar_time"),
-                                "open": bar.get("open"),
-                                "high": bar.get("high"),
-                                "low": bar.get("low"),
-                                "close": bar.get("close"),
-                                "volume": bar.get("volume"),
-                                "source": bar.get("source")
-                            }
-                        )
-                        inserted += 1
-                    except Exception as e:
-                        print(f"Error inserting price bar: {e}")
-
-                session.commit()
-
+                batch = [
+                    {
+                        "symbol": bar.get("symbol"),
+                        "timeframe": bar.get("timeframe"),
+                        "bar_time": bar.get("bar_time"),
+                        "open": _finite_or_none(bar.get("open")),
+                        "high": _finite_or_none(bar.get("high")),
+                        "low": _finite_or_none(bar.get("low")),
+                        "close": _finite_or_none(bar.get("close")),
+                        "volume": _finite_or_none(bar.get("volume")),
+                        "source": bar.get("source"),
+                    }
+                    for bar in bars[i:i + batch_size]
+                    if bar.get("bar_time")
+                ]
+                if not batch:
+                    continue
+                session.execute(stmt, batch)
+                inserted += len(batch)
             return inserted
 
     def get_price_bars(self, symbol: str, timeframe: str, limit: int = 1500,
@@ -1145,52 +1145,57 @@ class PostgresDatabaseManager:
     # ============================================================================
 
     def upsert_symbols_bulk(self, symbols: List[dict]) -> int:
-        """
-        Bulk upsert symbols into the master universe table.
-        Expects list of dicts with keys: symbol, name, exchange, asset_type, etc.
-        """
+        """Bulk upsert symbols into the master universe table (executemany)."""
         if not symbols:
             return 0
 
+        stmt = text("""
+            INSERT INTO symbols (symbol, name, exchange, asset_type, sector, industry, is_active)
+            VALUES (:symbol, :name, :exchange, :asset_type, :sector, :industry, TRUE)
+            ON CONFLICT (symbol) DO UPDATE SET
+                name = EXCLUDED.name,
+                exchange = COALESCE(EXCLUDED.exchange, symbols.exchange),
+                asset_type = EXCLUDED.asset_type,
+                sector = COALESCE(EXCLUDED.sector, symbols.sector),
+                industry = COALESCE(EXCLUDED.industry, symbols.industry),
+                is_active = TRUE,
+                updated_at = NOW()
+        """)
+
+        rows = []
+        for item in symbols:
+            symbol = item.get("symbol")
+            if not symbol:
+                continue
+            rows.append({
+                "symbol": symbol,
+                "name": item.get("name") or item.get("companyName") or "",
+                "exchange": item.get("exchange") or item.get("exchangeShortName"),
+                "asset_type": "stock",
+                "sector": item.get("sector"),
+                "industry": item.get("industry"),
+            })
+
         with self.get_session() as session:
-            success_count = 0
-            batch_size = 500
+            batch_size = 1000
+            inserted = 0
+            for i in range(0, len(rows), batch_size):
+                batch = rows[i:i + batch_size]
+                session.execute(stmt, batch)
+                inserted += len(batch)
+            print(f"Upserted {inserted}/{len(symbols)} symbols")
+            return inserted
 
-            for i in range(0, len(symbols), batch_size):
-                batch = symbols[i:i + batch_size]
-
-                for item in batch:
-                    try:
-                        session.execute(
-                            text("""
-                                INSERT INTO symbols (symbol, name, exchange, asset_type, sector, industry, is_active)
-                                VALUES (:symbol, :name, :exchange, :asset_type, :sector, :industry, TRUE)
-                                ON CONFLICT (symbol) DO UPDATE SET
-                                    name = EXCLUDED.name,
-                                    exchange = EXCLUDED.exchange,
-                                    asset_type = EXCLUDED.asset_type,
-                                    sector = COALESCE(EXCLUDED.sector, symbols.sector),
-                                    industry = COALESCE(EXCLUDED.industry, symbols.industry),
-                                    is_active = TRUE,
-                                    updated_at = NOW()
-                            """),
-                            {
-                                "symbol": item.get("symbol"),
-                                "name": item.get("name", item.get("companyName", "")),  # actively-trading-list returns "name" directly
-                                "exchange": item.get("exchange", item.get("exchangeShortName")),
-                                "asset_type": "stock",  # Force to stock since we're filtering ETFs/funds
-                                "sector": item.get("sector"),  # Will be NULL initially, enriched later
-                                "industry": item.get("industry")  # Will be NULL initially, enriched later
-                            }
-                        )
-                        success_count += 1
-                    except Exception as e:
-                        print(f"Error upserting symbol {item.get('symbol')}: {e}")
-
-                session.commit()
-
-            print(f"Upserted {success_count}/{len(symbols)} symbols")
-            return success_count
+    def get_symbol_directory(self) -> List[dict]:
+        """Compact ticker+name list for the screener (full universe, no quotes)."""
+        with self.get_session() as session:
+            result = session.execute(text("""
+                SELECT symbol AS ticker, name
+                FROM symbols
+                WHERE is_active = TRUE
+                ORDER BY CASE WHEN is_sp500 = TRUE THEN 0 ELSE 1 END, symbol
+            """))
+            return self._rows_to_dicts(result.fetchall())
 
     def get_symbols_by_tier(self, tier: int) -> List[str]:
         """Get list of symbols for a specific refresh tier."""

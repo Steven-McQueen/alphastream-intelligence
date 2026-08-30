@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, ExternalLink } from "lucide-react";
-
+import { Loader2 } from "lucide-react";
 import { API_BASE_URL } from "@/config/api";
+import { OverviewSection } from "./OverviewSection";
 
 interface NewsArticle {
   symbol: string;
@@ -18,6 +16,9 @@ interface NewsArticle {
 
 interface StockNewsProps {
   ticker: string;
+  /** ticker = company news; market = general market feed (indices). */
+  feed?: "ticker" | "market";
+  title?: string;
 }
 
 // Format relative time (e.g., "7m ago", "2h ago", or date if > 24h)
@@ -42,22 +43,36 @@ function formatRelativeTime(dateString: string): string {
   }
 }
 
-export function StockNews({ ticker }: StockNewsProps) {
+export function StockNews({ ticker, feed = "ticker", title = "Related News" }: StockNewsProps) {
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchNews = async () => {
-      if (!ticker) return;
-      
+      if (!ticker && feed === "ticker") return;
+
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch(`${API_BASE_URL}/api/news/${ticker}`);
+        const url =
+          feed === "market"
+            ? `${API_BASE_URL}/api/news/general?limit=20`
+            : `${API_BASE_URL}/api/news/${encodeURIComponent(ticker)}`;
+        const res = await fetch(url);
         if (!res.ok) throw new Error("Failed to fetch news");
-        const data: NewsArticle[] = await res.json();
-        setNews(data.slice(0, 10)); // Limit to 10 articles
+        const data = await res.json();
+        const normalized: NewsArticle[] = (Array.isArray(data) ? data : []).map((row: Record<string, unknown>) => ({
+          symbol: String(row.symbol ?? ticker ?? ""),
+          publishedDate: String(row.publishedDate ?? row.publishedAt ?? ""),
+          publisher: String(row.publisher ?? row.source ?? ""),
+          title: String(row.title ?? row.headline ?? ""),
+          image: String(row.image ?? ""),
+          site: String(row.site ?? row.source ?? ""),
+          text: String(row.text ?? row.summary ?? ""),
+          url: String(row.url ?? ""),
+        }));
+        setNews(normalized.slice(0, 10));
       } catch (err) {
         console.error("Error fetching news:", err);
         setError("Failed to load news");
@@ -67,105 +82,110 @@ export function StockNews({ ticker }: StockNewsProps) {
     };
 
     fetchNews();
-  }, [ticker]);
+  }, [ticker, feed]);
 
-  if (loading) {
-    return (
-      <Card className="p-6 bg-card border border-border rounded-xl">
-        <div className="flex items-center gap-2 mb-4">
-          <h3 className="font-semibold text-lg text-foreground">📰 Related News</h3>
-        </div>
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-dim" />
-        </div>
-      </Card>
-    );
-  }
+  const countChip =
+    !loading && news.length > 0 ? (
+      <span className="text-xs text-dim">{news.length} stories</span>
+    ) : null;
 
-  if (error || news.length === 0) {
-    return (
-      <Card className="p-6 bg-card border border-border rounded-xl">
-        <div className="flex items-center gap-2 mb-4">
-          <h3 className="font-semibold text-lg text-foreground">📰 Related News</h3>
-        </div>
-        <p className="text-sm text-dim text-center py-4">
-          {error || "No recent news available for this stock"}
-        </p>
-      </Card>
-    );
-  }
+  // Different sizing: first story is featured, the rest are a compact list.
+  const featured = news[0];
+  const rest = news.slice(1);
 
   return (
-    <Card className="p-6 bg-card border border-border rounded-xl">
-      <div className="flex items-center gap-2 mb-5">
-        <h3 className="font-semibold text-lg text-foreground">📰 Related News</h3>
-        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-          {news.length}
-        </span>
-      </div>
-
-      <div 
-        className="space-y-1"
-      >
-        {news.map((article, idx) => (
-          <a
-            key={idx}
-            href={article.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex gap-4 p-4 rounded-xl hover:bg-muted/60 transition-all duration-200 group cursor-pointer"
-          >
-            {/* Article Image - Left Side */}
-            <div className="flex-shrink-0 w-[100px] h-[80px] rounded-xl overflow-hidden bg-muted">
-              {article.image ? (
-                <img
-                  src={article.image}
-                  alt={article.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).parentElement!.innerHTML = 
-                      '<div class="w-full h-full flex items-center justify-center text-dim text-2xl">📰</div>';
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-dim text-2xl">
-                  📰
+    <OverviewSection title={title} kicker="Coverage" right={countChip} flush>
+      {loading ? (
+        <div className="flex items-center gap-2 px-6 py-8 text-sm italic text-dim">
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading news...
+        </div>
+      ) : error || news.length === 0 ? (
+        <div className="px-6 py-8 text-center text-sm text-dim">
+          {error || "No recent news available."}
+        </div>
+      ) : (
+        <div className="p-4">
+          {/* Featured story (larger) */}
+          {featured ? (
+            <a
+              href={featured.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group mb-4 block overflow-hidden rounded-lg border border-border transition-colors hover:border-secondary"
+            >
+              {featured.image ? (
+                <div className="relative h-44 w-full overflow-hidden bg-muted">
+                  <img
+                    src={featured.image}
+                    alt=""
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                    referrerPolicy="no-referrer"
+                    loading="lazy"
+                    onError={(e) => {
+                      (e.currentTarget.parentElement as HTMLElement).style.display = "none";
+                    }}
+                  />
                 </div>
-              )}
-            </div>
-
-            {/* Article Content - Right Side */}
-            <div className="flex-1 min-w-0 flex flex-col">
-              {/* Title */}
-              <h4 className="font-semibold text-[15px] text-foreground mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors leading-snug">
-                {article.title}
-              </h4>
-
-              {/* Article Text Preview */}
-              <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed mb-3">
-                {article.text}
-              </p>
-
-              {/* Footer: Publisher, Time, Ticker Badge */}
-              <div className="flex items-center gap-2 mt-auto">
-                <span className="text-xs font-medium text-dim">
-                  {article.publisher}
-                </span>
-                <span className="text-xs text-dim">•</span>
-                <span className="text-xs text-dim">
-                  {formatRelativeTime(article.publishedDate)}
-                </span>
-                <span className="text-xs text-dim">•</span>
-                {/* Ticker Badge */}
-                <Badge className="bg-positive/20 text-positive border-0 text-xs px-2 py-0.5 font-medium hover:bg-positive/30">
-                  ${ticker}
-                </Badge>
-                <ExternalLink className="w-3.5 h-3.5 text-dim opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
+              ) : null}
+              <div className="p-4">
+                <h4 className="line-clamp-2 text-lg font-semibold leading-snug text-foreground transition-colors group-hover:text-sub">
+                  {featured.title}
+                </h4>
+                <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+                  {featured.text}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-x-2 text-[0.7rem] text-dim">
+                  {featured.publisher ? (
+                    <span className="font-semibold uppercase tracking-wide text-sub">{featured.publisher}</span>
+                  ) : null}
+                  {featured.publisher && featured.publishedDate ? <span aria-hidden>&middot;</span> : null}
+                  {featured.publishedDate ? <span>{formatRelativeTime(featured.publishedDate)}</span> : null}
+                </div>
               </div>
-            </div>
-          </a>
-        ))}
-      </div>
-    </Card>
+            </a>
+          ) : null}
+
+          {/* Remaining stories (compact rows) */}
+          <div className="divide-y divide-border/50">
+            {rest.map((article, idx) => (
+              <a
+                key={idx}
+                href={article.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex gap-3 rounded-md p-2.5 transition-colors hover:bg-muted/40"
+              >
+                {article.image ? (
+                  <div className="h-16 w-24 shrink-0 overflow-hidden rounded-md bg-muted">
+                    <img
+                      src={article.image}
+                      alt=""
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      referrerPolicy="no-referrer"
+                      loading="lazy"
+                      onError={(e) => {
+                        (e.currentTarget.parentElement as HTMLElement).style.display = "none";
+                      }}
+                    />
+                  </div>
+                ) : null}
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <h4 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-sub">
+                    {article.title}
+                  </h4>
+                  <div className="mt-auto flex flex-wrap items-center gap-x-2 pt-1.5 text-[0.7rem] text-dim">
+                    {article.publisher ? (
+                      <span className="font-semibold uppercase tracking-wide text-sub">{article.publisher}</span>
+                    ) : null}
+                    {article.publisher && article.publishedDate ? <span aria-hidden>&middot;</span> : null}
+                    {article.publishedDate ? <span>{formatRelativeTime(article.publishedDate)}</span> : null}
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </OverviewSection>
   );
 }

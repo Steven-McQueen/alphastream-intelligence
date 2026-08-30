@@ -13,6 +13,8 @@ export interface StockDataPoint {
   close: number;
   volume: number;
   price: number; // alias for close
+  // Extended-hours (after/pre market) close, used only to draw the dashed 1D segment
+  extendedClose?: number | null;
   // Moving averages (calculated client-side)
   sma?: number;
   ema?: number;
@@ -31,6 +33,19 @@ interface RawBar {
   timeframe?: string;
 }
 
+/** Shared EOD cache so Historical Data can reuse bars the chart already loaded. */
+export const eodBarCache = new Map<string, RawBar[]>();
+export const intradayBarCache = new Map<string, RawBar[]>();
+
+export interface AfterHoursInfo {
+  price: number;
+  prevClose: number | null;
+  change: number | null;
+  changePercent: number | null;
+  timestamp: number | null;
+  session: "pre" | "post";
+}
+
 interface UseStockChartReturn {
   data: StockDataPoint[];
   rawIntradayData: StockDataPoint[];
@@ -42,6 +57,7 @@ interface UseStockChartReturn {
   lastUpdated: Date | null;
   avgVolume: number | undefined;
   maPeriod: number;
+  afterHours: AfterHoursInfo | null;
 }
 
 // Get MA period based on timeframe for appropriate smoothing
@@ -188,6 +204,12 @@ function rawBarToDataPoint(bar: RawBar): StockDataPoint {
   };
 }
 
+// Local calendar-day key (YYYY-M-D) for a data point, used to group sessions.
+function sessionDayKey(point: StockDataPoint): string {
+  const d = new Date(point.timestamp);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
 // Filter data by time range
 function filterByTimeRange(data: StockDataPoint[], timeRange: TimeRange): StockDataPoint[] {
   if (data.length === 0) return data;
@@ -195,20 +217,26 @@ function filterByTimeRange(data: StockDataPoint[], timeRange: TimeRange): StockD
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
+  // 1D / 5D anchor to the trading sessions actually present in the data (not the
+  // wall clock), so weekends, holidays and pre-open still show the last session(s)
+  // instead of rendering blank.
+  if (timeRange === "1D" || timeRange === "5D") {
+    const distinctDays: string[] = [];
+    // data is oldest -> newest; walk backwards to collect the most recent sessions
+    for (let i = data.length - 1; i >= 0; i--) {
+      const key = sessionDayKey(data[i]);
+      if (!distinctDays.includes(key)) {
+        distinctDays.push(key);
+        if (distinctDays.length >= (timeRange === "1D" ? 1 : 5)) break;
+      }
+    }
+    const keep = new Set(distinctDays);
+    return data.filter((d) => keep.has(sessionDayKey(d)));
+  }
+
   let cutoffDate: Date;
 
   switch (timeRange) {
-    case "1D": {
-      // For intraday, filter to today's data only
-      cutoffDate = today;
-      break;
-    }
-    case "5D": {
-      // Last 5 trading days (roughly 7 calendar days to account for weekends)
-      cutoffDate = new Date(today);
-      cutoffDate.setDate(cutoffDate.getDate() - 7);
-      break;
-    }
     case "1M": {
       cutoffDate = new Date(today);
       cutoffDate.setMonth(cutoffDate.getMonth() - 1);
@@ -245,28 +273,33 @@ function isIntradayTimeRange(timeRange: TimeRange): boolean {
   return timeRange === "1D" || timeRange === "5D";
 }
 
-// Determine if timeRange should use hourly (1hour) data
-function isHourlyTimeRange(timeRange: TimeRange): boolean {
-  return timeRange === "1M";
-}
-
-// Pick the right raw data source for a given timeRange
+// 1M uses daily EOD (hourly FMP is flaky and blocked the default view).
 function getDataSourceForTimeRange(
   timeRange: TimeRange,
   intradayData: StockDataPoint[],
-  hourlyData: StockDataPoint[],
   eodData: StockDataPoint[]
 ): StockDataPoint[] {
   if (isIntradayTimeRange(timeRange)) return intradayData;
-  if (isHourlyTimeRange(timeRange)) return hourlyData;
   return eodData;
+}
+
+export function chartCacheKey(symbol: string, isIndex: boolean): string {
+  return `${isIndex ? "idx:" : ""}${symbol.toUpperCase()}`;
+}
+
+export function chartEndpoint(symbol: string, isIndex: boolean, timeframe: string, limit: number): string {
+  const encoded = encodeURIComponent(symbol);
+  const base = isIndex ? `/api/index/${encoded}/chart` : `/api/stock/${encoded}/chart`;
+  return `${API_BASE_URL}${base}?timeframe=${timeframe}&limit=${limit}`;
 }
 
 export function useStockChart(
   symbol: string,
-  timeRange: TimeRange
+  timeRange: TimeRange,
+  options?: { isIndex?: boolean }
 ): UseStockChartReturn {
   const { isMarketOpen } = useMarket();
+  const isIndex = options?.isIndex ?? false;
 
   // Cache for raw data to avoid redundant fetches
   const [intradayData, setIntradayData] = useState<StockDataPoint[]>([]);
@@ -275,92 +308,152 @@ export function useStockChart(
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [afterHours, setAfterHours] = useState<AfterHoursInfo | null>(null);
 
   // Track which symbol's data is cached
   const cachedSymbolRef = useRef<string>("");
 
   // Fetch intraday data (5min bars) - limit to ~5 days (78 bars/day * 5 = 390)
   const fetchIntraday = useCallback(async () => {
+    const requestSymbol = symbol;
+    const key = chartCacheKey(requestSymbol, isIndex);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/stock/${symbol}/chart?timeframe=5min&limit=400`);
+      const cached = intradayBarCache.get(key);
+      if (cached && cached.length >= 20) {
+        const points = cached.map(rawBarToDataPoint);
+        if (cachedSymbolRef.current === requestSymbol) {
+          setIntradayData(points);
+          setLastUpdated(new Date());
+        }
+        return points;
+      }
+      const res = await fetch(chartEndpoint(requestSymbol, isIndex, "5min", 400));
       if (!res.ok) throw new Error(`Failed to fetch intraday data: ${res.status}`);
       const bars: RawBar[] = await res.json();
+      intradayBarCache.set(key, bars);
       const points = bars.map(rawBarToDataPoint);
-      setIntradayData(points);
-      setLastUpdated(new Date());
+      if (cachedSymbolRef.current === requestSymbol) {
+        setIntradayData(points);
+        setLastUpdated(new Date());
+      }
       return points;
     } catch (err) {
       console.error("Error fetching intraday data:", err);
       throw err;
     }
-  }, [symbol]);
-
-  // Fetch hourly data (1hour bars) - limit to ~500 bars (~3 months of hourly data)
-  const fetchHourly = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/stock/${symbol}/chart?timeframe=1hour&limit=500`);
-      if (!res.ok) throw new Error(`Failed to fetch hourly data: ${res.status}`);
-      const bars: RawBar[] = await res.json();
-      const points = bars.map(rawBarToDataPoint);
-      setHourlyData(points);
-      setLastUpdated(new Date());
-      return points;
-    } catch (err) {
-      console.error("Error fetching hourly data:", err);
-      throw err;
-    }
-  }, [symbol]);
+  }, [symbol, isIndex]);
 
   // Fetch EOD data (daily bars) - limit to ~5 years (252 * 5 = 1260)
   const fetchEod = useCallback(async () => {
+    const requestSymbol = symbol;
+    const key = chartCacheKey(requestSymbol, isIndex);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/stock/${symbol}/chart?timeframe=1day&limit=1300`);
+      const cached = eodBarCache.get(key);
+      if (cached && cached.length >= 200) {
+        const points = cached.map(rawBarToDataPoint);
+        if (cachedSymbolRef.current === requestSymbol) {
+          setEodData(points);
+          setLastUpdated(new Date());
+        }
+        return points;
+      }
+      const res = await fetch(chartEndpoint(requestSymbol, isIndex, "1day", 1300));
       if (!res.ok) throw new Error(`Failed to fetch EOD data: ${res.status}`);
       const bars: RawBar[] = await res.json();
+      eodBarCache.set(key, bars);
       const points = bars.map(rawBarToDataPoint);
-      setEodData(points);
-      setLastUpdated(new Date());
+      if (cachedSymbolRef.current === requestSymbol) {
+        setEodData(points);
+        setLastUpdated(new Date());
+      }
       return points;
     } catch (err) {
       console.error("Error fetching EOD data:", err);
       throw err;
     }
-  }, [symbol]);
+  }, [symbol, isIndex]);
 
-  // Initial data fetch when symbol changes
+  // Default view is 1M (daily). Only fetch EOD on open — 5min waits until 1D/5D.
   useEffect(() => {
     if (!symbol) return;
+    let cancelled = false;
 
     const loadData = async () => {
       setIsLoading(true);
       setError(null);
+      setIntradayData([]);
+      setHourlyData([]);
+      setEodData([]);
+      cachedSymbolRef.current = symbol;
 
       try {
-        // If symbol changed, fetch all three datasets in parallel
-        if (cachedSymbolRef.current !== symbol) {
-          await Promise.all([fetchIntraday(), fetchHourly(), fetchEod()]);
-          cachedSymbolRef.current = symbol;
-        } else {
-          // Symbol same, fetch based on current timeRange needs
-          if (isIntradayTimeRange(timeRange) && intradayData.length === 0) {
-            await fetchIntraday();
-          }
-          if (isHourlyTimeRange(timeRange) && hourlyData.length === 0) {
-            await fetchHourly();
-          }
-          if (!isIntradayTimeRange(timeRange) && !isHourlyTimeRange(timeRange) && eodData.length === 0) {
-            await fetchEod();
-          }
-        }
+        await fetchEod();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load chart data");
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load chart data");
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     loadData();
-  }, [symbol]); // Only re-run when symbol changes
+    return () => {
+      cancelled = true;
+    };
+  }, [symbol, fetchEod]);
+
+  // Lazy-load 5min bars only when the user actually opens 1D or 5D.
+  useEffect(() => {
+    if (!symbol || !isIntradayTimeRange(timeRange)) return;
+    if (intradayData.length > 0) return;
+    const cached = intradayBarCache.get(chartCacheKey(symbol, isIndex));
+    if (cached && cached.length > 0) {
+      setIntradayData(cached.map(rawBarToDataPoint));
+      return;
+    }
+    fetchIntraday().catch(console.error);
+  }, [symbol, timeRange, isIndex, fetchIntraday, intradayData.length]);
+
+  // When the market is closed, fetch the latest extended-hours price so the 1D
+  // view can show an "After Hours" marker. Cleared while the market is open.
+  // Indices have no after-hours tape.
+  useEffect(() => {
+    if (!symbol || isIndex) {
+      setAfterHours(null);
+      return;
+    }
+    if (isMarketOpen) {
+      setAfterHours(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/stock/${symbol}/aftermarket`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (cancelled) return;
+        if (json?.available && typeof json.price === "number") {
+          setAfterHours({
+            price: json.price,
+            prevClose: json.prevClose ?? null,
+            change: json.change ?? null,
+            changePercent: json.changePercent ?? null,
+            timestamp: json.timestamp ?? null,
+            session: json.session === "pre" ? "pre" : "post",
+          });
+        } else {
+          setAfterHours(null);
+        }
+      } catch (err) {
+        console.error("Error fetching after-hours data:", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [symbol, isMarketOpen, isIndex]);
 
   // Auto-refresh intraday data every 5 minutes during market hours
   useEffect(() => {
@@ -381,9 +474,8 @@ export function useStockChart(
     try {
       if (isIntradayTimeRange(timeRange)) {
         await fetchIntraday();
-      } else if (isHourlyTimeRange(timeRange)) {
-        await fetchHourly();
       } else {
+        eodBarCache.delete(chartCacheKey(symbol, isIndex));
         await fetchEod();
       }
     } catch (err) {
@@ -391,17 +483,25 @@ export function useStockChart(
     } finally {
       setIsLoading(false);
     }
-  }, [timeRange, fetchIntraday, fetchHourly, fetchEod]);
+  }, [symbol, timeRange, isIndex, fetchIntraday, fetchEod]);
 
   // Get MA period based on timeframe
   const maPeriod = useMemo(() => getMAPeriod(timeRange), [timeRange]);
 
   // Compute filtered and processed data
   const data = useMemo(() => {
-    const rawData = getDataSourceForTimeRange(timeRange, intradayData, hourlyData, eodData);
+    // Pick the source with graceful fallbacks so a panel never renders blank:
+    // - 1D/5D normally use intraday 5min bars; if that feed is empty, fall back to EOD.
+    // - 1M prefers hourly granularity; FMP's hourly feed is often empty, so fall back to EOD.
+    let rawData: StockDataPoint[];
+    if ((timeRange === "1D" || timeRange === "5D") && intradayData.length === 0) {
+      rawData = eodData;
+    } else {
+      rawData = getDataSourceForTimeRange(timeRange, intradayData, eodData);
+    }
     const filtered = filterByTimeRange(rawData, timeRange);
     return addMovingAverages(filtered, maPeriod);
-  }, [timeRange, intradayData, hourlyData, eodData, maPeriod]);
+  }, [timeRange, intradayData, eodData, maPeriod]);
 
   // Calculate average volume from the filtered data
   const avgVolume = useMemo(() => {
@@ -421,5 +521,6 @@ export function useStockChart(
     lastUpdated,
     avgVolume,
     maPeriod,
+    afterHours,
   };
 }

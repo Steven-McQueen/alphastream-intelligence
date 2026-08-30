@@ -40,6 +40,7 @@ type DrawShape =
 interface StockChartProps {
   symbol: string;
   companyName: string;
+  isIndex?: boolean;
   // Additional metrics from parent (for enhanced footer)
   metrics?: {
     yearHigh?: number;
@@ -49,28 +50,65 @@ interface StockChartProps {
     ytdReturn?: number;
     oneYearReturn?: number;
     beta?: number;
+    previousClose?: number;
   };
 }
 
-// Convert price data to returns
+function isFiniteNum(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function fmtNum(value: unknown, digits = 2, fallback = "0.00"): string {
+  return isFiniteNum(value) ? value.toFixed(digits) : fallback;
+}
+
+function fmtPctVsBase(value: number, base: unknown): string {
+  if (!isFiniteNum(value) || !isFiniteNum(base) || base === 0) return "0.00";
+  return fmtNum(((value - base) / base) * 100);
+}
+
+function pctFromBase(value: number | undefined, basePrice: number): number | undefined {
+  if (!isFiniteNum(value)) return undefined;
+  const r = ((value - basePrice) / basePrice) * 100;
+  return Number.isFinite(r) ? Number(r.toFixed(2)) : undefined;
+}
+
+// Convert price data to returns. Skip non-finite OHLC so Recharts never sees NaN.
 const convertToReturns = (data: StockDataPoint[]): StockDataPoint[] => {
   if (data.length === 0) return data;
-  
+
   const basePrice = data[0].close;
-  return data.map((point) => ({
-    ...point,
-    close: Number((((point.close - basePrice) / basePrice) * 100).toFixed(2)),
-    open: Number((((point.open - basePrice) / basePrice) * 100).toFixed(2)),
-    high: Number((((point.high - basePrice) / basePrice) * 100).toFixed(2)),
-    low: Number((((point.low - basePrice) / basePrice) * 100).toFixed(2)),
-    price: Number((((point.price - basePrice) / basePrice) * 100).toFixed(2)),
-    sma: point.sma ? Number((((point.sma - basePrice) / basePrice) * 100).toFixed(2)) : undefined,
-    ema: point.ema ? Number((((point.ema - basePrice) / basePrice) * 100).toFixed(2)) : undefined,
-    wma: point.wma ? Number((((point.wma - basePrice) / basePrice) * 100).toFixed(2)) : undefined,
-    dema: point.dema ? Number((((point.dema - basePrice) / basePrice) * 100).toFixed(2)) : undefined,
-    tema: point.tema ? Number((((point.tema - basePrice) / basePrice) * 100).toFixed(2)) : undefined,
-  }));
+  if (!isFiniteNum(basePrice) || basePrice === 0) return data;
+
+  return data.map((point) => {
+    const close = pctFromBase(point.close, basePrice) ?? 0;
+    return {
+      ...point,
+      close,
+      open: pctFromBase(point.open, basePrice) ?? close,
+      high: pctFromBase(point.high, basePrice) ?? close,
+      low: pctFromBase(point.low, basePrice) ?? close,
+      price: close,
+      sma: pctFromBase(point.sma, basePrice),
+      ema: pctFromBase(point.ema, basePrice),
+      wma: pctFromBase(point.wma, basePrice),
+      dema: pctFromBase(point.dema, basePrice),
+      tema: pctFromBase(point.tema, basePrice),
+    };
+  });
 };
+
+const MAX_CHART_POINTS = 400;
+
+function downsamplePoints(data: StockDataPoint[], maxPoints: number): StockDataPoint[] {
+  if (data.length <= maxPoints) return data;
+  const step = (data.length - 1) / (maxPoints - 1);
+  const out: StockDataPoint[] = [];
+  for (let i = 0; i < maxPoints; i++) {
+    out.push(data[Math.round(i * step)]);
+  }
+  return out;
+}
 
 // Format date based on time range
 const formatDate = (timestamp: number, timeRange: TimeRange): string => {
@@ -152,6 +190,7 @@ const Candlestick = (props: CandlestickProps) => {
   if (!payload) return null;
   
   const { open, close, high, low } = payload;
+  if (![open, close, high, low].every(isFiniteNum)) return null;
   const isGrowing = close > open;
   const color = isGrowing ? "hsl(var(--primary))" : "hsl(0, 84%, 60%)";
   
@@ -191,6 +230,7 @@ const CustomTooltip = ({
   timeRange,
   movingAverage,
   showReturns,
+  isIndex,
 }: {
   active?: boolean;
   payload?: { payload: StockDataPoint }[];
@@ -198,6 +238,7 @@ const CustomTooltip = ({
   timeRange: TimeRange;
   movingAverage: MovingAverage;
   showReturns: boolean;
+  isIndex?: boolean;
 }) => {
   if (!active || !payload || payload.length === 0) return null;
 
@@ -226,8 +267,11 @@ const CustomTooltip = ({
   };
 
   const maValue = getMAValue();
-  const formatValue = (val: number) => 
-    showReturns ? `${val > 0 ? '+' : ''}${val.toFixed(2)}%` : `$${val.toFixed(2)}`;
+  const formatValue = (val: number) => {
+    if (!isFiniteNum(val)) return "—";
+    if (showReturns) return `${val > 0 ? "+" : ""}${fmtNum(val)}%`;
+    return isIndex ? fmtNum(val) : `$${fmtNum(val)}`;
+  };
 
   return (
     <div className="bg-card border border-secondary rounded-lg shadow-lg p-3 min-w-[180px]">
@@ -290,7 +334,7 @@ const CustomTooltip = ({
         <div className="flex justify-between gap-4">
           <span className="text-xs text-muted-foreground">Vol</span>
           <span className="text-xs font-medium text-foreground">
-            {(data.volume / 1000000).toFixed(2)}M
+            {(isFiniteNum(data.volume) ? (data.volume / 1000000).toFixed(2) : "0.00")}M
           </span>
         </div>
       </div>
@@ -298,7 +342,7 @@ const CustomTooltip = ({
   );
 };
 
-export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
+export function StockChart({ symbol, companyName, metrics, isIndex = false }: StockChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>("1M");
   const [chartType, setChartType] = useState<ChartType>("line");
   const [movingAverage, setMovingAverage] = useState<MovingAverage>("none");
@@ -319,7 +363,10 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
   const panAnchorRef = useRef<{ startX: number; domain: [number, number] } | null>(null);
 
   // Fetch data using the hook
-  const { data: rawData, isLoading, error, refetch, lastUpdated, avgVolume: calculatedAvgVolume, maPeriod, afterHours } = useStockChart(symbol, timeRange);
+  const { data: rawData, isLoading, error, refetch, lastUpdated, avgVolume: calculatedAvgVolume, maPeriod, afterHours } = useStockChart(symbol, timeRange, { isIndex });
+
+  const fmtLevel = (value: unknown, digits = 2) =>
+    isIndex ? fmtNum(value, digits) : `$${fmtNum(value, digits)}`;
 
   // Apply returns transformation if needed
   const allData = useMemo(() => 
@@ -342,13 +389,14 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
   // line stops at the regular close); a separate dashed line uses `extendedClose`
   // to draw the after-hours segment in a distinct style.
   const chartData = useMemo(() => {
-    if (timeRange !== "1D" || !afterHours || showReturns || chartType !== "line" || viewData.length === 0) {
-      return viewData;
+    const source = downsamplePoints(viewData, MAX_CHART_POINTS);
+    if (timeRange !== "1D" || !afterHours || showReturns || chartType !== "line" || source.length === 0) {
+      return source;
     }
-    const last = viewData[viewData.length - 1];
+    const last = source[source.length - 1];
     const ahTs = afterHours.timestamp ?? last.timestamp + 5 * 60 * 1000;
-    const withMarker = viewData.map((d, i) =>
-      i === viewData.length - 1 ? { ...d, extendedClose: d.close } : d
+    const withMarker = source.map((d, i) =>
+      i === source.length - 1 ? { ...d, extendedClose: d.close } : d
     );
     const ahPoint: StockDataPoint = {
       ...last,
@@ -550,8 +598,8 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
       return { currentPrice: 0, priceChange: 0, priceChangePercent: 0, isPositive: true };
     }
 
-    const current = data[data.length - 1].price ?? 0;
-    const previous = data[0].price ?? 0;
+    const current = isFiniteNum(data[data.length - 1].price) ? data[data.length - 1].price : 0;
+    const previous = isFiniteNum(data[0].price) ? data[0].price : 0;
     const change = current - previous;
     const changePercent = showReturns ? current : (previous !== 0 ? (change / previous) * 100 : 0);
 
@@ -570,11 +618,19 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
       avg: 0, median: 0, rsi: 50, adx: 25, stddev: 0, williams: -50 
     };
 
-    const prices = rawData.map(d => d.close);
-    const open = rawData[0].close;
-    const close = rawData[rawData.length - 1].close;
-    const high = Math.max(...rawData.map(d => d.high));
-    const low = Math.min(...rawData.map(d => d.low));
+    const prices = rawData.map(d => d.close).filter(isFiniteNum);
+    const highs = rawData.map(d => d.high).filter(isFiniteNum);
+    const lows = rawData.map(d => d.low).filter(isFiniteNum);
+    if (prices.length === 0) {
+      return {
+        open: 0, high: 0, low: 0, close: 0,
+        avg: 0, median: 0, rsi: 50, adx: 25, stddev: 0, williams: -50
+      };
+    }
+    const open = prices[0];
+    const close = prices[prices.length - 1];
+    const high = highs.length ? Math.max(...highs) : close;
+    const low = lows.length ? Math.min(...lows) : close;
     const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
     const sorted = [...prices].sort((a, b) => a - b);
     const median = sorted[Math.floor(sorted.length / 2)];
@@ -700,7 +756,7 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                 ) : (
                   <>
                     <div className="text-3xl font-semibold text-foreground">
-                      {showReturns ? `${currentPrice > 0 ? '+' : ''}${currentPrice.toFixed(2)}%` : `$${currentPrice.toFixed(2)}`}
+                      {showReturns ? `${currentPrice > 0 ? "+" : ""}${fmtNum(currentPrice)}%` : fmtLevel(currentPrice)}
                     </div>
                     <div
                       className={cn(
@@ -712,12 +768,12 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                     >
                       <span>
                         {isPositive ? "↑" : "↓"}{" "}
-                        {showReturns 
-                          ? `${Math.abs(priceChange).toFixed(2)}%`
-                          : `${Math.abs(priceChange).toFixed(2)}`
+                        {showReturns
+                          ? `${fmtNum(Math.abs(priceChange))}%`
+                          : fmtNum(Math.abs(priceChange))
                         }
                       </span>
-                      <span>({Math.abs(priceChangePercent).toFixed(2)}%)</span>
+                      <span>({fmtNum(Math.abs(priceChangePercent))}%)</span>
                     </div>
 
                     {/* After-hours / pre-market chip (market closed) - distinct from the
@@ -985,8 +1041,8 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                   <XAxis dataKey="timestamp" xAxisId="1" hide />
                   <YAxis
                     yAxisId="price"
-                    domain={["dataMin - 5", "dataMax + 5"]}
-                    tickFormatter={(value) => showReturns ? `${value}%` : `$${value}`}
+                    domain={showReturns ? ["auto", "auto"] : ["dataMin - 5", "dataMax + 5"]}
+                    tickFormatter={(value) => showReturns ? `${value}%` : (isIndex ? String(value) : `$${value}`)}
                     stroke="hsl(0, 0%, 40%)"
                     tick={{ fontSize: 11, fill: "hsl(0, 0%, 50%)" }}
                     tickLine={false}
@@ -1014,6 +1070,7 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                         timeRange={timeRange}
                         movingAverage={movingAverage}
                         showReturns={showReturns}
+                        isIndex={isIndex}
                       />
                     }
                   />
@@ -1026,7 +1083,7 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                     fill="hsl(0, 0%, 35%)"
                     opacity={0.25}
                     radius={[2, 2, 0, 0]}
-                    animationDuration={300}
+                    isAnimationActive={false}
                   />
 
                   {chartType === "line" ? (
@@ -1044,8 +1101,7 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                         stroke: "hsl(var(--tooltip-bg))",
                         strokeWidth: 2,
                       }}
-                      animationDuration={500}
-                      animationEasing="ease-in-out"
+                      isAnimationActive={false}
                     />
                   ) : (
                     <Bar
@@ -1054,7 +1110,9 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                       // Range bar [low, high] so recharts positions the bar over the
                       // full candle range; the Candlestick shape then draws the wick
                       // and the open/close body correctly.
-                      dataKey={(d: StockDataPoint) => [d.low, d.high]}
+                      dataKey={(d: StockDataPoint) =>
+                        isFiniteNum(d.low) && isFiniteNum(d.high) ? [d.low, d.high] : [0, 0]
+                      }
                       fill="#8884d8"
                       shape={<Candlestick />}
                       isAnimationActive={false}
@@ -1088,7 +1146,7 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                       strokeWidth={1.5}
                       dot={false}
                       strokeDasharray="5 5"
-                      animationDuration={500}
+                      isAnimationActive={false}
                     />
                   )}
 
@@ -1213,25 +1271,25 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                 <div className="space-y-1">
                   <div className="text-xs text-dim">Open</div>
                   <div className="text-sm font-medium text-foreground">
-                    ${(footerMetrics.open ?? 0).toFixed(2)}
+                    {fmtLevel(footerMetrics.open)}
                   </div>
                 </div>
                 <div className="space-y-1">
                   <div className="text-xs text-dim">High</div>
                   <div className="text-sm font-medium text-positive">
-                    ${(footerMetrics.high ?? 0).toFixed(2)}
+                    {fmtLevel(footerMetrics.high)}
                   </div>
                 </div>
                 <div className="space-y-1">
                   <div className="text-xs text-dim">Low</div>
                   <div className="text-sm font-medium text-negative">
-                    ${(footerMetrics.low ?? 0).toFixed(2)}
+                    {fmtLevel(footerMetrics.low)}
                   </div>
                 </div>
                 <div className="space-y-1">
                   <div className="text-xs text-dim">Close</div>
                   <div className="text-sm font-medium text-foreground">
-                    ${(footerMetrics.close ?? 0).toFixed(2)}
+                    {fmtLevel(footerMetrics.close)}
                   </div>
                 </div>
               </div>
@@ -1242,7 +1300,7 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                   <div className="text-xs text-dim">52W Range</div>
                   <div className="text-sm font-medium text-foreground">
                     {metrics?.yearLow !== undefined && metrics?.yearHigh !== undefined
-                      ? `$${metrics.yearLow.toFixed(0)} - $${metrics.yearHigh.toFixed(0)}`
+                      ? `${fmtLevel(metrics.yearLow, 0)} - ${fmtLevel(metrics.yearHigh, 0)}`
                       : "N/A"
                     }
                   </div>
@@ -1264,9 +1322,11 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs text-dim">Market Cap</div>
+                  <div className="text-xs text-dim">{isIndex ? "Prev Close" : "Market Cap"}</div>
                   <div className="text-sm font-medium text-foreground">
-                    {formatLargeNumber(metrics?.marketCap)}
+                    {isIndex
+                      ? (metrics?.previousClose !== undefined ? fmtLevel(metrics.previousClose) : "N/A")
+                      : formatLargeNumber(metrics?.marketCap)}
                   </div>
                 </div>
               </div>
@@ -1281,33 +1341,25 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                 <div className="col-start-2 col-span-2 space-y-1 text-center">
                   <div className="text-xs text-dim">Average</div>
                   <div className="text-sm font-medium text-foreground">
-                    {rawData.length > 0 && rawData[0].close
-                      ? ((footerMetrics.avg - rawData[0].close) / rawData[0].close * 100).toFixed(2)
-                      : "0.00"}%
+                    {fmtPctVsBase(footerMetrics.avg, rawData[0]?.close)}%
                   </div>
                 </div>
                 <div className="col-start-4 col-span-2 space-y-1 text-center">
                   <div className="text-xs text-dim">Median</div>
                   <div className="text-sm font-medium text-foreground">
-                    {rawData.length > 0 && rawData[0].close
-                      ? ((footerMetrics.median - rawData[0].close) / rawData[0].close * 100).toFixed(2)
-                      : "0.00"}%
+                    {fmtPctVsBase(footerMetrics.median, rawData[0]?.close)}%
                   </div>
                 </div>
                 <div className="col-start-6 col-span-2 space-y-1 text-center">
                   <div className="text-xs text-dim">Period High</div>
                   <div className="text-sm font-medium text-positive">
-                    {rawData.length > 0 && rawData[0].close
-                      ? ((footerMetrics.high - rawData[0].close) / rawData[0].close * 100).toFixed(2)
-                      : "0.00"}%
+                    {fmtPctVsBase(footerMetrics.high, rawData[0]?.close)}%
                   </div>
                 </div>
                 <div className="col-start-8 col-span-2 space-y-1 text-center">
                   <div className="text-xs text-dim">Period Low</div>
                   <div className="text-sm font-medium text-negative">
-                    {rawData.length > 0 && rawData[0].close
-                      ? ((footerMetrics.low - rawData[0].close) / rawData[0].close * 100).toFixed(2)
-                      : "0.00"}%
+                    {fmtPctVsBase(footerMetrics.low, rawData[0]?.close)}%
                   </div>
                 </div>
               </div>
@@ -1321,19 +1373,19 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                     (footerMetrics.rsi ?? 50) > 70 ? "text-negative" :
                     (footerMetrics.rsi ?? 50) < 30 ? "text-positive" : "text-foreground"
                   )}>
-                    {(footerMetrics.rsi ?? 50).toFixed(1)}
+                    {fmtNum(footerMetrics.rsi ?? 50, 1)}
                   </div>
                 </div>
                 <div className="col-start-3 col-span-2 text-center">
                   <div className="text-xs text-dim mb-1">ADX</div>
                   <div className="text-sm font-semibold text-foreground">
-                    {(footerMetrics.adx ?? 25).toFixed(1)}
+                    {fmtNum(footerMetrics.adx ?? 25, 1)}
                   </div>
                 </div>
                 <div className="col-start-5 col-span-2 text-center">
                   <div className="text-xs text-dim mb-1">StdDev</div>
                   <div className="text-sm font-semibold text-foreground">
-                    {(footerMetrics.stddev ?? 0).toFixed(2)}
+                    {fmtNum(footerMetrics.stddev ?? 0)}
                   </div>
                 </div>
                 <div className="col-start-7 col-span-2 text-center">
@@ -1343,15 +1395,17 @@ export function StockChart({ symbol, companyName, metrics }: StockChartProps) {
                     (footerMetrics.williams ?? -50) > -20 ? "text-negative" :
                     (footerMetrics.williams ?? -50) < -80 ? "text-positive" : "text-foreground"
                   )}>
-                    {(footerMetrics.williams ?? -50).toFixed(1)}
+                    {fmtNum(footerMetrics.williams ?? -50, 1)}
                   </div>
                 </div>
+                {!isIndex && (
                 <div className="col-start-9 col-span-2 text-center">
                   <div className="text-xs text-dim mb-1">Beta</div>
                   <div className="text-sm font-semibold text-foreground">
-                    {metrics?.beta !== undefined ? metrics.beta.toFixed(2) : "N/A"}
+                    {metrics?.beta !== undefined ? fmtNum(metrics.beta) : "N/A"}
                   </div>
                 </div>
+                )}
               </div>
             </div>
           )}

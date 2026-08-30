@@ -50,8 +50,12 @@ class FMPClient:
         else:
             url = f"{self.BASE_URL}{endpoint}"
 
+        timeout = 10
+        if params and "_timeout" in params:
+            timeout = params.pop("_timeout")
+
         try:
-            response = self._session.get(url, params=params, timeout=10)
+            response = self._session.get(url, params=params, timeout=timeout)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as exc:
@@ -198,19 +202,20 @@ class FMPClient:
 
     # ========= STOCK LIST (UNIVERSE) =========
     def get_stock_list(self) -> List[Dict]:
+        """Fetch the full tradeable stock directory from FMP.
+
+        Prefers /stable/stock-list (~24k names). Falls back to
+        /stable/actively-trading-list if the primary endpoint fails.
         """
-        Fetch ALL actively trading stocks from FMP (excludes inactive companies).
-        Returns list of {symbol, name}.
-        """
-        try:
-            data = self._make_request("/stable/actively-trading-list")
-            if isinstance(data, list):
-                print(f"[FMP] Fetched {len(data)} symbols from actively-trading-list")
-                return data
-            return []
-        except Exception as e:
-            print(f"[FMP] Error fetching actively trading list: {e}")
-            return []
+        for endpoint in ("/stable/stock-list", "/stable/actively-trading-list"):
+            try:
+                data = self._make_request(endpoint, params={"_timeout": 90})
+                if isinstance(data, list) and data:
+                    print(f"[FMP] Fetched {len(data)} symbols from {endpoint}")
+                    return data
+            except Exception as e:
+                print(f"[FMP] Error fetching {endpoint}: {e}")
+        return []
 
     def get_sp500_constituents(self) -> List[Dict]:
         """

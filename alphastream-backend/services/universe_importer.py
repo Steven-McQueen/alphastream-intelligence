@@ -274,6 +274,28 @@ def get_universe_stats() -> Dict:
     return db.get_symbols_count()
 
 
+def ensure_full_symbol_directory(min_count: int = 5000) -> int:
+    """Import the FMP stock list if the symbols table is still S&P-sized."""
+    try:
+        stats = db.get_symbols_count()
+        active = int(stats.get("active") or 0)
+    except Exception as e:
+        print(f"[UNIVERSE] Could not read symbols count: {e}")
+        active = 0
+
+    if active >= min_count:
+        print(f"[UNIVERSE] Symbol directory already has {active} names")
+        return active
+
+    print(f"[UNIVERSE] Symbol directory has {active} names; importing full stock list...")
+    count = fetch_and_import_full_universe()
+    try:
+        fetch_and_set_sp500_flags()
+    except Exception as e:
+        print(f"[UNIVERSE] S&P flag refresh after import failed: {e}")
+    return count
+
+
 def populate_stocks_from_symbols() -> int:
     """
     Simple function to populate stocks table from symbols.

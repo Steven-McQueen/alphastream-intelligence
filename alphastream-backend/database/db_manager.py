@@ -173,8 +173,8 @@ class SQLiteDatabaseManager:
     finally:
       self.close()
 
-  def get_stock_list_rows(self) -> List[dict]:
-    """Get all stocks with only the columns the list DTO needs."""
+  def get_stock_list_rows(self, sp500_only: bool = True) -> List[dict]:
+    """Get stocks with only the columns the list DTO needs (S&P 500 by default)."""
     columns = (
       "ticker, name, sector, industry, price, change_1d, change_1w, change_1m, "
       "change_1y, volume, pe_ratio, eps, dividend_yield, market_cap, "
@@ -182,14 +182,22 @@ class SQLiteDatabaseManager:
       "beta, debt_to_equity, institutional_ownership, year_founded, website, "
       "last_updated"
     )
+    where = "WHERE is_sp500 = 1" if sp500_only else ""
     conn = self.connect()
     cursor = conn.cursor()
     try:
-      cursor.execute(f"SELECT {columns} FROM stocks ORDER BY market_cap DESC")
+      cursor.execute(f"SELECT {columns} FROM stocks {where} ORDER BY market_cap DESC")
       rows = cursor.fetchall()
       return [dict(row) for row in rows]
     finally:
       self.close()
+
+  def get_symbol_directory(self) -> List[dict]:
+    """Compact ticker+name list. SQLite fallback has no symbols table."""
+    return []
+
+  def get_symbols_count(self) -> dict:
+    return {"total": 0, "active": 0, "sp500": 0, "nasdaq100": 0, "tier1": 0, "tier2": 0, "tier3": 0}
 
   def count_stocks(self) -> int:
     """Count rows in the stocks table without transferring them."""
@@ -789,36 +797,39 @@ class SQLiteDatabaseManager:
   # PRICE BARS
   # ============================================================================
   def upsert_price_bars_bulk(self, bars: List[dict]) -> int:
-    """Insert or replace multiple price bars."""
+    """Insert or replace multiple price bars in one executemany."""
     if not bars:
       return 0
     conn = self.connect()
     cursor = conn.cursor()
-    inserted = 0
+    now = datetime.now().isoformat()
+    rows = [
+      (
+        bar.get("symbol"),
+        bar.get("timeframe"),
+        bar.get("bar_time"),
+        bar.get("open"),
+        bar.get("high"),
+        bar.get("low"),
+        bar.get("close"),
+        bar.get("volume"),
+        bar.get("source"),
+        now,
+      )
+      for bar in bars
+      if bar.get("bar_time")
+    ]
     try:
-      for bar in bars:
-        cursor.execute(
-          """
-          INSERT OR REPLACE INTO price_bars
-          (symbol, timeframe, bar_time, open, high, low, close, volume, source, last_updated)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          """,
-          (
-            bar.get("symbol"),
-            bar.get("timeframe"),
-            bar.get("bar_time"),
-            bar.get("open"),
-            bar.get("high"),
-            bar.get("low"),
-            bar.get("close"),
-            bar.get("volume"),
-            bar.get("source"),
-            datetime.now().isoformat(),
-          ),
-        )
-        inserted += 1
+      cursor.executemany(
+        """
+        INSERT OR REPLACE INTO price_bars
+        (symbol, timeframe, bar_time, open, high, low, close, volume, source, last_updated)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        rows,
+      )
       conn.commit()
-      return inserted
+      return len(rows)
     finally:
       self.close()
 
